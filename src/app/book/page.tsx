@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
 import { BookingProgressBar } from '@/components/booking/BookingProgressBar';
@@ -21,7 +21,7 @@ const nailStyles = [
   { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: '⚪' },
 ];
 
-export default function BookingPage() {
+function BookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentStep = useBookingStore((state) => state.currentStep);
@@ -215,5 +215,18 @@ export default function BookingPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+// Default export with Suspense boundary for useSearchParams
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F5F0EB] flex items-center justify-center">
+        <div className="animate-pulse text-[#D4A59A]">Loading...</div>
+      </div>
+    }>
+      <BookingContent />
+    </Suspense>
   );
 }

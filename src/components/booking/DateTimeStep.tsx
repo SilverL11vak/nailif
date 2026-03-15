@@ -26,6 +26,7 @@ export function DateTimeStep() {
   });
 
   // Load slots when date changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const dateToUse = selectedDate || dates[0];
     selectDate(dateToUse);
