@@ -18,6 +18,29 @@ const nailStyles: NailStyle[] = [
   { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: '⚪' },
 ];
 
+// Premium nail imagery from Unsplash
+const nailImages: {
+  hero: string;
+  services: Record<string, string>;
+  gallery: string[];
+} = {
+  hero: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=1200&q=80',
+  services: {
+    'gel-manicure': 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=600&q=80',
+    'acrylic-extensions': 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=600&q=80',
+    'luxury-spa-manicure': 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=600&q=80',
+    'gel-pedicure': 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600&q=80',
+  },
+  gallery: [
+    'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=800&q=80', // pink french
+    'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=800&q=80', // extensions
+    'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800&q=80', // close-up
+    'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=800&q=80', // spa
+    'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&q=80', // pedicure
+    'https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=800&q=80', // nude
+  ],
+};
+
 export default function Home() {
   const router = useRouter();
   const setSelectedStyle = useBookingStore((state) => state.setSelectedStyle);
@@ -179,16 +202,14 @@ export default function Home() {
             {/* Left: Editorial Image + Content */}
             <div className="lg:col-span-7 order-2 lg:order-1">
               {/* Clean Editorial Image */}
-              <div className="relative aspect-[4/3] lg:aspect-[16/10] rounded-2xl overflow-hidden mb-8 lg:mb-10 bg-gray-50">
-                {/* Clean white/cream editorial - no gradient, no decoration */}
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    {/* Simple, clean visual - no emoji */}
-                    <div className="text-7xl lg:text-8xl mb-3 opacity-90">✦</div>
-                    <p className="text-gray-400 text-base font-medium tracking-wide">Premium Nail Studio</p>
-                  </div>
-                </div>
+              <div className="relative aspect-[4/3] lg:aspect-[16/10] rounded-2xl overflow-hidden mb-8 lg:mb-10">
+                <img 
+                  src={nailImages.hero} 
+                  alt="Beautiful manicured nails"
+                  className="w-full h-full object-cover"
+                />
+                {/* Subtle overlay for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
               </div>
 
               {/* Headline + Single Trust Signal */}
@@ -320,10 +341,18 @@ export default function Home() {
                 className="group bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02]"
               >
                 {/* Clean Image Area with subtle visual indicator */}
-                <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center relative overflow-hidden">
-                  <div className="text-5xl opacity-80 group-hover:opacity-100 transition-opacity group-hover:scale-110 duration-300">
-                    {service.category === 'manicure' ? '💅' : service.category === 'pedicure' ? '🦶' : service.category === 'extensions' ? '✨' : '🎨'}
-                  </div>
+                <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center relative overflow-hidden group-hover:brightness-95 transition-all duration-300">
+                  {nailImages.services[service.id] ? (
+                    <img 
+                      src={nailImages.services[service.id]} 
+                      alt={service.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-5xl opacity-80 group-hover:opacity-100 transition-opacity group-hover:scale-110 duration-300">
+                      {service.category === 'manicure' ? '💅' : service.category === 'pedicure' ? '🦶' : service.category === 'extensions' ? '✨' : '🎨'}
+                    </div>
+                  )}
                   {/* Subtle overlay on hover */}
                   <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 transition-colors duration-300" />
                 </div>
@@ -458,9 +487,11 @@ export default function Home() {
                 className="col-span-2 row-span-2 relative overflow-hidden rounded-2xl cursor-pointer group"
                 onClick={() => handleBookStyle(nailStyles[0])}
               >
-                <div className="aspect-square lg:aspect-[4/4] bg-gray-100 flex items-center justify-center">
-                  <span className="text-6xl opacity-60">{nailStyles[0].emoji}</span>
-                </div>
+                <img 
+                  src={nailImages.gallery[0]} 
+                  alt={nailStyles[0].name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
                 {/* Hover zoom + gloss overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
                 {/* Book this style CTA */}
@@ -474,13 +505,17 @@ export default function Home() {
             )}
             
             {/* Regular Images */}
-            {nailStyles.slice(1, 4).map((style) => (
+            {nailStyles.slice(1, 4).map((style, idx) => (
               <div 
                 key={style.id}
-                className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative"
+                className="aspect-square rounded-2xl cursor-pointer group overflow-hidden relative"
                 onClick={() => handleBookStyle(style)}
               >
-                <span className="text-4xl opacity-50">{style.emoji}</span>
+                <img 
+                  src={nailImages.gallery[idx + 1]} 
+                  alt={style.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
                 {/* Book this style CTA */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
@@ -495,10 +530,14 @@ export default function Home() {
             {/* Second Featured Image */}
             {nailStyles[4] && (
               <div 
-                className="col-span-2 aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative"
+                className="col-span-2 aspect-square rounded-2xl cursor-pointer group overflow-hidden relative"
                 onClick={() => handleBookStyle(nailStyles[4])}
               >
-                <span className="text-5xl opacity-50">{nailStyles[4].emoji}</span>
+                <img 
+                  src={nailImages.gallery[4]} 
+                  alt={nailStyles[4].name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
                 {/* Book this style CTA */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
@@ -513,10 +552,14 @@ export default function Home() {
             {/* Last Image */}
             {nailStyles[5] && (
               <div 
-                className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative"
+                className="aspect-square rounded-2xl cursor-pointer group overflow-hidden relative"
                 onClick={() => handleBookStyle(nailStyles[5])}
               >
-                <span className="text-4xl opacity-50">{nailStyles[5].emoji}</span>
+                <img 
+                  src={nailImages.gallery[5]} 
+                  alt={nailStyles[5].name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
                 {/* Book this style CTA */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
