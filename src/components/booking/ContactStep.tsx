@@ -20,6 +20,7 @@ export function ContactStep() {
     lastName: contactInfo?.lastName || '',
     phone: contactInfo?.phone || '',
     email: contactInfo?.email || '',
+    notes: contactInfo?.notes || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -83,6 +84,7 @@ export function ContactStep() {
         lastName: formData.lastName || undefined,
         phone: formData.phone,
         email: formData.email || undefined,
+        notes: formData.notes || undefined,
       });
       nextStep();
       // Scroll next step into view
@@ -289,6 +291,22 @@ export function ContactStep() {
               </button>
             </div>
           )}
+        </div>
+
+        <div className="relative">
+          <textarea
+            id="notes"
+            name="notes"
+            value={formData.notes}
+            onChange={(event) =>
+              setFormData((prev) => ({
+                ...prev,
+                notes: event.target.value,
+              }))
+            }
+            placeholder={t('contact.optional') ? `Notes (${t('contact.optional')})` : 'Notes (optional)'}
+            className="min-h-20 w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm outline-none transition-colors duration-200 focus:border-[#D4A59A] focus:ring-2 focus:ring-[#D4A59A]/20"
+          />
         </div>
       </div>
 

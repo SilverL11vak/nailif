@@ -15,9 +15,13 @@ export interface TimeSlot {
   time: string; // "14:30"
   date: string; // "2026-03-18"
   available: boolean;
+  isBooked?: boolean;
   count?: number; // For "2 left" display
   isPopular?: boolean; // Show star badge
   isFastest?: boolean; // Show lightning badge
+  isSos?: boolean;
+  sosSurcharge?: number;
+  sosLabel?: string | null;
 }
 
 export interface ContactInfo {

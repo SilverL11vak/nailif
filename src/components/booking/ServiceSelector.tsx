@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from '@/lib/i18n';
 import type { Service } from '@/store/booking-types';
-import { mockServices } from '@/store/mock-data';
+import { useServices } from '@/hooks/use-services';
 
 interface ServiceSelectorProps {
   onSelect: (service: Service) => void;
@@ -12,6 +12,7 @@ interface ServiceSelectorProps {
 
 export function ServiceSelector({ onSelect, selectedService }: ServiceSelectorProps) {
   const { t } = useTranslation();
+  const { services } = useServices();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +73,7 @@ export function ServiceSelector({ onSelect, selectedService }: ServiceSelectorPr
       {isOpen && (
         <div className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-100 
                         rounded-xl shadow-lg max-h-72 overflow-y-auto">
-          {mockServices.map((service) => (
+          {services.map((service) => (
             <button
               key={service.id}
               type="button"

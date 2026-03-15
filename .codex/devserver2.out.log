@@ -1,0 +1,421 @@
+
+> nailify@0.1.0 dev
+> next dev --port 3003
+
+   ▲ Next.js 15.2.9
+   - Local:        http://localhost:3003
+   - Network:      http://192.168.8.8:3003
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.7s
+ ○ Compiling /api/services ...
+ ✓ Compiled /api/services in 4.2s (837 modules)
+ GET /admin 200 in 4725ms
+ GET / 200 in 4727ms
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "services" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "products" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ GET /api/services 200 in 7595ms
+ ○ Compiling /api/bookings/checkout ...
+ ✓ Compiled /api/bookings/checkout in 693ms (998 modules)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "bookings" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "payment_status" of relation "bookings" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "deposit_amount" of relation "bookings" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "stripe_session_id" of relation "bookings" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ POST /api/bookings/checkout 200 in 3526ms
+ ✓ Compiled /api/cart/checkout in 171ms (1000 modules)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "services" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "products" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ POST /api/cart/checkout 200 in 2519ms
+ ○ Compiling /admin/orders ...
+ ✓ Compiled /admin/orders in 605ms (1011 modules)
+ GET /shop 200 in 775ms
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "services" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "products" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ GET /api/products?admin=1 200 in 1393ms
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ GET /admin/orders 200 in 2487ms
+ ✓ Compiled in 449ms (350 modules)
+ ✓ Compiled in 100ms (350 modules)
+ ✓ Compiled /admin/bookings in 391ms (784 modules)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "bookings" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "payment_status" of relation "bookings" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "deposit_amount" of relation "bookings" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "stripe_session_id" of relation "bookings" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+ GET /admin/bookings 200 in 2843ms
+ ✓ Compiled in 271ms (350 modules)
+ ✓ Compiled in 158ms (350 modules)
+ ✓ Compiled in 144ms (350 modules)
+ ✓ Compiled in 270ms (355 modules)
+ ✓ Compiled in 173ms (355 modules)
+ ✓ Compiled in 217ms (355 modules)
+ ✓ Compiled in 148ms (355 modules)
+ ✓ Compiled in 200ms (355 modules)
+ ✓ Compiled in 161ms (355 modules)
+ ✓ Compiled in 142ms (355 modules)
+ ✓ Compiled in 123ms (355 modules)
+   Reload env: .env.local
+ ✓ Compiled in 1196ms (373 modules)
+ ✓ Compiled in 215ms (355 modules)
+ ✓ Compiled in 151ms (355 modules)
+ ✓ Compiled in 82ms (355 modules)
+ ✓ Compiled in 108ms (355 modules)
+ ✓ Compiled in 129ms (355 modules)
+ ✓ Compiled in 182ms (355 modules)
+ ✓ Compiled in 115ms (355 modules)
+ ✓ Compiled in 137ms (355 modules)
+ ✓ Compiled in 65ms (341 modules)
+ ✓ Compiled in 136ms (355 modules)
+ ✓ Compiled in 155ms (355 modules)
+ ✓ Compiled in 102ms (355 modules)
+ ✓ Compiled in 51ms (341 modules)
+ ✓ Compiled in 100ms (355 modules)
+ ✓ Compiled in 51ms (341 modules)
+ ✓ Compiled in 139ms (355 modules)
+ ✓ Compiled in 66ms (341 modules)
+ ✓ Compiled in 161ms (355 modules)
+ ✓ Compiled in 124ms (355 modules)
+ ✓ Compiled in 91ms (355 modules)
+ ✓ Compiled in 101ms (355 modules)
+ ✓ Compiled in 104ms (355 modules)
+ ✓ Compiled in 124ms (355 modules)
+ ✓ Compiled in 109ms (355 modules)
+ ✓ Compiled in 131ms (355 modules)
+ ✓ Compiled in 111ms (355 modules)
+ ✓ Compiled in 91ms (355 modules)
+ ○ Compiling /api/admin/status ...
+ ✓ Compiled /api/admin/status in 1332ms (355 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1311ms (781 modules)
+ GET /api/admin/status 500 in 4929ms
+ ✓ Compiled in 224ms (698 modules)
+ ○ Compiling /admin/login ...
+ ✓ Compiled /admin/login in 933ms (1099 modules)
+ GET /admin/login 200 in 1100ms
+ GET /api/admin/status 200 in 2793ms
+ ✓ Compiled /api/admin/login in 169ms (1101 modules)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "admin_users" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "admin_sessions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ POST /api/admin/login 200 in 1653ms
+ ✓ Compiled /admin in 418ms (1171 modules)
+ GET /admin 200 in 964ms
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "admin_users" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "admin_sessions" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ GET /api/admin/status 200 in 423ms
+ ✓ Compiled in 247ms (600 modules)
+ ✓ Compiled in 190ms (600 modules)
+ ✓ Compiled in 137ms (600 modules)
+ ✓ Compiled in 140ms (600 modules)
+ ✓ Compiled in 130ms (600 modules)
+ ✓ Compiled in 131ms (600 modules)
+ ✓ Compiled in 152ms (600 modules)
+ ✓ Compiled in 153ms (600 modules)
+ ✓ Compiled in 250ms (600 modules)
+ ✓ Compiled in 201ms (600 modules)
+ ✓ Compiled in 132ms (600 modules)
+ ✓ Compiled in 149ms (600 modules)
+ ✓ Compiled in 149ms (600 modules)
+ ✓ Compiled in 142ms (600 modules)
+ ✓ Compiled in 258ms (600 modules)
+ ✓ Compiled in 176ms (600 modules)
+ ✓ Compiled in 358ms (600 modules)
+ ✓ Compiled in 214ms (600 modules)
+ ✓ Compiled in 212ms (600 modules)
+ ✓ Compiled in 215ms (600 modules)
+ ✓ Compiled in 201ms (600 modules)
+ ✓ Compiled in 192ms (600 modules)
+ ✓ Compiled / in 282ms (444 modules)
+ GET / 200 in 487ms
+ ✓ Compiled in 231ms (600 modules)
+ ✓ Compiled in 214ms (600 modules)
+ ✓ Compiled in 445ms (1044 modules)
+ ✓ Compiled in 261ms (600 modules)
+ ✓ Compiled in 158ms (600 modules)
+ ✓ Compiled in 136ms (600 modules)
+ ✓ Compiled in 244ms (600 modules)
+ ✓ Compiled in 185ms (600 modules)
+ ✓ Compiled in 128ms (600 modules)
+ ✓ Compiled in 176ms (600 modules)
+ ✓ Compiled in 215ms (600 modules)
+ ✓ Compiled in 157ms (600 modules)
+ ✓ Compiled in 240ms (600 modules)
+ ✓ Compiled in 188ms (600 modules)
+ ✓ Compiled in 276ms (600 modules)
+ ✓ Compiled in 203ms (600 modules)
+ ✓ Compiled in 159ms (600 modules)
+ ✓ Compiled in 169ms (600 modules)
+ ✓ Compiled in 311ms (654 modules)
+ ✓ Compiled in 146ms (600 modules)
+ ✓ Compiled / in 123ms (444 modules)
+ GET / 200 in 313ms
+   Reload env: .env.local
+ ✓ Compiled in 319ms (1145 modules)
+ ✓ Compiled in 237ms (600 modules)
+ ✓ Compiled in 207ms (600 modules)
+ ✓ Compiled in 236ms (654 modules)
+ ✓ Compiled in 176ms (600 modules)
+ ✓ Compiled in 155ms (600 modules)
+ ✓ Compiled in 153ms (600 modules)
+ ✓ Compiled in 298ms (600 modules)
+ ✓ Compiled in 216ms (600 modules)
+ ✓ Compiled in 211ms (600 modules)
+ ✓ Compiled in 190ms (600 modules)
+ ✓ Compiled in 192ms (600 modules)
+ ✓ Compiled in 205ms (600 modules)
+ ✓ Compiled in 283ms (600 modules)
+ ✓ Compiled in 190ms (600 modules)
+ ✓ Compiled in 224ms (600 modules)
+ ✓ Compiled in 224ms (600 modules)
+ ✓ Compiled in 155ms (600 modules)
+ ✓ Compiled in 250ms (600 modules)
+ ✓ Compiled in 160ms (600 modules)
+   Reload env: .env.local
+ ✓ Compiled in 2.9s (773 modules)
+ ✓ Compiled in 237ms (600 modules)
+ ✓ Compiled in 146ms (600 modules)
+ ✓ Compiled in 189ms (600 modules)
+ ✓ Compiled in 140ms (600 modules)
+ ✓ Compiled in 167ms (600 modules)
+ ✓ Compiled in 141ms (600 modules)
+ ✓ Compiled in 168ms (600 modules)
+ ✓ Compiled in 175ms (600 modules)
+ ✓ Compiled in 124ms (600 modules)
+ ✓ Compiled in 205ms (600 modules)
+ ✓ Compiled in 518ms (600 modules)
+ ✓ Compiled in 223ms (600 modules)
+ ✓ Compiled in 239ms (600 modules)
+ ✓ Compiled in 242ms (600 modules)
+ ✓ Compiled in 239ms (600 modules)
+ ✓ Compiled in 177ms (600 modules)
+ ✓ Compiled in 267ms (600 modules)
+ ✓ Compiled in 231ms (600 modules)
+ ✓ Compiled in 257ms (600 modules)
+ ✓ Compiled in 177ms (600 modules)
+ ✓ Compiled in 161ms (600 modules)
+ ✓ Compiled in 231ms (600 modules)
+ ✓ Compiled in 188ms (600 modules)
+ ✓ Compiled in 208ms (600 modules)
+ ✓ Compiled in 174ms (600 modules)
+ ✓ Compiled in 188ms (600 modules)
+ ✓ Compiled in 169ms (600 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 930ms (444 modules)
+ GET / 200 in 1226ms
+ ✓ Compiled in 246ms (600 modules)
+ ✓ Compiled in 117ms (600 modules)
+ ✓ Compiled in 140ms (600 modules)
+ ✓ Compiled in 365ms (654 modules)
+ ✓ Compiled in 116ms (600 modules)
+ ✓ Compiled in 221ms (600 modules)
+ ✓ Compiled in 472ms (600 modules)
+ ✓ Compiled in 414ms (600 modules)
+ ✓ Compiled in 282ms (600 modules)
+ ✓ Compiled in 226ms (600 modules)
+ ✓ Compiled in 155ms (600 modules)
+ ✓ Compiled in 218ms (600 modules)
+ ✓ Compiled in 196ms (600 modules)
+ ✓ Compiled in 411ms (741 modules)
+ ✓ Compiled in 432ms (741 modules)
+ ✓ Compiled in 159ms (600 modules)
+ ✓ Compiled in 173ms (600 modules)
+ ✓ Compiled in 159ms (600 modules)
+ ✓ Compiled in 162ms (600 modules)
+ ✓ Compiled in 142ms (600 modules)
+ ✓ Compiled in 249ms (600 modules)
+ ✓ Compiled in 157ms (600 modules)
+ ✓ Compiled in 151ms (600 modules)
+ ✓ Compiled in 227ms (600 modules)
+ ✓ Compiled in 151ms (600 modules)
+ ✓ Compiled in 140ms (600 modules)
+ ✓ Compiled in 123ms (600 modules)
+ ✓ Compiled in 132ms (600 modules)
+ ✓ Compiled in 133ms (600 modules)
+ ✓ Compiled in 160ms (600 modules)
+ ✓ Compiled /admin/login in 111ms (428 modules)
+ GET /admin/login 200 in 263ms
+ ✓ Compiled /_not-found in 206ms (1032 modules)
+ GET /_next/static/css/app/layout.css?v=1773605634776 404 in 373ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 372ms
+ GET /_next/static/chunks/main-app.js?v=1773605634776 404 in 374ms
+ ✓ Compiled in 180ms (603 modules)
+ ✓ Compiled in 206ms (600 modules)
+ ✓ Compiled in 172ms (600 modules)
+ GET /admin/login 200 in 66ms
+ ✓ Compiled /_not-found in 190ms (1018 modules)
+ GET /_next/static/chunks/app-pages-internals.js 404 in 311ms
+ GET /_next/static/css/app/layout.css?v=1773605792171 404 in 329ms
+ GET /_next/static/chunks/main-app.js?v=1773605792171 404 in 312ms
+ ✓ Compiled in 177ms (603 modules)
+ ✓ Compiled in 176ms (603 modules)
+
+C:\Users\Admin\Desktop\SSNails\nailify>

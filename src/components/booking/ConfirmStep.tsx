@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 
 export function ConfirmStep() {
   const { t } = useTranslation();
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectedSlot = useBookingStore((state) => state.selectedSlot);
   const selectedAddOns = useBookingStore((state) => state.selectedAddOns);
@@ -18,26 +16,49 @@ export function ConfirmStep() {
   const totalDuration = useBookingStore((state) => state.totalDuration);
   const setStatus = useBookingStore((state) => state.setStatus);
 
-  const selectedExtras = selectedAddOns.filter((a) => a.selected);
+  const selectedExtras = selectedAddOns.filter((addOn) => addOn.selected);
 
   const handleConfirm = async () => {
+    if (!selectedService || !selectedSlot || !contactInfo) return;
+
     setIsLoading(true);
     setStatus('confirming');
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch('/api/bookings/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'guided',
+          service: selectedService,
+          slot: selectedSlot,
+          contact: contactInfo,
+          addOns: selectedExtras,
+          totalPrice,
+          totalDuration,
+        }),
+      });
 
-    // Mark as success
-    setStatus('success');
-    setIsLoading(false);
+      if (!response.ok) {
+        throw new Error('Booking checkout failed');
+      }
 
-    // Redirect to success page
-    router.push('/success');
+      const data = (await response.json()) as { checkoutUrl?: string };
+      if (!data.checkoutUrl) {
+        throw new Error('Missing Stripe checkout URL');
+      }
+
+      window.location.href = data.checkoutUrl;
+    } catch (error) {
+      console.error('Confirm booking error:', error);
+      setStatus('error');
+      setIsLoading(false);
+    }
   };
 
   if (!selectedService || !selectedSlot) {
     return (
-      <div className="text-center py-8">
+      <div className="py-8 text-center">
         <p className="text-gray-500">{t('confirm.missingDetails')}</p>
         <p className="text-sm text-gray-400">{t('confirm.completeAllSteps')}</p>
       </div>
@@ -46,73 +67,90 @@ export function ConfirmStep() {
 
   return (
     <div className="animate-fade-in">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          {t('confirm.title')}
-        </h2>
-        <p className="text-gray-500">
-          {t('confirm.reviewDetails')}
-        </p>
+      <div className="mb-6 text-center">
+        <h2 className="mb-2 text-2xl font-semibold text-gray-800">{t('confirm.title')}</h2>
+        <p className="text-gray-500">{t('confirm.reviewDetails')}</p>
       </div>
 
-      {/* Booking Summary Card */}
-      <div className="bg-white rounded-2xl border-2 border-gray-100 p-5 mb-6">
-        {/* Service */}
-        <div className="pb-4 mb-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-800 text-lg mb-1">
-            {selectedService.name}
-          </h3>
+      <div className="mb-6 rounded-2xl border-2 border-gray-100 bg-white p-5">
+        <div className="mb-4 border-b border-gray-100 pb-4">
+          <h3 className="mb-1 text-lg font-semibold text-gray-800">{selectedService.name}</h3>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">
               {selectedService.duration} {t('common.minutes')}
             </span>
-            <span className="font-semibold text-gray-800">
-              €{selectedService.price}
-            </span>
+            <span className="font-semibold text-gray-800">EUR {selectedService.price}</span>
           </div>
         </div>
 
-        {/* Date & Time */}
-        <div className="pb-4 mb-4 border-b border-gray-100">
+        <div className="mb-4 border-b border-gray-100 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FFF9F5] rounded-xl flex items-center justify-center">
-              <svg className="w-5 h-5 text-[#D4A59A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF9F5]">
+              <svg className="h-5 w-5 text-[#D4A59A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
             </div>
             <div>
               <p className="font-medium text-gray-800">
-                {new Date(selectedSlot.date).toLocaleDateString('en-GB', { 
-                  weekday: 'long', 
-                  day: 'numeric', 
+                {new Date(selectedSlot.date).toLocaleDateString('en-GB', {
+                  weekday: 'long',
+                  day: 'numeric',
                   month: 'long',
-                  year: 'numeric'
+                  year: 'numeric',
                 })}
               </p>
-              <p className="text-sm text-gray-500">{t('confirm.at')} {selectedSlot.time}</p>
+              <p className="text-sm text-gray-500">
+                {t('confirm.at')} {selectedSlot.time}
+              </p>
+              {selectedSlot.isSos && (
+                <p className="text-xs font-medium text-[#b05387]">
+                  SOS: {selectedSlot.sosLabel || 'Kiire aeg'}{' '}
+                  {selectedSlot.sosSurcharge ? `(+EUR ${selectedSlot.sosSurcharge})` : '(lisatasuta)'}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Extras */}
         {selectedExtras.length > 0 && (
-          <div className="pb-4 mb-4 border-b border-gray-100">
-            <h4 className="text-sm font-medium text-gray-600 mb-2">{t('confirm.extras')}</h4>
+          <div className="mb-4 border-b border-gray-100 pb-4">
+            <h4 className="mb-2 text-sm font-medium text-gray-600">{t('confirm.extras')}</h4>
             {selectedExtras.map((extra) => (
-              <div key={extra.id} className="flex items-center justify-between text-sm py-1">
+              <div key={extra.id} className="flex items-center justify-between py-1 text-sm">
                 <span className="text-gray-600">{extra.name}</span>
-                <span className="text-gray-800">+€{extra.price}</span>
+                <span className="text-gray-800">+EUR {extra.price}</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Contact */}
-        <div className="pb-4 mb-4 border-b border-gray-100">
+        {selectedSlot.isSos && (
+          <div className="mb-4 border-b border-gray-100 pb-4">
+            <h4 className="mb-2 text-sm font-medium text-gray-600">SOS ajavalik</h4>
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="text-gray-600">Kiire aeg: {selectedSlot.time}</span>
+              <span className="font-semibold text-[#b05387]">
+                {selectedSlot.sosSurcharge ? `+EUR ${selectedSlot.sosSurcharge}` : 'Lisatasuta'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-4 border-b border-gray-100 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FFF9F5] rounded-xl flex items-center justify-center">
-              <svg className="w-5 h-5 text-[#D4A59A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF9F5]">
+              <svg className="h-5 w-5 text-[#D4A59A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
               </svg>
             </div>
             <div>
@@ -120,59 +158,34 @@ export function ConfirmStep() {
                 {contactInfo?.firstName} {contactInfo?.lastName}
               </p>
               <p className="text-sm text-gray-500">{contactInfo?.phone}</p>
-              {contactInfo?.email && (
-                <p className="text-sm text-gray-400">{contactInfo.email}</p>
-              )}
+              {contactInfo?.email && <p className="text-sm text-gray-400">{contactInfo.email}</p>}
             </div>
           </div>
         </div>
 
-        {/* Total */}
         <div className="flex items-center justify-between">
           <div>
             <span className="text-lg font-semibold text-gray-800">{t('confirm.total')}</span>
-            <p className="text-sm text-gray-500">{totalDuration} {t('confirm.totalTime')}</p>
+            <p className="text-sm text-gray-500">
+              {totalDuration} {t('confirm.totalTime')}
+            </p>
           </div>
-          <span className="text-2xl font-semibold text-[#D4A59A]">
-            €{totalPrice}
-          </span>
+          <span className="text-2xl font-semibold text-[#D4A59A]">EUR {totalPrice}</span>
         </div>
       </div>
 
-      {/* Terms */}
-      <p className="text-xs gray-400 text-center mb-6">
-        {t('confirm.agreeTerms')}
-      </p>
+      <p className="mb-4 text-center text-xs text-gray-400">10 EUR ettemaks kinnitab aja. Ülejäänud summa maksad kohapeal.</p>
 
-      {/* Confirm Button */}
       <button
         onClick={handleConfirm}
         disabled={isLoading}
-        className={`
-          w-full py-5 rounded-xl font-semibold transition-all duration-200
-          flex items-center justify-center gap-2
-          ${isLoading 
-            ? 'bg-gray-100 text-gray-400 cursor-wait' 
-            : 'bg-[#D4A59A] text-white hover:bg-[#C47D6D] active:scale-[0.98] shadow-lg hover:shadow-xl'
-          }
-        `}
+        className={`w-full rounded-xl py-5 font-semibold transition-all duration-200 ${
+          isLoading
+            ? 'cursor-wait bg-gray-100 text-gray-400'
+            : 'bg-[#D4A59A] text-white shadow-lg hover:bg-[#C47D6D] hover:shadow-xl active:scale-[0.98]'
+        }`}
       >
-        {isLoading ? (
-          <>
-            <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            {t('confirm.confirming')}
-          </>
-        ) : (
-          <>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            {t('confirm.confirmBooking')} • €{totalPrice}
-          </>
-        )}
+        {isLoading ? t('confirm.confirming') : 'Pay 10 EUR deposit'}
       </button>
     </div>
   );

@@ -145,7 +145,10 @@ export const useBookingStore = create<BookingState>()(
 
       selectDate: (date) => set({ selectedDate: date }),
 
-      selectSlot: (slot) => set({ selectedSlot: slot }),
+      selectSlot: (slot) => {
+        set({ selectedSlot: slot });
+        get().calculateTotals();
+      },
 
       setSelectedStyle: (style) => set({ selectedStyle: style }),
 
@@ -220,7 +223,7 @@ export const useBookingStore = create<BookingState>()(
       },
 
       calculateTotals: () => {
-        const { selectedService, selectedAddOns } = get();
+        const { selectedService, selectedAddOns, selectedSlot } = get();
         
         if (!selectedService) {
           set({ totalPrice: 0, totalDuration: 0 });
@@ -236,6 +239,10 @@ export const useBookingStore = create<BookingState>()(
             duration += addOn.duration;
           }
         });
+
+        if (selectedSlot?.isSos && selectedSlot.sosSurcharge) {
+          price += selectedSlot.sosSurcharge;
+        }
 
         set({ totalPrice: price, totalDuration: duration });
       },

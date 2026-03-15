@@ -1,0 +1,168 @@
+import { sql } from './db';
+
+export interface OrderRecord {
+  id: string;
+  orderType: 'booking_deposit' | 'product_purchase';
+  status: 'pending' | 'paid' | 'cancelled' | 'failed';
+  amountTotal: number;
+  currency: string;
+  stripeSessionId: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  items: Array<{ id: string; name: string; quantity: number; price: number }>;
+  createdAt: string;
+  paidAt: string | null;
+}
+
+interface CreateOrderInput {
+  orderType: 'booking_deposit' | 'product_purchase';
+  amountTotal: number;
+  currency?: string;
+  items?: Array<{ id: string; name: string; quantity: number; price: number }>;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  bookingId?: string;
+  status?: 'pending' | 'paid' | 'cancelled' | 'failed';
+}
+
+export async function ensureOrdersTable() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS orders (
+      id BIGSERIAL PRIMARY KEY,
+      order_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      amount_total INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'eur',
+      stripe_session_id TEXT UNIQUE,
+      customer_name TEXT,
+      customer_email TEXT,
+      customer_phone TEXT,
+      booking_id BIGINT,
+      items_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      paid_at TIMESTAMPTZ
+    )
+  `;
+}
+
+export async function createOrder(input: CreateOrderInput) {
+  const [row] = await sql<[{ id: number }]>`
+    INSERT INTO orders (
+      order_type,
+      status,
+      amount_total,
+      currency,
+      customer_name,
+      customer_email,
+      customer_phone,
+      booking_id,
+      items_json
+    ) VALUES (
+      ${input.orderType},
+      ${input.status ?? 'pending'},
+      ${input.amountTotal},
+      ${input.currency ?? 'eur'},
+      ${input.customerName ?? null},
+      ${input.customerEmail ?? null},
+      ${input.customerPhone ?? null},
+      ${input.bookingId ? Number(input.bookingId) : null},
+      ${JSON.stringify(input.items ?? [])}
+    )
+    RETURNING id
+  `;
+
+  return String(row.id);
+}
+
+export async function setOrderStripeSession(orderId: string, sessionId: string) {
+  await sql`
+    UPDATE orders
+    SET stripe_session_id = ${sessionId}
+    WHERE id = ${orderId}::bigint
+  `;
+}
+
+export async function markOrderPaidBySession(sessionId: string) {
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE orders
+    SET status = 'paid',
+        paid_at = NOW()
+    WHERE stripe_session_id = ${sessionId}
+    RETURNING id
+  `;
+
+  return row ? String(row.id) : null;
+}
+
+export async function listOrders(limit = 100): Promise<OrderRecord[]> {
+  const safeLimit = Math.max(1, Math.min(500, Math.floor(limit)));
+  const rows = await sql<{
+    id: number;
+    order_type: 'booking_deposit' | 'product_purchase';
+    status: 'pending' | 'paid' | 'cancelled' | 'failed';
+    amount_total: number;
+    currency: string;
+    stripe_session_id: string | null;
+    customer_name: string | null;
+    customer_email: string | null;
+    customer_phone: string | null;
+    items_json:
+      | Array<{ id: string; name: string; quantity: number; price: number }>
+      | string;
+    created_at: string;
+    paid_at: string | null;
+  }[]>`
+    SELECT
+      id,
+      order_type,
+      status,
+      amount_total,
+      currency,
+      stripe_session_id,
+      customer_name,
+      customer_email,
+      customer_phone,
+      items_json,
+      created_at::text,
+      paid_at::text
+    FROM orders
+    ORDER BY created_at DESC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => {
+    let parsedItems: Array<{ id: string; name: string; quantity: number; price: number }> = [];
+    if (Array.isArray(row.items_json)) {
+      parsedItems = row.items_json;
+    } else if (typeof row.items_json === 'string') {
+      try {
+        parsedItems = JSON.parse(row.items_json) as Array<{
+          id: string;
+          name: string;
+          quantity: number;
+          price: number;
+        }>;
+      } catch {
+        parsedItems = [];
+      }
+    }
+
+    return {
+      id: String(row.id),
+      orderType: row.order_type,
+      status: row.status,
+      amountTotal: row.amount_total,
+      currency: row.currency,
+      stripeSessionId: row.stripe_session_id,
+      customerName: row.customer_name,
+      customerEmail: row.customer_email,
+      customerPhone: row.customer_phone,
+      items: parsedItems,
+      createdAt: row.created_at,
+      paidAt: row.paid_at,
+    };
+  });
+}
+

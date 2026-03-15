@@ -10,16 +10,15 @@ import { DateTimeStep } from '@/components/booking/DateTimeStep';
 import { ContactStep } from '@/components/booking/ContactStep';
 import { ExtrasStep } from '@/components/booking/ExtrasStep';
 import { ConfirmStep } from '@/components/booking/ConfirmStep';
-import { mockServices } from '@/store/mock-data';
+import { useServices } from '@/hooks/use-services';
 
-// Gallery nail styles for deep linking - must match homepage
 const nailStyles = [
-  { id: '1', name: 'Glossy Pink French', slug: 'glossy-pink-french', recommendedServiceId: 'gel-manicure', emoji: '💅' },
-  { id: '2', name: 'Matte Nude', slug: 'matte-nude', recommendedServiceId: 'gel-manicure', emoji: '🎀' },
-  { id: '3', name: 'Chrome Silver', slug: 'chrome-silver', recommendedServiceId: 'nail-art', emoji: '✨' },
-  { id: '4', name: 'Ombre Sunset', slug: 'ombre-sunset', recommendedServiceId: 'gel-manicure', emoji: '🌅' },
-  { id: '5', name: 'Ruby Red', slug: 'ruby-red', recommendedServiceId: 'gel-manicure', emoji: '❤️' },
-  { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: '⚪' },
+  { id: '1', name: 'Glossy Pink French', slug: 'glossy-pink-french', recommendedServiceId: 'gel-manicure', emoji: 'P' },
+  { id: '2', name: 'Matte Nude', slug: 'matte-nude', recommendedServiceId: 'gel-manicure', emoji: 'N' },
+  { id: '3', name: 'Chrome Silver', slug: 'chrome-silver', recommendedServiceId: 'nail-art', emoji: 'C' },
+  { id: '4', name: 'Ombre Sunset', slug: 'ombre-sunset', recommendedServiceId: 'gel-manicure', emoji: 'O' },
+  { id: '5', name: 'Ruby Red', slug: 'ruby-red', recommendedServiceId: 'gel-manicure', emoji: 'R' },
+  { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: 'W' },
 ];
 
 function BookingContent() {
@@ -34,40 +33,57 @@ function BookingContent() {
   const selectedStyle = useBookingStore((state) => state.selectedStyle);
   const setSelectedStyle = useBookingStore((state) => state.setSelectedStyle);
   const selectService = useBookingStore((state) => state.selectService);
+  const selectDate = useBookingStore((state) => state.selectDate);
+  const setStep = useBookingStore((state) => state.setStep);
   const nextStep = useBookingStore((state) => state.nextStep);
-  
-  // Calculate total price locally
+  const { services } = useServices();
+
   const total = selectedService?.price || 0;
   const serviceRef = useRef<HTMLDivElement>(null);
+  const stylePreview = selectedStyle?.emoji ?? 'S';
+  const selectedSlotLabel = selectedSlot
+    ? `${selectedSlot.date} ${t('confirm.at')} ${selectedSlot.time}`
+    : null;
 
-  // Handle style deep link - preselect service
   useEffect(() => {
     const styleSlug = searchParams.get('style');
+    const serviceId = searchParams.get('service');
+    const dateParam = searchParams.get('date');
+
+    if (serviceId) {
+      const directService = services.find((service) => service.id === serviceId);
+      if (directService) {
+        selectService(directService);
+        setStep(2);
+        if (dateParam) {
+          const parsed = new Date(`${dateParam}T00:00:00`);
+          if (!Number.isNaN(parsed.getTime())) {
+            selectDate(parsed);
+          }
+        }
+      }
+    }
+
     if (styleSlug) {
-      const style = nailStyles.find(s => s.slug === styleSlug);
+      const style = nailStyles.find((item) => item.slug === styleSlug);
       if (style) {
         setSelectedStyle(style);
-        // Preselect the recommended service
-        const recommendedService = mockServices.find(s => s.id === style.recommendedServiceId);
+        const recommendedService = services.find((service) => service.id === style.recommendedServiceId);
         if (recommendedService && !selectedService) {
           selectService(recommendedService);
-          // Auto-advance after short delay for smooth UX
           setTimeout(() => {
             nextStep();
-            // Scroll service into view if needed
             serviceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }, 300);
         }
       }
     }
-  }, [searchParams, setSelectedStyle, selectService, selectedService, nextStep]);
+  }, [searchParams, setSelectedStyle, selectService, selectedService, nextStep, services, selectDate, setStep]);
 
-  // Initialize - set mode to guided and ensure we start at step 1
   useEffect(() => {
     setMode('guided');
   }, [setMode]);
 
-  // Scroll to top when step changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
@@ -98,109 +114,92 @@ function BookingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F0EB]">
-      {/* Premium Identity Block */}
-      <div className="bg-white border-b border-gray-100 py-3">
-        <div className="max-w-xl mx-auto px-4 flex items-center justify-center gap-3">
-          <div className="flex items-center gap-2">
-            {/* Elegant avatar placeholder */}
-            <div className="w-8 h-8 rounded-full bg-[#D4A59A]/20 flex items-center justify-center">
-              <span className="text-sm text-[#D4A59A]">S</span>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#f7f2ee_42%,_#f3ede8_100%)]">
+      <div className="border-b border-white/70 bg-white/75 backdrop-blur-xl">
+        <div className="mx-auto max-w-xl px-4 py-4">
+          <div className="flex items-center justify-between gap-4 rounded-[28px] bg-white/80 px-4 py-3 shadow-[0_20px_55px_-40px_rgba(72,49,35,0.45)] ring-1 ring-[#e7ddd6]">
+            <div className="flex items-center gap-3">
+              <div className="relative h-12 w-12 overflow-hidden rounded-full bg-[linear-gradient(145deg,#f2ddd4,#cfa293)] shadow-[0_10px_24px_-14px_rgba(84,49,32,0.75)]">
+                <div className="absolute inset-[3px] rounded-full bg-[radial-gradient(circle_at_30%_30%,#fff6f0,_#d3a08f_70%,#b98271_100%)]" />
+                <div className="absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.26em] text-[#b08979]">Appointment Preview</p>
+                <p className="text-sm font-semibold text-[#3d3028]">{t('booking.bookingWith')} Sandra</p>
+                <p className="text-xs text-[#8c7568]">Mustamae Studio</p>
+              </div>
             </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-gray-800">{t('booking.bookingWith')} Sandra</p>
-              <p className="text-xs text-gray-400">{t('trust.mustamaeStudio')}</p>
+            <div className="hidden min-[430px]:flex items-center gap-2 rounded-full bg-[#fbf6f2] px-3 py-1.5 text-[11px] font-medium text-[#7b6559] ring-1 ring-[#efe4dc]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#c59b8d]" />
+              Certified nail technician
             </div>
           </div>
-          <span className="text-gray-200">•</span>
-          <span className="text-xs text-gray-400">{t('trust.certifiedTechnician')}</span>
         </div>
       </div>
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-[73px] z-10">
-        <div className="max-w-xl mx-auto px-4 py-4">
+      <header className="sticky top-[89px] z-10 border-b border-white/70 bg-white/70 backdrop-blur-xl">
+        <div className="mx-auto max-w-xl px-4 py-4">
           <div className="flex items-center justify-between">
-            {/* Back Button */}
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-[#D4A59A] transition-colors"
+              className="flex items-center gap-2 text-gray-600 transition-colors hover:text-[#b58373]"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               <span className="text-sm font-medium">{t('booking.back')}</span>
             </button>
 
-            {/* Logo */}
-            <h1 className="text-xl font-semibold text-[#D4A59A]">Nailify</h1>
+            <div className="text-center">
+              <h1 className="text-xl font-semibold tracking-[0.08em] text-[#b58373]">Nailify</h1>
+              <p className="text-[11px] text-[#9f887b]">Designed for easy booking</p>
+            </div>
 
-            {/* Spacer for balance */}
             <div className="w-16" />
           </div>
         </div>
       </header>
 
-      {/* Progress Bar */}
       <BookingProgressBar />
 
-      {/* Sticky Booking Summary - Shows after step 2 */}
       {currentStep >= 3 && (selectedService || selectedSlot) && (
-        <div className="sticky top-[73px] z-10 bg-white border-b border-gray-100 shadow-sm">
-          <div className="max-w-xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {selectedStyle && (
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="text-lg">{selectedStyle.emoji}</span>
-                    <span className="text-gray-700 font-medium">{selectedStyle.name}</span>
-                  </div>
-                )}
-                {selectedStyle && (selectedService || selectedSlot) && (
-                  <span className="text-gray-300">•</span>
-                )}
-                {selectedService && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">{selectedService.name}</span>
-                  </div>
-                )}
-                {selectedService && selectedSlot && (
-                  <span className="text-gray-300">•</span>
-                )}
-                {selectedSlot && (
-                  <div className="flex items-center gap-1 text-sm text-gray-500">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span>
-                      {selectedSlot.date} {t('confirm.at')} {selectedSlot.time}
-                    </span>
-                  </div>
-                )}
+        <div className="sticky top-[89px] z-10 border-b border-white/70 bg-white/70 backdrop-blur-xl">
+          <div className="mx-auto max-w-xl px-4 py-3">
+            <div className="flex items-center justify-between gap-4 rounded-[24px] bg-white/85 px-4 py-3 shadow-[0_18px_45px_-35px_rgba(72,49,35,0.5)] ring-1 ring-[#ece1da]">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#f4e4dc,#e8c1b3)] text-lg text-[#9e725f] shadow-inner">
+                  {stylePreview}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-[#aa8a7b]">Appointment preview</p>
+                  <p className="truncate text-sm font-semibold text-[#3d3028]">
+                    {selectedService?.name || selectedStyle?.name || 'Nailify booking'}
+                  </p>
+                  {selectedSlotLabel && (
+                    <p className="truncate text-xs text-[#7d685d]">Approximate appointment time: {selectedSlotLabel}</p>
+                  )}
+                </div>
               </div>
-              <div className="text-sm font-semibold text-[#D4A59A]">
-                €{total}
+              <div className="shrink-0 text-right">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#aa8a7b]">Estimated total</p>
+                <div className="text-sm font-semibold text-[#b58373]">EUR {total}</div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="max-w-xl mx-auto px-4 py-8">
-        {/* Floating Premium Card Effect */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] overflow-hidden">
-          {/* Subtle top gradient line */}
-          <div className="h-1 bg-gradient-to-r from-[#D4A59A] via-[#E8C4B8] to-[#D4A59A]" />
-          
-          {/* Step Animation Container */}
-          <div className="animate-fade-in p-6 sm:p-8" key={currentStep}>
+      <main className="mx-auto max-w-xl px-4 py-8 sm:py-10">
+        <div className="overflow-hidden rounded-[32px] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,250,247,0.98)_100%)] shadow-[0_24px_70px_-34px_rgba(62,42,30,0.32),0_12px_30px_-24px_rgba(62,42,30,0.22)] ring-1 ring-white/80">
+          <div className="px-6 pt-5 text-center sm:px-8">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[#b08979]">Tailored to your selected style</p>
+          </div>
+          <div className="animate-fade-in px-6 pb-7 pt-4 sm:px-8 sm:pb-8 sm:pt-5" key={currentStep}>
             {renderStep()}
           </div>
         </div>
       </main>
 
-      {/* CSS Animation */}
       <style jsx>{`
         @keyframes fade-in {
           from {
@@ -220,14 +219,15 @@ function BookingContent() {
   );
 }
 
-// Default export with Suspense boundary for useSearchParams
 export default function BookingPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[#F5F0EB] flex items-center justify-center">
-        <div className="animate-pulse text-[#D4A59A]">Laadimine...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#f5f0eb]">
+          <div className="animate-pulse text-[#b58373]">Laadimine...</div>
+        </div>
+      }
+    >
       <BookingContent />
     </Suspense>
   );

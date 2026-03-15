@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -65,19 +65,34 @@ export function FastBookingSheet({
         throw new Error(t('contact.required'));
       }
 
-      // Optimistic update - show success immediately
-      setIsLoading(false);
-      setIsSuccess(true);
-      setStatus('success');
-      
       // Save contact info
       setContactInfo(formData);
       calculateTotals();
 
-      // Redirect after showing success
-      setTimeout(() => {
-        router.push('/success');
-      }, 2000);
+      const response = await fetch('/api/bookings/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'fast',
+          service,
+          slot,
+          contact: formData,
+          addOns: [],
+          totalPrice: service.price,
+          totalDuration: service.duration,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(t('error.somethingWrong'));
+      }
+
+      const data = (await response.json()) as { checkoutUrl?: string };
+      if (!data.checkoutUrl) {
+        throw new Error('Missing Stripe checkout URL');
+      }
+      setStatus('confirming');
+      window.location.href = data.checkoutUrl;
 
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error.somethingWrong'));
@@ -118,8 +133,8 @@ export function FastBookingSheet({
                 </svg>
               </div>
               {/* Sparkle effects */}
-              <span className="absolute -top-2 -right-2 text-2xl animate-sparkle-1">✨</span>
-              <span className="absolute -bottom-1 -left-2 text-xl animate-sparkle-2">💅</span>
+              <span className="absolute -top-2 -right-2 text-2xl animate-sparkle-1">*</span>
+              <span className="absolute -bottom-1 -left-2 text-xl animate-sparkle-2">*</span>
             </div>
             
             {/* Emotional Headline */}
@@ -137,7 +152,7 @@ export function FastBookingSheet({
             {/* Add to Calendar CTA */}
             <button 
               onClick={() => router.push('/success')}
-              className="mt-6 px-6 py-3 bg-[#D4A59A] text-white rounded-full font-medium hover:bg-[#C47D6D] transition-colors"
+              className="mt-6 px-6 py-3 bg-[#B58373] text-white rounded-full font-medium hover:bg-[#9F6D5C] transition-colors"
             >
               {t('fastBook.addToCalendar')}
             </button>
@@ -153,7 +168,7 @@ export function FastBookingSheet({
                     {t('fastBook.quickBook')}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {service.name} • {service.duration} {t('common.minutes')}
+                    {service.name} | {service.duration} {t('common.minutes')}
                   </p>
                 </div>
                 <button
@@ -168,7 +183,7 @@ export function FastBookingSheet({
 
               {/* Time Display */}
               <div className="mt-4 p-4 bg-[#FFF9F5] rounded-xl">
-                <div className="flex items-center gap-2 text-[#D4A59A]">
+                <div className="flex items-center gap-2 text-[#B58373]">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -197,7 +212,7 @@ export function FastBookingSheet({
                   value={formData.firstName}
                   onChange={handleChange}
                   placeholder={t('fastBook.yourFirstName')}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-[#D4A59A] focus:outline-none focus:ring-2 focus:ring-[#D4A59A]/20 transition-colors duration-200"
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-[#B58373] focus:outline-none focus:ring-2 focus:ring-[#B58373]/20 transition-colors duration-200"
                   required
                 />
               </div>
@@ -213,7 +228,7 @@ export function FastBookingSheet({
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="+44 7700 900000"
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-[#D4A59A] focus:outline-none focus:ring-2 focus:ring-[#D4A59A]/20 transition-colors duration-200"
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-[#B58373] focus:outline-none focus:ring-2 focus:ring-[#B58373]/20 transition-colors duration-200"
                   required
                 />
               </div>
@@ -229,7 +244,7 @@ export function FastBookingSheet({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-4 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] disabled:opacity-50 transition-all duration-200 flex items-center justify-center gap-2"
+                className="w-full py-4 bg-[#B58373] text-white font-semibold rounded-xl hover:bg-[#9F6D5C] active:scale-[0.98] disabled:opacity-50 transition-all duration-200 flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>
@@ -246,7 +261,7 @@ export function FastBookingSheet({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    {t('contact.confirmBooking')} • €{service.price}
+                    Pay 10 EUR deposit
                   </>
                 )}
               </button>
@@ -256,9 +271,9 @@ export function FastBookingSheet({
                 <button
                   type="button"
                   onClick={onSwitchToFull}
-                  className="w-full py-3 text-gray-500 text-sm hover:text-[#D4A59A] transition-colors duration-200"
+                  className="w-full py-3 text-gray-500 text-sm hover:text-[#B58373] transition-colors duration-200"
                 >
-                  {t('fastBook.orFullForm')} →
+                  {t('fastBook.orFullForm')} -&gt;
                 </button>
               )}
             </form>
@@ -318,3 +333,6 @@ export function FastBookingSheet({
 }
 
 export default FastBookingSheet;
+
+
+
