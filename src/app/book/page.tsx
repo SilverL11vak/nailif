@@ -1,0 +1,111 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useBookingStore } from '@/store/booking-store';
+import { BookingProgressBar } from '@/components/booking/BookingProgressBar';
+import { ServiceStep } from '@/components/booking/ServiceStep';
+import { DateTimeStep } from '@/components/booking/DateTimeStep';
+import { ContactStep } from '@/components/booking/ContactStep';
+import { ExtrasStep } from '@/components/booking/ExtrasStep';
+import { ConfirmStep } from '@/components/booking/ConfirmStep';
+
+export default function BookingPage() {
+  const router = useRouter();
+  const currentStep = useBookingStore((state) => state.currentStep);
+  const prevStep = useBookingStore((state) => state.prevStep);
+  const setMode = useBookingStore((state) => state.setMode);
+  const reset = useBookingStore((state) => state.reset);
+  const selectedService = useBookingStore((state) => state.selectedService);
+
+  // Initialize - set mode to guided and ensure we start at step 1
+  useEffect(() => {
+    setMode('guided');
+  }, [setMode]);
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      prevStep();
+    } else {
+      router.push('/');
+    }
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return <ServiceStep />;
+      case 2:
+        return <DateTimeStep />;
+      case 3:
+        return <ContactStep />;
+      case 4:
+        return <ExtrasStep />;
+      case 5:
+        return <ConfirmStep />;
+      default:
+        return <ServiceStep />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F5F0EB]">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="max-w-xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Back Button */}
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-[#D4A59A] transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm font-medium">Back</span>
+            </button>
+
+            {/* Logo */}
+            <h1 className="text-xl font-semibold text-[#D4A59A]">Nailify</h1>
+
+            {/* Spacer for balance */}
+            <div className="w-16" />
+          </div>
+        </div>
+      </header>
+
+      {/* Progress Bar */}
+      <BookingProgressBar />
+
+      {/* Main Content */}
+      <main className="max-w-xl mx-auto px-4 py-8">
+        {/* Step Animation Container */}
+        <div className="animate-fade-in" key={currentStep}>
+          {renderStep()}
+        </div>
+      </main>
+
+      {/* CSS Animation */}
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
+    </div>
+  );
+}
