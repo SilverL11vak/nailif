@@ -10,6 +10,9 @@ export default function Home() {
   const router = useRouter();
   const [nextAvailable, setNextAvailable] = useState<string>('');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [discountPillDismissed, setDiscountPillDismissed] = useState(false);
+  const [visibleSteps, setVisibleSteps] = useState<number[]>([]);
 
   useEffect(() => {
     // Calculate next available slot
@@ -28,12 +31,41 @@ export default function Home() {
       }
     }
 
-    // Handle scroll for header shrink effect
+    // Handle scroll for header shrink effect and progress tracking
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+      
+      // Calculate scroll progress for discount pill
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const scrollableHeight = documentHeight - windowHeight;
+      const progress = scrollTop / scrollableHeight;
+      setScrollProgress(progress);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Intersection Observer for How It Works fade-in animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const stepIndex = parseInt(entry.target.getAttribute('data-step') || '0');
+            setVisibleSteps(prev => [...new Set([...prev, stepIndex])]);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    document.querySelectorAll('.how-it-works-step').forEach((el) => {
+      observer.observe(el);
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   const scrollToSection = (id: string) => {
@@ -58,6 +90,9 @@ export default function Home() {
     textSecondary: '#4B5563',  // gray-600
     textMuted: '#6B7280',     // gray-500
   };
+
+  // Show discount pill at 40% scroll
+  const showDiscountPill = scrollProgress > 0.4 && !discountPillDismissed;
 
   return (
     <div className="min-h-screen bg-white">
@@ -114,7 +149,7 @@ export default function Home() {
       </header>
 
       {/* ===================== */}
-      {/* 2. HERO SECTION */}
+      {/* 2. HERO SECTION - DOMINATION */}
       {/* ===================== */}
       <section className={`pt-24 lg:pt-28 pb-16 lg:pb-24 transition-all duration-300 ${
         isScrolled ? 'pt-20' : ''
@@ -139,17 +174,58 @@ export default function Home() {
 
               {/* Headline + Single Trust Signal */}
               <div className="max-w-xl">
+                {/* EMOTIONAL HERO HEADLINE */}
                 <h1 className="text-4xl lg:text-5xl font-medium text-gray-900 leading-tight mb-5 tracking-tight">
-                  Beautiful nails,<br />
-                  <span style={{ color: colors.primary }}>effortlessly booked</span>
+                  Obsessively beautiful nails.<br />
+                  <span style={{ color: colors.primary }}>Booked in seconds.</span>
                 </h1>
+                
+                {/* EMOTIONAL SUBTEXT */}
                 <p className="text-lg text-gray-500 mb-6 leading-relaxed">
-                  Experience precision nail artistry in our tranquil studio. 
-                  Expert technicians, lasting results.
+                  Long-lasting results crafted with meticulous attention to detail. 
+                  Book your appointment in moments and walk out with confidence.
                 </p>
 
-                {/* Single Trust Signal - Rating Only */}
-                <div className="flex items-center gap-3">
+                {/* Primary CTA - Dominant with shadow and lift */}
+                <button 
+                  onClick={() => router.push('/book')}
+                  className="px-8 py-4 text-white rounded-full font-semibold text-lg transition-all duration-300 hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  Book Your Appointment
+                </button>
+
+                {/* MICRO TRUST STRIP */}
+                <div className="flex flex-wrap items-center gap-4 mt-5 pt-5 border-t border-gray-100">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Certified Technician
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Mustamäe Studio
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                    Premium Products
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Hygienic Tools
+                  </div>
+                </div>
+
+                {/* Trust Rating */}
+                <div className="flex items-center gap-3 mt-6">
                   <div className="flex items-center gap-1">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
@@ -207,13 +283,14 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 4. POPULAR SERVICES */}
+      {/* 4. POPULAR SERVICES - CONVERSION OPTIMIZED */}
       {/* ===================== */}
       <section id="services" className="py-20 lg:py-28" style={{ backgroundColor: colors.backgroundAlt }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 lg:mb-16">
             <h2 className="text-3xl lg:text-4xl font-medium text-gray-900 mb-4 tracking-tight">Our Services</h2>
-            <p className="text-lg text-gray-500 max-w-2xl mx-auto">Expertly crafted treatments for lasting, beautiful results.</p>
+            {/* HELPER TEXT */}
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto">Choose your service and book in less than 30 seconds.</p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
@@ -221,13 +298,15 @@ export default function Home() {
               <div 
                 key={service.id}
                 onClick={() => router.push('/book')}
-                className="group bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                className="group bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02]"
               >
-                {/* Clean Image Area */}
-                <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center">
-                  <div className="text-5xl opacity-80 group-hover:opacity-100 transition-opacity">
+                {/* Clean Image Area with subtle visual indicator */}
+                <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center relative overflow-hidden">
+                  <div className="text-5xl opacity-80 group-hover:opacity-100 transition-opacity group-hover:scale-110 duration-300">
                     {service.category === 'manicure' ? '💅' : service.category === 'pedicure' ? '🦶' : service.category === 'extensions' ? '✨' : '🎨'}
                   </div>
+                  {/* Subtle overlay on hover */}
+                  <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 transition-colors duration-300" />
                 </div>
                 
                 {/* Content */}
@@ -247,7 +326,7 @@ export default function Home() {
 
                   {/* Quick Book CTA */}
                   <button 
-                    className="w-full py-2.5 text-white rounded-xl font-medium transition-all duration-200"
+                    className="w-full py-2.5 text-white rounded-xl font-medium transition-all duration-200 group-hover:shadow-md"
                     style={{ backgroundColor: colors.primary }}
                   >
                     Book
@@ -270,54 +349,80 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 5. HOW BOOKING WORKS */}
+      {/* 5. HOW BOOKING WORKS - CLARITY BOOST */}
       {/* ===================== */}
       <section className="py-20 lg:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 lg:mb-16">
             <h2 className="text-3xl lg:text-4xl font-medium text-gray-900 mb-4 tracking-tight">How It Works</h2>
-            <p className="text-lg text-gray-500">Book your appointment in minutes</p>
+            {/* HELPER SUBTEXT */}
+            <p className="text-lg text-gray-500">Simple 3-step booking flow.</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-16 max-w-4xl mx-auto">
-            {/* Step 1 */}
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 mb-5">
-                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Choose Service</h3>
-              <p className="text-gray-500 leading-relaxed">Select from our range of premium treatments</p>
-            </div>
+          {/* Connecting Progress Line - Hidden on mobile */}
+          <div className="relative max-w-4xl mx-auto">
+            {/* Progress line behind steps - desktop only */}
+            <div className="hidden md:block absolute top-6 left-1/4 right-1/4 h-px bg-gray-200 -translate-y-1/2" />
 
-            {/* Step 2 */}
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 mb-5">
-                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+            <div className="grid md:grid-cols-3 gap-8 lg:gap-16">
+              {/* Step 1 */}
+              <div 
+                data-step="1"
+                className={`how-it-works-step text-center transition-all duration-700 ${
+                  visibleSteps.includes(1) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                <div className="inline-flex items-center justify-center w-12 h-12 mb-5 relative">
+                  {/* Step number bubble */}
+                  <div className="absolute inset-0 bg-gray-100 rounded-full" />
+                  <svg className="w-8 h-8 text-gray-400 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Choose Service</h3>
+                <p className="text-gray-500 leading-relaxed">Select from our range of premium treatments</p>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Pick Time</h3>
-              <p className="text-gray-500 leading-relaxed">Choose a convenient time slot</p>
-            </div>
 
-            {/* Step 3 */}
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 mb-5">
-                <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+              {/* Step 2 */}
+              <div 
+                data-step="2"
+                className={`how-it-works-step text-center transition-all duration-700 delay-100 ${
+                  visibleSteps.includes(2) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                <div className="inline-flex items-center justify-center w-12 h-12 mb-5 relative">
+                  <div className="absolute inset-0 bg-gray-100 rounded-full" />
+                  <svg className="w-8 h-8 text-gray-400 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Pick Time</h3>
+                <p className="text-gray-500 leading-relaxed">Choose a convenient time slot</p>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Confirm</h3>
-              <p className="text-gray-500 leading-relaxed">Secure your booking instantly</p>
+
+              {/* Step 3 */}
+              <div 
+                data-step="3"
+                className={`how-it-works-step text-center transition-all duration-700 delay-200 ${
+                  visibleSteps.includes(3) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+              >
+                <div className="inline-flex items-center justify-center w-12 h-12 mb-5 relative">
+                  <div className="absolute inset-0 bg-gray-100 rounded-full" />
+                  <svg className="w-8 h-8 text-gray-400 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Confirm</h3>
+                <p className="text-gray-500 leading-relaxed">Secure your booking instantly</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ===================== */}
-      {/* 6. RESULTS GALLERY */}
+      {/* 6. RESULTS GALLERY - EDITORIAL RHYTHM */}
       {/* ===================== */}
       <section id="gallery" className="py-20 lg:py-28" style={{ backgroundColor: colors.backgroundAlt }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -326,27 +431,63 @@ export default function Home() {
             <p className="text-lg text-gray-500">A selection of recent work</p>
           </div>
 
-          {/* Clean Gallery Grid */}
+          {/* Editorial Gallery Grid with Featured Images */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-10">
-            {/* Large Feature */}
-            <div className="col-span-2 row-span-2">
-              <div className="aspect-square lg:aspect-[4/4] bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+            {/* Large Featured Image (positioned to create editorial rhythm) */}
+            <div className="col-span-2 row-span-2 relative overflow-hidden rounded-2xl">
+              <div className="aspect-square lg:aspect-[4/4] bg-gray-100 flex items-center justify-center cursor-pointer group">
                 <span className="text-6xl opacity-60">✦</span>
+                {/* Hover zoom + gloss overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
+                  <span className="text-white/80 text-sm font-medium">View Details</span>
+                </div>
               </div>
             </div>
             
-            {/* Clean Image Containers */}
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+            {/* Regular Image 1 */}
+            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
               <span className="text-4xl opacity-50">✦</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
+                <span className="text-white/80 text-xs font-medium">View</span>
+              </div>
             </div>
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+            
+            {/* Regular Image 2 */}
+            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
               <span className="text-4xl opacity-50">✦</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
+                <span className="text-white/80 text-xs font-medium">View</span>
+              </div>
             </div>
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+            
+            {/* Regular Image 3 */}
+            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
               <span className="text-4xl opacity-50">✦</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
+                <span className="text-white/80 text-xs font-medium">View</span>
+              </div>
             </div>
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+            
+            {/* Second Featured Image (inserted after 4 regular images for editorial rhythm) */}
+            <div className="col-span-2 aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
+              <span className="text-5xl opacity-50">✦</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
+                <span className="text-white/80 text-sm font-medium">View Details</span>
+              </div>
+            </div>
+
+            {/* Regular Image 4 */}
+            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
               <span className="text-4xl opacity-50">✦</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
+                <span className="text-white/80 text-xs font-medium">View</span>
+              </div>
             </div>
           </div>
 
@@ -605,7 +746,7 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 11. FINAL CTA */}
+      {/* 11. FINAL CTA - CLOSING ENERGY */}
       {/* ===================== */}
       <section className="py-20 lg:py-28 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -613,13 +754,30 @@ export default function Home() {
             <h2 className="text-3xl lg:text-4xl font-medium text-gray-900 mb-4 tracking-tight">
               Ready for Beautiful Nails?
             </h2>
-            <p className="text-lg text-gray-500 mb-8 max-w-xl mx-auto">
+            <p className="text-lg text-gray-500 mb-6 max-w-xl mx-auto">
               Secure your slot and experience the Nailify difference.
             </p>
+            
+            {/* REASSURANCE + RISK REMOVAL MICROCOPY */}
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center mb-8 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Most clients return within 4 weeks</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Free reschedule if plans change</span>
+              </div>
+            </div>
+            
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button 
                 onClick={() => router.push('/book')}
-                className="px-8 py-4 text-white rounded-full font-medium hover:opacity-90 transition-all duration-200 shadow-sm"
+                className="px-8 py-4 text-white rounded-full font-semibold hover:opacity-90 transition-all duration-200 shadow-lg"
                 style={{ backgroundColor: colors.primary }}
               >
                 Secure Your Slot
@@ -696,6 +854,34 @@ export default function Home() {
 
       {/* Mobile Sticky CTA */}
       <StickyBookingCTA hideOnPaths={['/book', '/success']} />
+
+      {/* ===================== */}
+      {/* FLOATING DISCOUNT PILL - Mobile Conversion Trigger */}
+      {/* ===================== */}
+      {showDiscountPill && (
+        <div className="fixed bottom-24 left-4 right-4 z-40 md:hidden">
+          <div 
+            onClick={() => router.push('/book')}
+            className="bg-gray-900 text-white px-5 py-3 rounded-full shadow-xl flex items-center justify-between cursor-pointer animate-in slide-in-from-bottom-4"
+          >
+            <div className="flex items-center gap-3">
+              <span className="bg-white text-gray-900 text-xs font-bold px-2 py-1 rounded-full">−15%</span>
+              <span className="text-sm font-medium">First Visit Offer</span>
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setDiscountPillDismissed(true);
+              }}
+              className="text-gray-400 hover:text-white p-1"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
