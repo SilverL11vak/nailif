@@ -43,7 +43,7 @@ export default function SuccessPage() {
           title: 'Nailify Booking',
           text: `I just booked an appointment at Nailify!`,
         });
-      } catch (err) {
+      } catch {
         console.log('Share cancelled');
       }
     } else {
