@@ -68,7 +68,7 @@ export function ContactStep() {
           Your Details
         </h2>
         <p className="text-gray-500">
-          We'll send your confirmation here
+          We&apos;ll send your confirmation here
         </p>
       </div>
 

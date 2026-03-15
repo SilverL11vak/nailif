@@ -15,7 +15,6 @@ export function ConfirmStep() {
   const totalPrice = useBookingStore((state) => state.totalPrice);
   const totalDuration = useBookingStore((state) => state.totalDuration);
   const setStatus = useBookingStore((state) => state.setStatus);
-  const reset = useBookingStore((state) => state.reset);
 
   const selectedExtras = selectedAddOns.filter((a) => a.selected);
 

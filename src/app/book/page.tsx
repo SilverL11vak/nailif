@@ -15,8 +15,6 @@ export default function BookingPage() {
   const currentStep = useBookingStore((state) => state.currentStep);
   const prevStep = useBookingStore((state) => state.prevStep);
   const setMode = useBookingStore((state) => state.setMode);
-  const reset = useBookingStore((state) => state.reset);
-  const selectedService = useBookingStore((state) => state.selectedService);
 
   // Initialize - set mode to guided and ensure we start at step 1
   useEffect(() => {
