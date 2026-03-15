@@ -7,7 +7,8 @@ import type {
   AddOn, 
   BookingStatus, 
   BookingMode, 
-  BookingStep 
+  BookingStep,
+  NailStyle 
 } from './booking-types';
 
 interface BookingState {
@@ -18,6 +19,9 @@ interface BookingState {
   selectedService: Service | null;
   selectedDate: Date | null;
   selectedSlot: TimeSlot | null;
+  
+  // Gallery style selection (from deep link)
+  selectedStyle: NailStyle | null;
   
   // Contact info
   contactInfo: ContactInfo | null;
@@ -49,6 +53,7 @@ interface BookingState {
   selectDate: (date: Date) => void;
   selectSlot: (slot: TimeSlot) => void;
   setContactInfo: (info: ContactInfo) => void;
+  setSelectedStyle: (style: NailStyle | null) => void;
   
   // Actions - Add-ons
   toggleAddOn: (addOn: AddOn) => void;
@@ -113,6 +118,7 @@ const initialState = {
   selectedService: null,
   selectedDate: null,
   selectedSlot: null,
+  selectedStyle: null,
   contactInfo: null,
   selectedAddOns: initialAddOns,
   currentStep: 1 as BookingStep,
@@ -140,6 +146,8 @@ export const useBookingStore = create<BookingState>()(
       selectDate: (date) => set({ selectedDate: date }),
 
       selectSlot: (slot) => set({ selectedSlot: slot }),
+
+      setSelectedStyle: (style) => set({ selectedStyle: style }),
 
       setContactInfo: (info) => set({ contactInfo: info }),
 

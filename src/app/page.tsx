@@ -5,9 +5,22 @@ import { useRouter } from 'next/navigation';
 import { HeroBookingWidget } from '@/components/booking/HeroBookingWidget';
 import { StickyBookingCTA } from '@/components/layout/StickyBookingCTA';
 import { mockServices, generateSlotsForDate } from '@/store/mock-data';
+import { useBookingStore } from '@/store/booking-store';
+import type { NailStyle } from '@/store/booking-types';
+
+// Gallery nail styles for deep linking
+const nailStyles: NailStyle[] = [
+  { id: '1', name: 'Glossy Pink French', slug: 'glossy-pink-french', recommendedServiceId: 'gel-manicure', emoji: '💅' },
+  { id: '2', name: 'Matte Nude', slug: 'matte-nude', recommendedServiceId: 'gel-manicure', emoji: '🎀' },
+  { id: '3', name: 'Chrome Silver', slug: 'chrome-silver', recommendedServiceId: 'nail-art', emoji: '✨' },
+  { id: '4', name: 'Ombre Sunset', slug: 'ombre-sunset', recommendedServiceId: 'gel-manicure', emoji: '🌅' },
+  { id: '5', name: 'Ruby Red', slug: 'ruby-red', recommendedServiceId: 'gel-manicure', emoji: '❤️' },
+  { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: '⚪' },
+];
 
 export default function Home() {
   const router = useRouter();
+  const setSelectedStyle = useBookingStore((state) => state.setSelectedStyle);
   const [nextAvailable, setNextAvailable] = useState<string>('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -73,6 +86,12 @@ export default function Home() {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  // Handle booking from gallery - deep link to booking with style
+  const handleBookStyle = (style: NailStyle) => {
+    setSelectedStyle(style);
+    router.push(`/book?style=${style.slug}`);
   };
 
   const services = mockServices.slice(0, 4);
@@ -434,61 +453,80 @@ export default function Home() {
           {/* Editorial Gallery Grid with Featured Images */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-10">
             {/* Large Featured Image (positioned to create editorial rhythm) */}
-            <div className="col-span-2 row-span-2 relative overflow-hidden rounded-2xl">
-              <div className="aspect-square lg:aspect-[4/4] bg-gray-100 flex items-center justify-center cursor-pointer group">
-                <span className="text-6xl opacity-60">✦</span>
+            {nailStyles[0] && (
+              <div 
+                className="col-span-2 row-span-2 relative overflow-hidden rounded-2xl cursor-pointer group"
+                onClick={() => handleBookStyle(nailStyles[0])}
+              >
+                <div className="aspect-square lg:aspect-[4/4] bg-gray-100 flex items-center justify-center">
+                  <span className="text-6xl opacity-60">{nailStyles[0].emoji}</span>
+                </div>
                 {/* Hover zoom + gloss overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
-                  <span className="text-white/80 text-sm font-medium">View Details</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                {/* Book this style CTA */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <span className="text-white text-sm font-medium mb-2">{nailStyles[0].name}</span>
+                  <span className="px-4 py-2 bg-white/90 text-gray-900 text-xs font-semibold rounded-full shadow-lg">
+                    Book this style
+                  </span>
                 </div>
               </div>
-            </div>
+            )}
             
-            {/* Regular Image 1 */}
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
-              <span className="text-4xl opacity-50">✦</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
-                <span className="text-white/80 text-xs font-medium">View</span>
+            {/* Regular Images */}
+            {nailStyles.slice(1, 4).map((style) => (
+              <div 
+                key={style.id}
+                className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative"
+                onClick={() => handleBookStyle(style)}
+              >
+                <span className="text-4xl opacity-50">{style.emoji}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                {/* Book this style CTA */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <span className="text-white text-xs font-medium mb-1.5">{style.name}</span>
+                  <span className="px-3 py-1.5 bg-white/90 text-gray-900 text-xs font-semibold rounded-full">
+                    Book this style
+                  </span>
+                </div>
               </div>
-            </div>
+            ))}
             
-            {/* Regular Image 2 */}
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
-              <span className="text-4xl opacity-50">✦</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
-                <span className="text-white/80 text-xs font-medium">View</span>
+            {/* Second Featured Image */}
+            {nailStyles[4] && (
+              <div 
+                className="col-span-2 aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative"
+                onClick={() => handleBookStyle(nailStyles[4])}
+              >
+                <span className="text-5xl opacity-50">{nailStyles[4].emoji}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                {/* Book this style CTA */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <span className="text-white text-sm font-medium mb-2">{nailStyles[4].name}</span>
+                  <span className="px-4 py-2 bg-white/90 text-gray-900 text-xs font-semibold rounded-full shadow-lg">
+                    Book this style
+                  </span>
+                </div>
               </div>
-            </div>
-            
-            {/* Regular Image 3 */}
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
-              <span className="text-4xl opacity-50">✦</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
-                <span className="text-white/80 text-xs font-medium">View</span>
-              </div>
-            </div>
-            
-            {/* Second Featured Image (inserted after 4 regular images for editorial rhythm) */}
-            <div className="col-span-2 aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
-              <span className="text-5xl opacity-50">✦</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
-                <span className="text-white/80 text-sm font-medium">View Details</span>
-              </div>
-            </div>
+            )}
 
-            {/* Regular Image 4 */}
-            <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative">
-              <span className="text-4xl opacity-50">✦</span>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-110">
-                <span className="text-white/80 text-xs font-medium">View</span>
+            {/* Last Image */}
+            {nailStyles[5] && (
+              <div 
+                className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center cursor-pointer group overflow-hidden relative"
+                onClick={() => handleBookStyle(nailStyles[5])}
+              >
+                <span className="text-4xl opacity-50">{nailStyles[5].emoji}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                {/* Book this style CTA */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <span className="text-white text-xs font-medium mb-1.5">{nailStyles[5].name}</span>
+                  <span className="px-3 py-1.5 bg-white/90 text-gray-900 text-xs font-semibold rounded-full">
+                    Book this style
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="text-center">

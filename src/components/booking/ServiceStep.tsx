@@ -17,6 +17,7 @@ export function ServiceStep() {
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectService = useBookingStore((state) => state.selectService);
   const nextStep = useBookingStore((state) => state.nextStep);
+  const selectedStyle = useBookingStore((state) => state.selectedStyle);
   const continueButtonRef = useRef<HTMLDivElement>(null);
 
   const handleSelect = (service: Service) => {
@@ -35,15 +36,31 @@ export function ServiceStep() {
         <h2 className="text-2xl font-semibold text-gray-800 mb-2">
           Choose Your Service
         </h2>
-        <p className="text-gray-500">
-          Select a treatment to get started
-        </p>
+        {selectedStyle ? (
+          <div className="flex items-center justify-center gap-2 text-sm text-[#D4A59A] mb-2">
+            <span>{selectedStyle.emoji}</span>
+            <span>Style selected from gallery</span>
+          </div>
+        ) : (
+          <p className="text-gray-500">
+            Select a treatment to get started
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {mockServices.map((service) => {
           const isSelected = selectedService?.id === service.id;
           const benefit = serviceBenefits[service.id] || service.description || '';
+          // Mini visual thumbnails for each service
+          const serviceThumbnails: Record<string, string> = {
+            'gel-manicure': '💅',
+            'acrylic-extensions': '✨',
+            'luxury-spa-manicure': '🌸',
+            'gel-pedicure': '🦶',
+            'nail-art': '🎨',
+          };
+          const thumbnail = serviceThumbnails[service.id] || '💅';
 
           return (
             <button
@@ -59,6 +76,11 @@ export function ServiceStep() {
                 }
               `}
             >
+              {/* Mini visual thumbnail */}
+              <div className="absolute top-4 right-4 text-2xl opacity-60">
+                {thumbnail}
+              </div>
+
               {/* Popular Badge */}
               {service.isPopular && (
                 <span className="absolute top-3 right-3 px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full flex items-center gap-1">

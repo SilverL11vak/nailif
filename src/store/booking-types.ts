@@ -37,6 +37,17 @@ export interface AddOn {
   selected: boolean;
 }
 
+export interface NailStyle {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  // Service that best matches this style
+  recommendedServiceId: string;
+  // For visual reference in booking summary
+  emoji?: string;
+}
+
 export interface Booking {
   id: string;
   service: Service;

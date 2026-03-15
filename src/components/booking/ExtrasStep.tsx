@@ -40,6 +40,19 @@ export function ExtrasStep() {
         </div>
       </div>
 
+      {/* Beauty Context */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-[#D4A59A]/5 to-[#D4A59A]/10 rounded-2xl border border-[#D4A59A]/20">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#D4A59A]/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-lg">💆</span>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-800 mb-1">Turn your appointment into self-care</p>
+            <p className="text-xs text-gray-500">Add a little extra relaxation. These treatments pair beautifully with your {selectedService?.name?.toLowerCase() || 'selected service'}.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Add-ons List */}
       <div className="space-y-3 mb-6">
         {selectedAddOns.map((addOn) => {

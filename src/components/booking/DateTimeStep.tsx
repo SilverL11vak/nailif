@@ -118,6 +118,19 @@ export function DateTimeStep() {
         <span>Earliest available appointment highlighted</span>
       </div>
 
+      {/* Beauty Context Microcopy */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-[#D4A59A]/5 to-[#D4A59A]/10 rounded-2xl border border-[#D4A59A]/20">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#D4A59A]/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-lg">✨</span>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-800 mb-1">Your nails will thank you</p>
+            <p className="text-xs text-gray-500">Relax in our Mustamäe studio. Each appointment includes a consultation to ensure your nails are perfectly suited to your lifestyle.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Horizontal Date Scroller */}
       <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
         {dates.map((date, index) => {
