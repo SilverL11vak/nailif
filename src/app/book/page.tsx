@@ -15,6 +15,11 @@ export default function BookingPage() {
   const currentStep = useBookingStore((state) => state.currentStep);
   const prevStep = useBookingStore((state) => state.prevStep);
   const setMode = useBookingStore((state) => state.setMode);
+  const selectedService = useBookingStore((state) => state.selectedService);
+  const selectedSlot = useBookingStore((state) => state.selectedSlot);
+  
+  // Calculate total price locally
+  const total = selectedService?.price || 0;
 
   // Initialize - set mode to guided and ensure we start at step 1
   useEffect(() => {
@@ -79,6 +84,37 @@ export default function BookingPage() {
 
       {/* Progress Bar */}
       <BookingProgressBar />
+
+      {/* Sticky Booking Summary - Shows after step 2 */}
+      {currentStep >= 3 && (selectedService || selectedSlot) && (
+        <div className="sticky top-[73px] z-10 bg-white border-b border-gray-100 shadow-sm">
+          <div className="max-w-xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {selectedService && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">{selectedService.name}</span>
+                    <span className="text-xs text-gray-400">•</span>
+                  </div>
+                )}
+                {selectedSlot && (
+                  <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>
+                      {selectedSlot.date} at {selectedSlot.time}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="text-sm font-semibold text-[#D4A59A]">
+                £{total}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-xl mx-auto px-4 py-8">

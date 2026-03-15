@@ -4,22 +4,50 @@ import { useBookingStore } from '@/store/booking-store';
 
 const steps = [
   { id: 1, label: 'Service' },
-  { id: 2, label: 'Date' },
-  { id: 3, label: 'Time' },
-  { id: 4, label: 'Details' },
-  { id: 5, label: 'Confirm' },
+  { id: 2, label: 'Date & Time' },
+  { id: 3, label: 'Details' },
+  { id: 4, label: 'Confirm' },
 ];
 
 export function BookingProgressBar() {
   const currentStep = useBookingStore((state) => state.currentStep);
   const setStep = useBookingStore((state) => state.setStep);
+  const selectedService = useBookingStore((state) => state.selectedService);
+  const selectedSlot = useBookingStore((state) => state.selectedSlot);
+  
+  // Reduce visual dominance after step 2 (when service and time are selected)
+  const isMinimalMode = currentStep >= 3;
 
   const handleStepClick = (stepId: number) => {
-    // Only allow clicking on completed steps or current step
     if (stepId <= currentStep) {
-      setStep(stepId as 1 | 2 | 3 | 4 | 5);
+      setStep(stepId as 1 | 2 | 3 | 4);
     }
   };
+
+  // Compact version for later steps
+  if (isMinimalMode) {
+    return (
+      <div className="w-full bg-white border-b border-gray-50 py-2">
+        <div className="max-w-xl mx-auto px-4 flex items-center justify-center gap-2 text-sm">
+          {/* Compact summary */}
+          <span className="text-gray-500">
+            {selectedService?.name}
+          </span>
+          <span className="text-gray-300">•</span>
+          <span className="text-gray-500">
+            {selectedSlot ? `${new Date(selectedSlot.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} at ${selectedSlot.time}` : ''}
+          </span>
+          <span className="text-gray-300">•</span>
+          <button 
+            onClick={() => handleStepClick(1)}
+            className="text-[#D4A59A] hover:underline font-medium"
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-white border-b border-gray-100 py-4 overflow-hidden">
@@ -34,14 +62,14 @@ export function BookingProgressBar() {
         </div>
         
         <div className="flex items-center justify-between relative">
-          {steps.map((step, index) => {
+          {steps.map((step) => {
             const isCompleted = step.id < currentStep;
             const isCurrent = step.id === currentStep;
             const isClickable = step.id <= currentStep;
 
             return (
               <div key={step.id} className="flex flex-col items-center">
-                {/* Step Circle - with smooth scale animation */}
+                {/* Step Circle */}
                 <button
                   type="button"
                   onClick={() => handleStepClick(step.id)}
@@ -72,7 +100,7 @@ export function BookingProgressBar() {
                   )}
                 </button>
 
-                {/* Step Label - visible on all screens */}
+                {/* Step Label */}
                 <span 
                   className={`
                     mt-2 text-xs font-medium transition-all duration-300

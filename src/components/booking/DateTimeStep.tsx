@@ -15,6 +15,7 @@ export function DateTimeStep() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [showPreselectedMsg, setShowPreselectedMsg] = useState(false);
   const continueButtonRef = useRef<HTMLDivElement>(null);
 
   // Generate dates for next 7 days
@@ -25,7 +26,6 @@ export function DateTimeStep() {
   });
 
   // Load slots when date changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const dateToUse = selectedDate || dates[0];
     selectDate(dateToUse);
@@ -36,6 +36,15 @@ export function DateTimeStep() {
       const generatedSlots = generateSlotsForDate(dateToUse);
       setSlots(generatedSlots);
       setIsLoading(false);
+      
+      // Auto preselect first available slot
+      const firstAvailable = generatedSlots.find(s => s.available);
+      if (firstAvailable && !selectedSlot) {
+        selectSlot(firstAvailable);
+        setShowPreselectedMsg(true);
+        // Hide message after 3 seconds
+        setTimeout(() => setShowPreselectedMsg(false), 3000);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
@@ -50,6 +59,14 @@ export function DateTimeStep() {
       const generatedSlots = generateSlotsForDate(date);
       setSlots(generatedSlots);
       setIsLoading(false);
+      
+      // Auto preselect first available slot
+      const firstAvailable = generatedSlots.find(s => s.available);
+      if (firstAvailable) {
+        selectSlot(firstAvailable);
+        setShowPreselectedMsg(true);
+        setTimeout(() => setShowPreselectedMsg(false), 3000);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
@@ -148,6 +165,16 @@ export function DateTimeStep() {
           Available Times
         </h3>
         
+        {/* Auto preselected microcopy */}
+        {showPreselectedMsg && selectedSlot && (
+          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg mb-3 animate-fade-in">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Earliest available time preselected</span>
+          </div>
+        )}
+        
         {isLoading ? (
           // Loading skeleton
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
@@ -199,7 +226,7 @@ export function DateTimeStep() {
           }
         `}
       >
-        Continue
+        {selectedSlot ? 'Continue to Details' : 'Select a time'}
       </button>
       
       {/* Hidden ref for scroll */}

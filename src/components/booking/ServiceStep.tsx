@@ -114,6 +114,13 @@ export function ServiceStep() {
       {/* Hidden ref for scroll-into-view after selection */}
       <div ref={continueButtonRef} />
       
+      {/* Decision Safety Microcopy */}
+      <div className="flex items-center justify-center gap-4 text-xs text-gray-400 pt-4">
+        <span>✓ Book in seconds</span>
+        <span>•</span>
+        <span>Free reschedule</span>
+      </div>
+      
       <style jsx>{`
         @keyframes scale-in {
           0% { transform: translate(-50%, -50%) scale(0); }

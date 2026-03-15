@@ -74,9 +74,12 @@ export default function SuccessPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-semibold text-gray-800 mb-2">
-            You are booked!
+            See you soon! ✨
           </h1>
           <p className="text-gray-500">
+            Your appointment is confirmed
+          </p>
+          <p className="text-[#D4A59A] font-medium mt-2">
             Ref: {bookingRef}
           </p>
         </div>
@@ -108,6 +111,21 @@ export default function SuccessPage() {
               <span className="font-semibold text-gray-800">
                 £{totalPrice || selectedService?.price || 35} • {totalDuration || selectedService?.duration || 45} min
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Booking Reminder */}
+        <div className="bg-blue-50 rounded-2xl p-4 mb-6 border border-blue-100">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-800 mb-1">Prepare for your visit</h3>
+              <p className="text-sm text-gray-600">Arrive 5 minutes early. Remove any old polish. We provide everything else!</p>
             </div>
           </div>
         </div>

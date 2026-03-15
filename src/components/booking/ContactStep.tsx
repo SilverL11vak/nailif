@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 
 export function ContactStep() {
@@ -22,10 +22,31 @@ export function ContactStep() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const continueButtonRef = useRef<HTMLDivElement>(null);
+  const firstNameRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus first name field on mount
+  useEffect(() => {
+    firstNameRef.current?.focus();
+  }, []);
+
+  // Format phone number as user types (UK format)
+  const formatPhoneNumber = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)}`;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Format phone number
+    let processedValue = value;
+    if (name === 'phone') {
+      processedValue = formatPhoneNumber(value);
+    }
+    
+    setFormData((prev) => ({ ...prev, [name]: processedValue }));
     // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
@@ -108,6 +129,7 @@ export function ContactStep() {
         {/* First Name - Floating Label Style */}
         <div className="relative">
           <input
+            ref={firstNameRef}
             type="text"
             id="firstName"
             name="firstName"
@@ -270,12 +292,19 @@ export function ContactStep() {
         </p>
       </div>
 
+      {/* Decision Safety Microcopy */}
+      <div className="flex items-center justify-center gap-4 text-xs text-gray-400 mb-4">
+        <span>✓ Takes less than a minute</span>
+        <span>•</span>
+        <span>You can reschedule anytime</span>
+      </div>
+
       {/* Continue Button - Large tap area */}
       <button
         onClick={handleSubmit}
-        className="w-full mt-6 py-5 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-xl"
+        className="w-full mt-2 py-5 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-xl"
       >
-        Continue
+        Confirm Booking
       </button>
       
       {/* Hidden ref for scroll */}
