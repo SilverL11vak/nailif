@@ -119,7 +119,7 @@ export function ContactStep() {
       <div className="bg-[#FFF9F5] rounded-2xl p-4 mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="font-medium text-gray-800">{selectedService?.name}</span>
-          <span className="text-[#D4A59A] font-semibold">£{totalPrice || selectedService?.price}</span>
+          <span className="text-[#D4A59A] font-semibold">€{totalPrice || selectedService?.price}</span>
         </div>
         <div className="flex items-center justify-between text-sm text-gray-500">
           <span>

@@ -85,7 +85,7 @@ export function ServiceSelector({ onSelect, selectedService }: ServiceSelectorPr
                 <span className="text-sm text-gray-400">{service.duration} min</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-[#D4A59A]">£{service.price}</span>
+                <span className="font-semibold text-[#D4A59A]">€{service.price}</span>
                 {service.isPopular && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
                     Popular

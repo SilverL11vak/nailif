@@ -177,7 +177,7 @@ function BookingContent() {
                 )}
               </div>
               <div className="text-sm font-semibold text-[#D4A59A]">
-                £{total}
+                €{total}
               </div>
             </div>
           </div>

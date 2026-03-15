@@ -65,7 +65,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
             <>
               <span>Book {selectedService.name}</span>
               {totalPrice > 0 && (
-                <span className="opacity-80">from £{totalPrice}</span>
+                <span className="opacity-80">from €{totalPrice}</span>
               )}
             </>
           ) : (

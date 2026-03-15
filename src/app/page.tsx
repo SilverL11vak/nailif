@@ -369,7 +369,7 @@ export default function Home() {
                       </svg>
                       {service.duration} min
                     </div>
-                    <span className="text-base font-medium text-gray-700">From £{service.price}</span>
+                    <span className="text-base font-medium text-gray-700">From €{service.price}</span>
                   </div>
 
                   {/* Quick Book CTA */}
@@ -715,7 +715,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900 mb-1">Address</h3>
-                    <p className="text-gray-500">Nailify Shoreditch<br />123 High Street, London E1 6AN</p>
+                    <p className="text-gray-500">Nailify Mustamäe<br />Mustamäe tee 55, Tallinn</p>
                   </div>
                 </div>
 
@@ -741,7 +741,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900 mb-1">Transport</h3>
-                    <p className="text-gray-500">5 min from Shoreditch High Street<br />Paid parking available</p>
+                    <p className="text-gray-500">5 min from Mustamäe Keskus<br />Free parking available</p>
                   </div>
                 </div>
               </div>
@@ -768,7 +768,7 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <p className="text-gray-400 font-medium">Shoreditch, London</p>
+                <p className="text-gray-400 font-medium">Mustamäe, Tallinn</p>
               </div>
             </div>
           </div>
@@ -795,7 +795,7 @@ export default function Home() {
                       <div className="font-medium text-gray-900 text-sm">{product.name}</div>
                       <div className="text-xs text-gray-400">{product.desc}</div>
                     </div>
-                    <div className="text-gray-700 font-medium">£{product.price}</div>
+                    <div className="text-gray-700 font-medium">€{product.price}</div>
                   </div>
                 ))}
               </div>
@@ -884,7 +884,7 @@ export default function Home() {
             <div>
               <span className="text-xl font-semibold" style={{ color: colors.primary }}>Nailify</span>
               <p className="mt-4 text-gray-500 text-sm leading-relaxed">
-                Premium nail artistry in the heart of Shoreditch. Expert technicians, lasting results.
+                Premium nail artistry in Mustamäe. Expert technicians, lasting results.
               </p>
             </div>
 
@@ -903,9 +903,9 @@ export default function Home() {
             <div>
               <h4 className="font-medium text-gray-900 mb-4">Contact</h4>
               <ul className="space-y-2.5 text-gray-500 text-sm">
-                <li>Nailify Shoreditch</li>
-                <li>123 High Street</li>
-                <li>London E1 6AN</li>
+                <li>Nailify Mustamäe</li>
+                <li>Mustamäe tee 55</li>
+                <li>Tallinn, Estonia</li>
                 <li style={{ color: colors.primary }}>hello@nailify.com</li>
               </ul>
             </div>

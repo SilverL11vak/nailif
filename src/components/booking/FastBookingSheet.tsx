@@ -244,7 +244,7 @@ export function FastBookingSheet({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    CONFIRM BOOKING • £{service.price}
+                    CONFIRM BOOKING • €{service.price}
                   </>
                 )}
               </button>

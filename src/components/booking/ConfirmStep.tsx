@@ -65,7 +65,7 @@ export function ConfirmStep() {
               {selectedService.duration} min
             </span>
             <span className="font-semibold text-gray-800">
-              £{selectedService.price}
+              €{selectedService.price}
             </span>
           </div>
         </div>
@@ -99,7 +99,7 @@ export function ConfirmStep() {
             {selectedExtras.map((extra) => (
               <div key={extra.id} className="flex items-center justify-between text-sm py-1">
                 <span className="text-gray-600">{extra.name}</span>
-                <span className="text-gray-800">+£{extra.price}</span>
+                <span className="text-gray-800">+€{extra.price}</span>
               </div>
             ))}
           </div>
@@ -132,7 +132,7 @@ export function ConfirmStep() {
             <p className="text-sm text-gray-500">{totalDuration} min total</p>
           </div>
           <span className="text-2xl font-semibold text-[#D4A59A]">
-            £{totalPrice}
+            €{totalPrice}
           </span>
         </div>
       </div>
@@ -168,7 +168,7 @@ export function ConfirmStep() {
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Confirm Booking • £{totalPrice}
+            Confirm Booking • €{totalPrice}
           </>
         )}
       </button>

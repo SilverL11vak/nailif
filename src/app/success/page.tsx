@@ -109,7 +109,7 @@ export default function SuccessPage() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Total</span>
               <span className="font-semibold text-gray-800">
-                £{totalPrice || selectedService?.price || 35} • {totalDuration || selectedService?.duration || 45} min
+                €{totalPrice || selectedService?.price || 35} • {totalDuration || selectedService?.duration || 45} min
               </span>
             </div>
           </div>

@@ -115,7 +115,7 @@ export function ServiceStep() {
                 {/* Clearer Price Hierarchy */}
                 <div className="text-right">
                   <span className="text-lg font-bold text-[#D4A59A]">
-                    £{service.price}
+                    €{service.price}
                   </span>
                 </div>
               </div>

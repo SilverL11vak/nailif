@@ -34,7 +34,7 @@ export function ExtrasStep() {
             {selectedService?.name} (+ extras)
           </span>
           <div className="text-right">
-            <span className="font-semibold text-gray-800">£{totalPrice}</span>
+            <span className="font-semibold text-gray-800">€{totalPrice}</span>
             <span className="text-gray-500 ml-2">• {totalDuration} min</span>
           </div>
         </div>
@@ -99,7 +99,7 @@ export function ExtrasStep() {
 
               {/* Price & Duration */}
               <div className="text-right">
-                <span className="font-semibold text-[#D4A59A]">+£{addOn.price}</span>
+                <span className="font-semibold text-[#D4A59A]">+€{addOn.price}</span>
                 {addOn.duration > 0 && (
                   <span className="text-sm text-gray-500 ml-1">• {addOn.duration} min</span>
                 )}
@@ -125,7 +125,7 @@ export function ExtrasStep() {
           className="flex-[2] py-4 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200"
         >
           {selectedCount > 0 
-            ? `Continue (+£${selectedAddOns.filter(a => a.selected).reduce((sum, a) => sum + a.price, 0)})`
+            ? `Continue (+€${selectedAddOns.filter(a => a.selected).reduce((sum, a) => sum + a.price, 0)})`
             : 'Continue'
           }
         </button>
