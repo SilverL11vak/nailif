@@ -63,6 +63,11 @@ export function HeroBookingWidget() {
 
   return (
     <div id="hero-booking" className="bg-white rounded-2xl shadow-lg p-6 lg:p-8">
+      {/* Helper Headline */}
+      <p className="text-center text-sm text-gray-500 mb-4 font-medium">
+        Book your appointment in under 30 seconds.
+      </p>
+      
       {/* Next Available Badge */}
       <div className="flex items-center gap-2 text-sm text-green-600 mb-6">
         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -100,7 +105,7 @@ export function HeroBookingWidget() {
         className={`w-full py-4 font-semibold rounded-xl transition-all duration-200
           flex items-center justify-center gap-2
           ${selectedService 
-            ? 'bg-[#D4A59A] text-white hover:bg-[#C47D6D] active:scale-[0.98]' 
+            ? 'bg-[#D4A59A] text-white hover:bg-[#C47D6D] active:scale-[0.98] shadow-lg hover:shadow-xl' 
             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
       >

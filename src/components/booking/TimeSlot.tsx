@@ -54,19 +54,19 @@ export const TimeSlot = memo(function TimeSlot({
     return null;
   };
 
-  // Base styles
+  // Base styles - Rounded chips with generous spacing
   const baseStyles = `
     relative flex flex-col items-center justify-center 
-    rounded-xl border-2 transition-all duration-200 cursor-pointer
+    rounded-full border-2 transition-all duration-200 cursor-pointer
     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D4A59A]
-    ${compact ? 'px-3 py-2 min-w-[70px]' : 'px-4 py-3 min-w-[90px]'}
+    ${compact ? 'px-4 py-2.5 min-w-[80px]' : 'px-5 py-3 min-w-[90px]'}
   `;
 
-  // State styles
+  // State styles - Disabled
   if (!slot.available) {
     return (
       <button
-        className={`${baseStyles} border-gray-100 bg-gray-50 cursor-not-allowed opacity-50`}
+        className={`${baseStyles} border-gray-100 bg-gray-50 cursor-not-allowed opacity-40`}
         disabled
       >
         <span className="text-gray-400 line-through text-sm font-medium">
@@ -76,28 +76,34 @@ export const TimeSlot = memo(function TimeSlot({
     );
   }
 
+  // State styles - Selected with growing animation and check icon
   if (isSelected) {
     return (
       <button
         onClick={handleClick}
-        className={`${baseStyles} border-[#D4A59A] bg-[#FFF9F5] shadow-md hover:shadow-lg`}
+        className={`${baseStyles} border-[#D4A59A] bg-[#FFF9F5] shadow-lg hover:shadow-xl scale-105`}
         aria-pressed="true"
       >
-        <span className="text-[#D4A59A] font-semibold text-sm">
-          {slot.time}
-        </span>
-        <span className="text-[#D4A59A] text-xs mt-1">Selected</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[#D4A59A] font-bold text-sm">
+            {slot.time}
+          </span>
+          <svg className="w-4 h-4 text-[#D4A59A] animate-scale-in" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+        </div>
       </button>
     );
   }
 
+  // State styles - Available (hover state)
   return (
     <button
       onClick={handleClick}
-      className={`${baseStyles} border-gray-200 bg-white hover:border-[#D4A59A] hover:bg-[#FFF9F5]/50`}
+      className={`${baseStyles} border-gray-200 bg-white hover:border-[#D4A59A] hover:bg-[#FFF9F5]/50 hover:shadow-md`}
       aria-pressed="false"
     >
-      <span className="text-gray-700 font-medium text-sm">
+      <span className="text-gray-700 font-semibold text-sm">
         {slot.time}
       </span>
       {getSlotBadge()}

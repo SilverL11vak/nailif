@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { generateSlotsForDate } from '@/store/mock-data';
 import type { TimeSlot } from '@/store/booking-types';
@@ -15,6 +15,7 @@ export function DateTimeStep() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const continueButtonRef = useRef<HTMLDivElement>(null);
 
   // Generate dates for next 7 days
   const dates = Array.from({ length: 7 }, (_, i) => {
@@ -61,6 +62,8 @@ export function DateTimeStep() {
   const handleContinue = () => {
     if (selectedSlot) {
       nextStep();
+      // Scroll next step into view
+      continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
@@ -71,6 +74,12 @@ export function DateTimeStep() {
   const isToday = (date: Date) => {
     const today = new Date();
     return date.toDateString() === today.toDateString();
+  };
+
+  // Check if date has available slots
+  const hasAvailableSlots = (date: Date) => {
+    const dateSlots = generateSlotsForDate(date);
+    return dateSlots.some(s => s.available);
   };
 
   return (
@@ -84,28 +93,48 @@ export function DateTimeStep() {
         </p>
       </div>
 
+      {/* Helper Microcopy */}
+      <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-4 py-2 rounded-xl mb-4">
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Earliest available appointment highlighted</span>
+      </div>
+
       {/* Horizontal Date Scroller */}
       <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
         {dates.map((date, index) => {
           const isSelected = selectedDate?.toDateString() === date.toDateString();
+          const isEarliest = index === 0 && hasAvailableSlots(date);
+          const hasSlots = hasAvailableSlots(date);
           
           return (
             <button
               key={index}
-              onClick={() => handleDateSelect(date)}
+              onClick={() => hasSlots && handleDateSelect(date)}
+              disabled={!hasSlots}
               className={`
                 flex-shrink-0 flex flex-col items-center justify-center 
                 w-16 h-20 rounded-2xl border-2 transition-all duration-200
                 ${isSelected 
-                  ? 'border-[#D4A59A] bg-[#FFF9F5]' 
-                  : 'border-gray-100 bg-white hover:border-[#D4A59A]'
+                  ? 'border-[#D4A59A] bg-[#FFF9F5] shadow-md' 
+                  : hasSlots 
+                    ? isEarliest
+                      ? 'border-amber-300 bg-amber-50 hover:border-amber-400 hover:shadow-md'
+                      : 'border-gray-100 bg-white hover:border-[#D4A59A]'
+                    : 'border-gray-50 bg-gray-50 cursor-not-allowed opacity-40'
                 }
+                ${hasSlots ? 'cursor-pointer' : ''}
               `}
             >
-              <span className={`text-xs font-medium ${isSelected ? 'text-[#D4A59A]' : 'text-gray-500'}`}>
+              {/* Earliest badge */}
+              {isEarliest && (
+                <span className="text-[10px] font-semibold text-amber-600 mb-0.5">Earliest</span>
+              )}
+              <span className={`text-xs font-medium ${isSelected ? 'text-[#D4A59A]' : hasSlots ? 'text-gray-500' : 'text-gray-300'}`}>
                 {isToday(date) ? 'Today' : formatDate(date).split(' ')[0]}
               </span>
-              <span className={`text-xl font-semibold ${isSelected ? 'text-[#D4A59A]' : 'text-gray-800'}`}>
+              <span className={`text-xl font-semibold ${isSelected ? 'text-[#D4A59A]' : hasSlots ? 'text-gray-800' : 'text-gray-300'}`}>
                 {date.getDate()}
               </span>
             </button>
@@ -150,6 +179,14 @@ export function DateTimeStep() {
         )}
       </div>
 
+      {/* Reassurance text */}
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 p-3 bg-gray-50 rounded-xl">
+        <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span>Free reschedule if your plans change</span>
+      </div>
+
       {/* Continue Button */}
       <button
         onClick={handleContinue}
@@ -157,13 +194,16 @@ export function DateTimeStep() {
         className={`
           w-full py-4 rounded-xl font-semibold transition-all duration-200
           ${selectedSlot 
-            ? 'bg-[#D4A59A] text-white hover:bg-[#C47D6D] active:scale-[0.98]' 
+            ? 'bg-[#D4A59A] text-white hover:bg-[#C47D6D] active:scale-[0.98] shadow-lg hover:shadow-xl' 
             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           }
         `}
       >
         Continue
       </button>
+      
+      {/* Hidden ref for scroll */}
+      <div ref={continueButtonRef} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 
 export function ContactStep() {
@@ -20,6 +20,8 @@ export function ContactStep() {
     email: contactInfo?.email || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const continueButtonRef = useRef<HTMLDivElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -28,6 +30,8 @@ export function ContactStep() {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
+    // Mark as touched
+    setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
   const validate = () => {
@@ -58,6 +62,16 @@ export function ContactStep() {
         email: formData.email || undefined,
       });
       nextStep();
+      // Scroll next step into view
+      continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      // Mark all fields as touched to show errors
+      setTouched({
+        firstName: true,
+        lastName: true,
+        phone: true,
+        email: true
+      });
     }
   };
 
@@ -90,71 +104,100 @@ export function ContactStep() {
       </div>
 
       {/* Contact Form */}
-      <div className="space-y-4">
-        {/* First Name */}
-        <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-            First Name *
-          </label>
+      <div className="space-y-5">
+        {/* First Name - Floating Label Style */}
+        <div className="relative">
           <input
             type="text"
             id="firstName"
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
-            placeholder="Your first name"
+            placeholder=" "
             className={`
-              w-full px-4 py-3 bg-white border-2 rounded-xl 
-              focus:outline-none focus:ring-2 transition-colors duration-200
-              ${errors.firstName 
+              peer w-full px-4 pt-6 pb-2 bg-white border-2 rounded-xl 
+              focus:outline-none focus:ring-2 transition-all duration-200
+              ${errors.firstName && touched.firstName
                 ? 'border-red-300 focus:border-red-400 focus:ring-red-100' 
                 : 'border-gray-200 focus:border-[#D4A59A] focus:ring-[#D4A59A]/20'
               }
             `}
           />
-          {errors.firstName && (
+          <label 
+            htmlFor="firstName" 
+            className={`
+              absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
+              ${formData.firstName 
+                ? 'top-1 text-xs text-gray-500' 
+                : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
+              }
+              ${errors.firstName && touched.firstName ? 'text-red-500' : ''}
+            `}
+          >
+            First Name *
+          </label>
+          {errors.firstName && touched.firstName && (
             <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
           )}
         </div>
 
         {/* Last Name (Optional) */}
-        <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-            Last Name <span className="text-gray-400">(optional)</span>
-          </label>
+        <div className="relative">
           <input
             type="text"
             id="lastName"
             name="lastName"
             value={formData.lastName}
             onChange={handleChange}
-            placeholder="Your last name"
-            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-[#D4A59A] focus:outline-none focus:ring-2 focus:ring-[#D4A59A]/20 transition-colors duration-200"
+            placeholder=" "
+            className="peer w-full px-4 pt-6 pb-2 bg-white border-2 border-gray-200 rounded-xl focus:border-[#D4A59A] focus:outline-none focus:ring-2 focus:ring-[#D4A59A]/20 transition-colors duration-200"
           />
+          <label 
+            htmlFor="lastName" 
+            className={`
+              absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
+              ${formData.lastName 
+                ? 'top-1 text-xs text-gray-500' 
+                : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
+              }
+            `}
+          >
+            Last Name <span className="text-gray-400">(optional)</span>
+          </label>
         </div>
 
         {/* Phone */}
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-            Phone Number *
-          </label>
+        <div className="relative">
           <input
             type="tel"
             id="phone"
             name="phone"
             value={formData.phone}
             onChange={handleChange}
-            placeholder="+44 7700 900000"
+            placeholder=" "
             className={`
-              w-full px-4 py-3 bg-white border-2 rounded-xl 
-              focus:outline-none focus:ring-2 transition-colors duration-200
-              ${errors.phone 
+              peer w-full px-4 pt-6 pb-2 bg-white border-2 rounded-xl 
+              focus:outline-none focus:ring-2 transition-all duration-200
+              ${errors.phone && touched.phone
                 ? 'border-red-300 focus:border-red-400 focus:ring-red-100' 
                 : 'border-gray-200 focus:border-[#D4A59A] focus:ring-[#D4A59A]/20'
               }
             `}
           />
-          {errors.phone && (
+          <label 
+            htmlFor="phone" 
+            className={`
+              absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
+              ${formData.phone 
+                ? 'top-1 text-xs text-gray-500' 
+                : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
+              }
+              ${errors.phone && touched.phone ? 'text-red-500' : ''}
+            `}
+          >
+            Phone Number *
+          </label>
+          {errors.phone && touched.phone && (
             <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
           )}
         </div>
@@ -170,27 +213,36 @@ export function ContactStep() {
               + Add email for booking confirmation
             </button>
           ) : (
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email <span className="text-gray-400">(optional)</span>
-              </label>
+            <div className="relative">
               <input
                 type="email"
                 id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="your@email.com"
+                placeholder=" "
                 className={`
-                  w-full px-4 py-3 bg-white border-2 rounded-xl 
-                  focus:outline-none focus:ring-2 transition-colors duration-200
-                  ${errors.email 
+                  peer w-full px-4 pt-6 pb-2 bg-white border-2 rounded-xl 
+                  focus:outline-none focus:ring-2 transition-all duration-200
+                  ${errors.email && touched.email
                     ? 'border-red-300 focus:border-red-400 focus:ring-red-100' 
                     : 'border-gray-200 focus:border-[#D4A59A] focus:ring-[#D4A59A]/20'
                   }
                 `}
               />
-              {errors.email && (
+              <label 
+                htmlFor="email" 
+                className={`
+                  absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
+                  ${formData.email 
+                    ? 'top-1 text-xs text-gray-500' 
+                    : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
+                  }
+                `}
+              >
+                Email <span className="text-gray-400">(optional)</span>
+              </label>
+              {errors.email && touched.email && (
                 <p className="mt-1 text-sm text-red-500">{errors.email}</p>
               )}
               <button
@@ -208,13 +260,26 @@ export function ContactStep() {
         </div>
       </div>
 
-      {/* Continue Button */}
+      {/* Helper Text - Privacy */}
+      <div className="mt-4 p-3 bg-gray-50 rounded-xl flex items-center gap-2">
+        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <p className="text-xs text-gray-500">
+          We only use your contact to confirm the booking.
+        </p>
+      </div>
+
+      {/* Continue Button - Large tap area */}
       <button
         onClick={handleSubmit}
-        className="w-full mt-6 py-4 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200"
+        className="w-full mt-6 py-5 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-xl"
       >
         Continue
       </button>
+      
+      {/* Hidden ref for scroll */}
+      <div ref={continueButtonRef} />
     </div>
   );
 }

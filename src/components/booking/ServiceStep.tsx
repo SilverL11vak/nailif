@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { mockServices } from '@/store/mock-data';
 import type { Service } from '@/store/booking-types';
@@ -16,12 +17,15 @@ export function ServiceStep() {
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectService = useBookingStore((state) => state.selectService);
   const nextStep = useBookingStore((state) => state.nextStep);
+  const continueButtonRef = useRef<HTMLDivElement>(null);
 
   const handleSelect = (service: Service) => {
     selectService(service);
-    // Auto-advance to next step
+    // Auto-advance to next step after short delay
     setTimeout(() => {
       nextStep();
+      // Scroll next step into view
+      continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
   };
 
@@ -47,17 +51,21 @@ export function ServiceStep() {
               onClick={() => handleSelect(service)}
               className={`
                 relative flex flex-col items-start p-5 rounded-2xl border-2 
-                transition-all duration-200 text-left
+                transition-all duration-300 text-left
+                hover:-translate-y-1 hover:shadow-xl
                 ${isSelected 
-                  ? 'border-[#D4A59A] bg-[#FFF9F5] shadow-md' 
-                  : 'border-gray-100 bg-white hover:border-[#D4A59A] hover:shadow-sm'
+                  ? 'border-[#D4A59A] bg-[#FFF9F5] shadow-lg' 
+                  : 'border-gray-100 bg-white hover:border-[#D4A59A]'
                 }
               `}
             >
               {/* Popular Badge */}
               {service.isPopular && (
-                <span className="absolute top-3 right-3 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                  Popular
+                <span className="absolute top-3 right-3 px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  Most booked
                 </span>
               )}
 
@@ -73,21 +81,27 @@ export function ServiceStep() {
 
               {/* Duration & Price */}
               <div className="flex items-center justify-between w-full mt-auto">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {service.duration} min
+                <div className="flex items-center gap-3">
+                  {/* Duration Label */}
+                  <div className="flex items-center gap-1.5 text-sm text-gray-500 bg-gray-50 px-2 py-1 rounded-lg">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {service.duration} min
+                  </div>
                 </div>
-                <span className="text-lg font-semibold text-[#D4A59A]">
-                  From £{service.price}
-                </span>
+                {/* Clearer Price Hierarchy */}
+                <div className="text-right">
+                  <span className="text-lg font-bold text-[#D4A59A]">
+                    £{service.price}
+                  </span>
+                </div>
               </div>
 
-              {/* Selection Indicator */}
+              {/* Selection Indicator - Strong highlight with checkmark */}
               {isSelected && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-[#D4A59A] rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-[#D4A59A] rounded-full flex items-center justify-center animate-scale-in">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </div>
@@ -96,6 +110,20 @@ export function ServiceStep() {
           );
         })}
       </div>
+      
+      {/* Hidden ref for scroll-into-view after selection */}
+      <div ref={continueButtonRef} />
+      
+      <style jsx>{`
+        @keyframes scale-in {
+          0% { transform: translate(-50%, -50%) scale(0); }
+          50% { transform: translate(-50%, -50%) scale(1.2); }
+          100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

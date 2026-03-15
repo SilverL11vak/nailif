@@ -147,11 +147,11 @@ export function ConfirmStep() {
         onClick={handleConfirm}
         disabled={isLoading}
         className={`
-          w-full py-4 rounded-xl font-semibold transition-all duration-200
+          w-full py-5 rounded-xl font-semibold transition-all duration-200
           flex items-center justify-center gap-2
           ${isLoading 
             ? 'bg-gray-100 text-gray-400 cursor-wait' 
-            : 'bg-[#D4A59A] text-white hover:bg-[#C47D6D] active:scale-[0.98]'
+            : 'bg-[#D4A59A] text-white hover:bg-[#C47D6D] active:scale-[0.98] shadow-lg hover:shadow-xl'
           }
         `}
       >

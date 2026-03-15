@@ -106,25 +106,42 @@ export function FastBookingSheet({
         </div>
 
         {isSuccess ? (
-          /* Success State */
+          // Success State - Dopamine State
           <div className="px-6 pb-12 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-green-500 animate-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
+            {/* Animated Success Circle with Sparkle */}
+            <div className="relative inline-flex mb-6">
+              <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center animate-scale-in">
+                <svg className="w-12 h-12 text-green-500 animate-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              {/* Sparkle effects */}
+              <span className="absolute -top-2 -right-2 text-2xl animate-sparkle-1">✨</span>
+              <span className="absolute -bottom-1 -left-2 text-xl animate-sparkle-2">💅</span>
             </div>
+            
+            {/* Emotional Headline */}
             <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-              Booking Confirmed!
+              Your appointment request is sent!
             </h3>
-            <p className="text-gray-500 mb-6">
+            <p className="text-gray-500 mb-2">
               Ref: #NF-{Math.random().toString(36).substring(2, 8).toUpperCase()}
             </p>
-            <p className="text-sm text-gray-400">
-              Redirecting to confirmation...
+            {/* Reassurance */}
+            <p className="text-sm text-green-600 font-medium">
+              ✓ You will receive confirmation shortly
             </p>
+            
+            {/* Add to Calendar CTA */}
+            <button 
+              onClick={() => router.push('/success')}
+              className="mt-6 px-6 py-3 bg-[#D4A59A] text-white rounded-full font-medium hover:bg-[#C47D6D] transition-colors"
+            >
+              Add to calendar
+            </button>
           </div>
         ) : (
-          /* Form State */
+          // Form State
           <>
             {/* Header */}
             <div className="px-6 pb-4 border-b border-gray-100">
@@ -270,6 +287,28 @@ export function FastBookingSheet({
         .animate-check {
           stroke-dasharray: 100;
           animation: check 0.5s ease-out forwards;
+        }
+        @keyframes scale-in {
+          0% { transform: scale(0); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.4s ease-out forwards;
+        }
+        @keyframes sparkle-1 {
+          0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+          50% { opacity: 1; transform: scale(1) rotate(180deg); }
+        }
+        .animate-sparkle-1 {
+          animation: sparkle-1 1s ease-out 0.2s forwards;
+        }
+        @keyframes sparkle-2 {
+          0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+          50% { opacity: 1; transform: scale(1) rotate(-180deg); }
+        }
+        .animate-sparkle-2 {
+          animation: sparkle-2 1s ease-out 0.4s forwards;
         }
       `}</style>
     </div>
