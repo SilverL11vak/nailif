@@ -1,0 +1,245 @@
+{
+  "nav": {
+    "services": "Teenused",
+    "gallery": "Galerii",
+    "pricing": "Hinnad",
+    "contact": "Kontakt",
+    "bookNow": "Broneeri kohe"
+  },
+  "hero": {
+    "headline": "Obsessiivselt ilusad küüned. Broneeritud sekunditega.",
+    "subtext": "Pikaajalised tulemused, mis on loodud hoolika tähelepanu Detailidele. Broneerige oma kohtamine mõne hetkega ja lahkuge enesekindlalt.",
+    "cta": "Broneeri oma kohtamine",
+    "nextAvailable": "Järgmine vaba"
+  },
+  "trust": {
+    "googleRating": "Google hinnang",
+    "appointmentsThisWeek": "Kohtamist nädalas",
+    "sterileEquipment": "Sterilne varustus",
+    "premiumProducts": "Premium tooted",
+    "certifiedTechnician": "Sertifitseeritud tehnik",
+    "mustamaeStudio": "Mustamäe stuudio",
+    "hygienicTools": "Hügieenilised tööriistad",
+    "rating": "4.9",
+    "clients": "1,200+ klienti"
+  },
+  "services": {
+    "title": "Meie teenused",
+    "subtitle": "Valige oma teenus ja broneerige vähem kui 30 sekundiga.",
+    "from": "alates",
+    "minutes": "min",
+    "viewAll": "Vaata kõiki teenuseid",
+    "book": "Broneeri"
+  },
+  "howItWorks": {
+    "title": "Kuidas see toimib",
+    "subtitle": "Lihtne 3-sammuline broneerimisprotsess.",
+    "step1Title": "Valige teenus",
+    "step1Desc": "Valige meie laia valiku Premium hoolduste seast",
+    "step2Title": "Valige aeg",
+    "step2Desc": "Valige teile sobiv aeg",
+    "step3Title": "Kinnitage",
+    "step3Desc": "Kinnitage oma broneering kohe"
+  },
+  "gallery": {
+    "title": "Meie töö",
+    "subtitle": "Valik hiljuti tehtud töid",
+    "bookThisStyle": "Broneeri see stiil",
+    "bookYourLook": "Broneeri oma stiil"
+  },
+  "enhancements": {
+    "title": "Täiendused",
+    "subtitle": "Valikulised täiendused teie hoolduse jaoks",
+    "cuticleCare": "Küünehooldus",
+    "cuticleCareDesc": "Terved, niisutatud küüned",
+    "handMassage": "Käemassage",
+    "handMassageDesc": "Lõõgastav pingete vabastamine",
+    "nailStrengthening": "Küüne tugevdamine",
+    "nailStrengtheningDesc": "Täiendav tugevus nõrkadele küüntele",
+    "aftercareKit": "Hoolduskomplekt",
+    "aftercareKitDesc": "Kodused hooldustooted",
+    "plus": "+",
+    "addTime": "+"
+  },
+  "team": {
+    "title": "Meie meeskond",
+    "subtitle": "Kogenud tehnikud, kes on pühendunud ilusatele tulemustele",
+    "gelSpecialist": "Geeli spetsialist",
+    "nailArtist": "Küünekunstnik",
+    "spaExpert": "Spa ekspert",
+    "experience": "aastat kogemust"
+  },
+  "location": {
+    "title": "Külastage meid",
+    "address": "Aadress",
+    "addressDetail": "Nailify Mustamäe\nMustamäe tee 55, Tallinn",
+    "openingHours": "Lahtiolekuajad",
+    "hoursWeekday": "E - R: 9:00 - 19:00",
+    "hoursWeekend": "P: 10:00 - 17:00",
+    "transport": "Transport",
+    "transportDetail": "5 min Mustamäe Keskusest\nTasuta parkimine",
+    "getDirections": "Juhised",
+    "mustamae": "Mustamäe, Tallinn"
+  },
+  "aftercare": {
+    "title": "Hooldus",
+    "cuticleOil": "Küüneõli",
+    "cuticleOilDesc": "Hoidke küüni niisutatud",
+    "nailHardener": "Küüne tugevdaja",
+    "nailHardenerDesc": "Säilitage tugevus",
+    "protectionSpray": "Kaitse spray",
+    "protectionSprayDesc": "Pikendage maniküüri"
+  },
+  "giftCards": {
+    "title": "Kingikaardid",
+    "subtitle": "Sobib kõigele, kes väärivad ilusaid küüsi.",
+    "purchase": "Osta kingikaart"
+  },
+  "finalCta": {
+    "title": "Valmis ilusate küünte jaoks?",
+    "subtitle": "Kinnitage oma kohtamine ja kogeda Nailify erinevust.",
+    "mostClients": "Enamik kliente naaseb 4 nädala jooksul",
+    "freeReschedule": "Tasuta ümberbroneerimine",
+    "secureSlot": "Kinnita oma koht",
+    "browseServices": "Sirvi teenuseid"
+  },
+  "footer": {
+    "quickLinks": "Kiirlingid",
+    "contact": "Kontakt",
+    "openingHours": "Lahtiolekuajad",
+    "copyright": "© 2026 Nailify. Kõik õigused kaitstud.",
+    "bookAppointment": "Broneeri kohtamine",
+    "description": "Premium küünekunst Mustamäes. Kogenud tehnikud, pikaajalised tulemused."
+  },
+  "discountPill": {
+    "firstVisit": "Esimese külastuse pakkumine",
+    "discount": "−15%"
+  },
+  "widget": {
+    "bookInSeconds": "Broneerige alla 30 sekundi.",
+    "noSlotsAvailable": "Vabu aegu pole",
+    "todayAt": "Täna kell",
+    "tomorrowAt": "Homme kell",
+    "nextAvailable": "Järgmine saadaval",
+    "selectService": "Valige teenus",
+    "selectTime": "Valige aeg",
+    "secureThisSlot": "KINDLUSTA SEE KOHT",
+    "medicalGrade": "Meditsiinikvaliteediga"
+  },
+  "booking": {
+    "back": "Tagasi",
+    "bookingWith": "Broneerite",
+    "stepService": "Teenused",
+    "stepDateTime": "Kuupäev ja aeg",
+    "stepDetails": "Andmed",
+    "stepConfirm": "Kinnita",
+    "edit": "Muuda"
+  },
+  "service": {
+    "choose": "Valige oma teenus",
+    "styleSelected": "Stiil valitud",
+    "getStarted": "Valige hooldus",
+    "mostBooked": "Enim broneeritud",
+    "minutes": "min",
+    "bookInSeconds": "Broneeri sekunditega",
+    "freeReschedule": "Tasuta ümberbroneerimine"
+  },
+  "datetime": {
+    "choose": "Valige kuupäev ja kellaaeg",
+    "pickTime": "Valige sobiv aeg",
+    "earliestAvailable": "Varaseim saadaval on esile tõstetud",
+    "yourNailsWillThankYou": "Teie küüned tänavad teid",
+    "studioInfo": "Lõõgastuge meie Mustamäe stuudios. Iga kohtamine sisaldab konsultatsiooni.",
+    "earliest": "Varaseim",
+    "today": "Täna",
+    "availableTimes": "Saadaval ajad",
+    "preselected": "Varaseim aeg eelvalitud",
+    "noSlots": "Sellel kuupäeval pole vabu aegu.",
+    "tryAnother": "Proovige mõnda muud kuupäeva.",
+    "freeReschedule": "Tasuta ümberbroneerimine",
+    "continue": "Jätka andmetega",
+    "selectTime": "Valige aeg"
+  },
+  "contact": {
+    "yourDetails": "Teie andmed",
+    "sendConfirmation": "Saadame kinnituse siia",
+    "privateSecure": "Teie andmed jäävad privaatseteks. Kasutame neid ainult kohtamise jaoks.",
+    "firstName": "Eesnimi",
+    "lastName": "Perekonnanimi",
+    "optional": "(valikuline)",
+    "phone": "Telefoninumber",
+    "email": "E-post",
+    "addEmail": "+ Lisa e-post",
+    "removeEmail": "Eemalda e-post",
+    "contactForBooking": "Kasutame kontakti ainult kinnitamiseks.",
+    "lessThanMinute": "Võtab vähem kui minut aega",
+    "rescheduleAnytime": "Saate igal ajal ümber broneerida",
+    "confirmBooking": "Kinnita broneering",
+    "noTimeSelected": "Aeg pole valitud",
+    "required": "nõutud",
+    "validPhone": "Sisestage kehtiv telefoninumber",
+    "validEmail": "Sisestage kehtiv e-post"
+  },
+  "extras": {
+    "addExtras": "Lisa lisad",
+    "makeSpecial": "Muutke külastus erilisemaks",
+    "selectedService": "Teenused (+ lisad)",
+    "turnIntoSelfCare": "Muutke enesehoolduseks",
+    "pairBeautifully": "Need hooldused sobivad hästi valitud teenusega.",
+    "skip": "Jäta vahele",
+    "continue": "Jätka"
+  },
+  "confirm": {
+    "title": "Kinnita broneering",
+    "reviewDetails": "Vaadake üksikasjad",
+    "at": "kell",
+    "extras": "Lisad",
+    "total": "Kokku",
+    "totalTime": "min kokku",
+    "agreeTerms": "Nõustute tingimustega.",
+    "confirming": "Kinnitan...",
+    "confirmBooking": "Kinnita broneering",
+    "missingDetails": "Üksikasjad puuduvad.",
+    "completeAllSteps": "Täitke kõik sammud."
+  },
+  "success": {
+    "seeYouSoon": "Kohtume varsti! ✨",
+    "confirmed": "Kohtamine on kinnitatud",
+    "ref": "Viide",
+    "prepareVisit": "Valmistuge külastuseks",
+    "arriveEarly": "Saage 5 min varem. Eemaldage vana lakk!",
+    "addToCalendar": "Lisa kalendrisse",
+    "getDirections": "Juhised",
+    "rebookSameService": "Broneeri uuesti",
+    "shareWithFriends": "Jagage sõpradega",
+    "followUs": "Jälgi meid @nailify"
+  },
+  "fastBook": {
+    "quickBook": "Kiire broneerimine",
+    "requestSent": "Taotlus on saadetud!",
+    "willReceiveConfirmation": "Saate kinnituse pea",
+    "addToCalendar": "Lisa kalendrisse",
+    "yourFirstName": "Teie eesnimi",
+    "securingSlot": "Kohta kindlustamine...",
+    "orFullForm": "või täisvorm"
+  },
+  "slot": {
+    "fastest": "Kiireim",
+    "popular": "Populaarne",
+    "left": "jäänud"
+  },
+  "loading": {
+    "loading": "Laadimine...",
+    "booking": "Broneering laadimisel...",
+    "success": "Edu!"
+  },
+  "error": {
+    "somethingWrong": "Midagi läks valesti",
+    "tryAgain": "Proovige uuesti"
+  },
+  "common": {
+    "minutes": "min",
+    "from": "alates",
+    "book": "Broneeri"
+  }
+}

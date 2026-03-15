@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import type { Service } from '@/store/booking-types';
 import { mockServices } from '@/store/mock-data';
 
@@ -10,6 +11,7 @@ interface ServiceSelectorProps {
 }
 
 export function ServiceSelector({ onSelect, selectedService }: ServiceSelectorProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -50,11 +52,11 @@ export function ServiceSelector({ onSelect, selectedService }: ServiceSelectorPr
                 {selectedService.name}
               </span>
               <span className="text-gray-400 text-sm">
-                • {selectedService.duration} min
+                • {selectedService.duration} {t('common.minutes')}
               </span>
             </>
           ) : (
-            <span className="text-gray-400">Select treatment</span>
+            <span className="text-gray-400">{t('widget.selectService')}</span>
           )}
         </div>
         <svg 
@@ -82,13 +84,13 @@ export function ServiceSelector({ onSelect, selectedService }: ServiceSelectorPr
             >
               <div className="flex flex-col items-start">
                 <span className="font-medium text-gray-700">{service.name}</span>
-                <span className="text-sm text-gray-400">{service.duration} min</span>
+                <span className="text-sm text-gray-400">{service.duration} {t('common.minutes')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[#D4A59A]">€{service.price}</span>
                 {service.isPopular && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                    Popular
+                    {t('slot.popular')}
                   </span>
                 )}
               </div>

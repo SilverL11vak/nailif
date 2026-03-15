@@ -1,15 +1,17 @@
 'use client';
 
 import { useBookingStore } from '@/store/booking-store';
+import { useTranslation } from '@/lib/i18n';
 
 const steps = [
-  { id: 1, label: 'Service' },
-  { id: 2, label: 'Date & Time' },
-  { id: 3, label: 'Details' },
-  { id: 4, label: 'Confirm' },
+  { id: 1, labelKey: 'booking.stepService' },
+  { id: 2, labelKey: 'booking.stepDateTime' },
+  { id: 3, labelKey: 'booking.stepDetails' },
+  { id: 4, labelKey: 'booking.stepConfirm' },
 ];
 
 export function BookingProgressBar() {
+  const { t } = useTranslation();
   const currentStep = useBookingStore((state) => state.currentStep);
   const setStep = useBookingStore((state) => state.setStep);
   const selectedService = useBookingStore((state) => state.selectedService);
@@ -35,14 +37,14 @@ export function BookingProgressBar() {
           </span>
           <span className="text-gray-300">•</span>
           <span className="text-gray-500">
-            {selectedSlot ? `${new Date(selectedSlot.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} at ${selectedSlot.time}` : ''}
+            {selectedSlot ? `${new Date(selectedSlot.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${t('confirm.at')} ${selectedSlot.time}` : ''}
           </span>
           <span className="text-gray-300">•</span>
           <button 
             onClick={() => handleStepClick(1)}
             className="text-[#D4A59A] hover:underline font-medium"
           >
-            Edit
+            {t('booking.edit')}
           </button>
         </div>
       </div>
@@ -107,7 +109,7 @@ export function BookingProgressBar() {
                     ${isCurrent ? 'text-[#D4A59A] scale-105' : isCompleted ? 'text-gray-700' : 'text-gray-400'}
                   `}
                 >
-                  {step.label}
+                  {t(step.labelKey)}
                 </span>
               </div>
             );

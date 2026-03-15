@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/lib/i18n';
 import type { Service, TimeSlot, ContactInfo } from '@/store/booking-types';
 import { useBookingStore } from '@/store/booking-store';
 
@@ -20,6 +21,7 @@ export function FastBookingSheet({
   slot,
   onSwitchToFull 
 }: FastBookingSheetProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [formData, setFormData] = useState<ContactInfo>({
     firstName: '',
@@ -57,10 +59,10 @@ export function FastBookingSheet({
     try {
       // Validate
       if (!formData.firstName.trim()) {
-        throw new Error('Please enter your first name');
+        throw new Error(t('contact.required'));
       }
       if (!formData.phone.trim()) {
-        throw new Error('Please enter your phone number');
+        throw new Error(t('contact.required'));
       }
 
       // Optimistic update - show success immediately
@@ -78,7 +80,7 @@ export function FastBookingSheet({
       }, 2000);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : t('error.somethingWrong'));
       setIsLoading(false);
     }
   };
@@ -122,14 +124,14 @@ export function FastBookingSheet({
             
             {/* Emotional Headline */}
             <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-              Your appointment request is sent!
+              {t('fastBook.requestSent')}
             </h3>
             <p className="text-gray-500 mb-2">
-              Ref: #NF-{Math.random().toString(36).substring(2, 8).toUpperCase()}
+              {t('success.ref')}: #NF-{Math.random().toString(36).substring(2, 8).toUpperCase()}
             </p>
             {/* Reassurance */}
             <p className="text-sm text-green-600 font-medium">
-              ✓ You will receive confirmation shortly
+              {t('fastBook.willReceiveConfirmation')}
             </p>
             
             {/* Add to Calendar CTA */}
@@ -137,7 +139,7 @@ export function FastBookingSheet({
               onClick={() => router.push('/success')}
               className="mt-6 px-6 py-3 bg-[#D4A59A] text-white rounded-full font-medium hover:bg-[#C47D6D] transition-colors"
             >
-              Add to calendar
+              {t('fastBook.addToCalendar')}
             </button>
           </div>
         ) : (
@@ -148,10 +150,10 @@ export function FastBookingSheet({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">
-                    Quick Book
+                    {t('fastBook.quickBook')}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {service.name} • {service.duration} min
+                    {service.name} • {service.duration} {t('common.minutes')}
                   </p>
                 </div>
                 <button
@@ -176,7 +178,7 @@ export function FastBookingSheet({
                       weekday: 'long', 
                       day: 'numeric', 
                       month: 'short' 
-                    })} at {slot.time}
+                    })} {t('confirm.at')} {slot.time}
                   </span>
                 </div>
               </div>
@@ -186,7 +188,7 @@ export function FastBookingSheet({
             <form onSubmit={handleSubmit} className="px-6 py-6 space-y-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name *
+                  {t('contact.firstName')} *
                 </label>
                 <input
                   type="text"
@@ -194,7 +196,7 @@ export function FastBookingSheet({
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
-                  placeholder="Your first name"
+                  placeholder={t('fastBook.yourFirstName')}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-[#D4A59A] focus:outline-none focus:ring-2 focus:ring-[#D4A59A]/20 transition-colors duration-200"
                   required
                 />
@@ -202,7 +204,7 @@ export function FastBookingSheet({
 
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number *
+                  {t('contact.phone')} *
                 </label>
                 <input
                   type="tel"
@@ -236,7 +238,7 @@ export function FastBookingSheet({
                       <path className="opacity-75" fill="currentColor" 
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Securing your slot...
+                    {t('fastBook.securingSlot')}
                   </>
                 ) : (
                   <>
@@ -244,7 +246,7 @@ export function FastBookingSheet({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    CONFIRM BOOKING • €{service.price}
+                    {t('contact.confirmBooking')} • €{service.price}
                   </>
                 )}
               </button>
@@ -256,7 +258,7 @@ export function FastBookingSheet({
                   onClick={onSwitchToFull}
                   className="w-full py-3 text-gray-500 text-sm hover:text-[#D4A59A] transition-colors duration-200"
                 >
-                  or full booking form →
+                  {t('fastBook.orFullForm')} →
                 </button>
               )}
             </form>

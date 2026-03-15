@@ -1,0 +1,245 @@
+{
+  "nav": {
+    "services": "Services",
+    "gallery": "Gallery",
+    "pricing": "Pricing",
+    "contact": "Contact",
+    "bookNow": "Book Now"
+  },
+  "hero": {
+    "headline": "Obsessively beautiful nails. Booked in seconds.",
+    "subtext": "Long-lasting results crafted with meticulous attention to detail. Book your appointment in moments and walk out with confidence.",
+    "cta": "Book Your Appointment",
+    "nextAvailable": "Next available"
+  },
+  "trust": {
+    "googleRating": "Google Rating",
+    "appointmentsThisWeek": "Appointments This Week",
+    "sterileEquipment": "Sterile Equipment",
+    "premiumProducts": "Premium Products",
+    "certifiedTechnician": "Certified Technician",
+    "mustamaeStudio": "Mustamäe Studio",
+    "hygienicTools": "Hygienic Tools",
+    "rating": "4.9",
+    "clients": "1,200+ clients"
+  },
+  "services": {
+    "title": "Our Services",
+    "subtitle": "Choose your service and book in less than 30 seconds.",
+    "from": "from",
+    "minutes": "min",
+    "viewAll": "View All Services",
+    "book": "Book"
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Simple 3-step booking flow.",
+    "step1Title": "Choose Service",
+    "step1Desc": "Select from our range of premium treatments",
+    "step2Title": "Pick Time",
+    "step2Desc": "Choose a convenient time slot",
+    "step3Title": "Confirm",
+    "step3Desc": "Secure your booking instantly"
+  },
+  "gallery": {
+    "title": "Our Work",
+    "subtitle": "A selection of recent work",
+    "bookThisStyle": "Book this style",
+    "bookYourLook": "Book Your Look"
+  },
+  "enhancements": {
+    "title": "Enhancements",
+    "subtitle": "Optional upgrades for your treatment",
+    "cuticleCare": "Cuticle Care",
+    "cuticleCareDesc": "Healthy, hydrated cuticles",
+    "handMassage": "Hand Massage",
+    "handMassageDesc": "Relaxing tension release",
+    "nailStrengthening": "Nail Strengthening",
+    "nailStrengtheningDesc": "Extra strength for weak nails",
+    "aftercareKit": "Aftercare Kit",
+    "aftercareKitDesc": "Take-home care products",
+    "plus": "+",
+    "addTime": "+"
+  },
+  "team": {
+    "title": "Our Team",
+    "subtitle": "Expert technicians dedicated to beautiful results",
+    "gelSpecialist": "Gel Specialist",
+    "nailArtist": "Nail Artist",
+    "spaExpert": "Spa Expert",
+    "experience": "years experience"
+  },
+  "location": {
+    "title": "Visit Us",
+    "address": "Address",
+    "addressDetail": "Nailify Mustamäe\nMustamäe tee 55, Tallinn",
+    "openingHours": "Opening Hours",
+    "hoursWeekday": "Mon - Sat: 9am - 7pm",
+    "hoursWeekend": "Sunday: 10am - 5pm",
+    "transport": "Transport",
+    "transportDetail": "5 min from Mustamäe Keskus\nFree parking available",
+    "getDirections": "Get Directions",
+    "mustamae": "Mustamäe, Tallinn"
+  },
+  "aftercare": {
+    "title": "Aftercare",
+    "cuticleOil": "Cuticle Oil",
+    "cuticleOilDesc": "Keep nails hydrated",
+    "nailHardener": "Nail Hardener",
+    "nailHardenerDesc": "Maintain strength",
+    "protectionSpray": "Protection Spray",
+    "protectionSprayDesc": "Extend your manicure"
+  },
+  "giftCards": {
+    "title": "Gift Cards",
+    "subtitle": "Perfect for anyone who deserves beautiful nails.",
+    "purchase": "Purchase Gift Card"
+  },
+  "finalCta": {
+    "title": "Ready for Beautiful Nails?",
+    "subtitle": "Secure your slot and experience the Nailify difference.",
+    "mostClients": "Most clients return within 4 weeks",
+    "freeReschedule": "Free reschedule if plans change",
+    "secureSlot": "Secure Your Slot",
+    "browseServices": "Browse Services"
+  },
+  "footer": {
+    "quickLinks": "Quick Links",
+    "contact": "Contact",
+    "openingHours": "Opening Hours",
+    "copyright": "© 2026 Nailify. All rights reserved.",
+    "bookAppointment": "Book Appointment",
+    "description": "Premium nail artistry in Mustamäe. Expert technicians, lasting results."
+  },
+  "discountPill": {
+    "firstVisit": "First Visit Offer",
+    "discount": "−15%"
+  },
+  "widget": {
+    "bookInSeconds": "Book your appointment in under 30 seconds.",
+    "noSlotsAvailable": "No slots available",
+    "todayAt": "Today at",
+    "tomorrowAt": "Tomorrow at",
+    "nextAvailable": "Next available",
+    "selectService": "Select a service",
+    "selectTime": "Select a time",
+    "secureThisSlot": "SECURE THIS SLOT",
+    "medicalGrade": "Medical-grade sterilization"
+  },
+  "booking": {
+    "back": "Back",
+    "bookingWith": "Booking with",
+    "stepService": "Service",
+    "stepDateTime": "Date & Time",
+    "stepDetails": "Details",
+    "stepConfirm": "Confirm",
+    "edit": "Edit"
+  },
+  "service": {
+    "choose": "Choose Your Service",
+    "styleSelected": "Style selected from gallery",
+    "getStarted": "Select a treatment to get started",
+    "mostBooked": "Most booked",
+    "minutes": "min",
+    "bookInSeconds": "Book in seconds",
+    "freeReschedule": "Free reschedule"
+  },
+  "datetime": {
+    "choose": "Choose Date & Time",
+    "pickTime": "Pick a convenient time for your appointment",
+    "earliestAvailable": "Earliest available appointment highlighted",
+    "yourNailsWillThankYou": "Your nails will thank you",
+    "studioInfo": "Relax in our Mustamäe studio. Each appointment includes a consultation to ensure your nails are perfectly suited to your lifestyle.",
+    "earliest": "Earliest",
+    "today": "Today",
+    "availableTimes": "Available Times",
+    "preselected": "Earliest available time preselected",
+    "noSlots": "No available slots for this date.",
+    "tryAnother": "Please try another date.",
+    "freeReschedule": "Free reschedule if your plans change",
+    "continue": "Continue to Details",
+    "selectTime": "Select a time"
+  },
+  "contact": {
+    "yourDetails": "Your Details",
+    "sendConfirmation": "We'll send your confirmation here",
+    "privateSecure": "Your details stay private and secure. We'll only use them for your appointment.",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "optional": "(optional)",
+    "phone": "Phone Number",
+    "email": "Email",
+    "addEmail": "+ Add email for booking confirmation",
+    "removeEmail": "Remove email",
+    "contactForBooking": "We only use your contact to confirm the booking.",
+    "lessThanMinute": "Takes less than a minute",
+    "rescheduleAnytime": "You can reschedule anytime",
+    "confirmBooking": "Confirm Booking",
+    "noTimeSelected": "No time selected",
+    "required": "required",
+    "validPhone": "Please enter a valid phone number",
+    "validEmail": "Please enter a valid email"
+  },
+  "extras": {
+    "addExtras": "Add Extras",
+    "makeSpecial": "Make your visit even more special",
+    "selectedService": "Service (+ extras)",
+    "turnIntoSelfCare": "Turn your appointment into self-care",
+    "pairBeautifully": "Add a little extra relaxation. These treatments pair beautifully with your service.",
+    "skip": "Skip",
+    "continue": "Continue"
+  },
+  "confirm": {
+    "title": "Confirm Booking",
+    "reviewDetails": "Review your appointment details",
+    "at": "at",
+    "extras": "Extras",
+    "total": "Total",
+    "totalTime": "min total",
+    "agreeTerms": "By confirming, you agree to our booking terms and cancellation policy.",
+    "confirming": "Confirming...",
+    "confirmBooking": "Confirm Booking",
+    "missingDetails": "Missing booking details.",
+    "completeAllSteps": "Please go back and complete all steps."
+  },
+  "success": {
+    "seeYouSoon": "See you soon! ✨",
+    "confirmed": "Your appointment is confirmed",
+    "ref": "Ref",
+    "prepareVisit": "Prepare for your visit",
+    "arriveEarly": "Arrive 5 minutes early. Remove any old polish. We provide everything else!",
+    "addToCalendar": "Add to Calendar",
+    "getDirections": "Get Directions",
+    "rebookSameService": "Rebook Same Service",
+    "shareWithFriends": "Share with friends",
+    "followUs": "Follow us @nailify for nail inspiration"
+  },
+  "fastBook": {
+    "quickBook": "Quick Book",
+    "requestSent": "Your appointment request is sent!",
+    "willReceiveConfirmation": "You will receive confirmation shortly",
+    "addToCalendar": "Add to calendar",
+    "yourFirstName": "Your first name",
+    "securingSlot": "Securing your slot...",
+    "orFullForm": "or full booking form"
+  },
+  "slot": {
+    "fastest": "Fastest",
+    "popular": "Popular",
+    "left": "left"
+  },
+  "loading": {
+    "loading": "Loading...",
+    "booking": "Loading booking...",
+    "success": "Success!"
+  },
+  "error": {
+    "somethingWrong": "Something went wrong",
+    "tryAgain": "Try again"
+  },
+  "common": {
+    "minutes": "min",
+    "from": "from",
+    "book": "Book"
+  }
+}

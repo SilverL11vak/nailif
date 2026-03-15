@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
+import { useTranslation } from '@/lib/i18n';
 
 export default function SuccessPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [bookingRef, setBookingRef] = useState('');
   
   const { selectedService, selectedSlot, totalPrice, totalDuration, reset } = useBookingStore();
@@ -74,13 +76,13 @@ export default function SuccessPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-semibold text-gray-800 mb-2">
-            See you soon! ✨
+            {t('success.seeYouSoon')}
           </h1>
           <p className="text-gray-500">
-            Your appointment is confirmed
+            {t('success.confirmed')}
           </p>
           <p className="text-[#D4A59A] font-medium mt-2">
-            Ref: {bookingRef}
+            {t('success.ref')}: {bookingRef}
           </p>
         </div>
 
@@ -96,12 +98,12 @@ export default function SuccessPage() {
                     weekday: 'long', 
                     day: 'numeric', 
                     month: 'long' 
-                  })} at ${selectedSlot.time}`
-                : 'Friday, March 18 at 2:30 PM'
+                  })} ${t('confirm.at')} ${selectedSlot.time}`
+                : t('success.confirmed')
               }
             </p>
             <p className="text-gray-400 text-sm">
-              {selectedService?.duration || 45} min • with Sophie
+              {selectedService?.duration || 45} {t('common.minutes')} • {t('team.gelSpecialist')}
             </p>
           </div>
 
@@ -109,7 +111,7 @@ export default function SuccessPage() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Total</span>
               <span className="font-semibold text-gray-800">
-                €{totalPrice || selectedService?.price || 35} • {totalDuration || selectedService?.duration || 45} min
+                €{totalPrice || selectedService?.price || 35} • {totalDuration || selectedService?.duration || 45} {t('common.minutes')}
               </span>
             </div>
           </div>
@@ -124,8 +126,8 @@ export default function SuccessPage() {
               </svg>
             </div>
             <div>
-              <h3 className="font-medium text-gray-800 mb-1">Prepare for your visit</h3>
-              <p className="text-sm text-gray-600">Arrive 5 minutes early. Remove any old polish. We provide everything else!</p>
+              <h3 className="font-medium text-gray-800 mb-1">{t('success.prepareVisit')}</h3>
+              <p className="text-sm text-gray-600">{t('success.arriveEarly')}</p>
             </div>
           </div>
         </div>
@@ -140,7 +142,7 @@ export default function SuccessPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Add to Calendar
+            {t('success.addToCalendar')}
           </button>
           
           <button
@@ -153,7 +155,7 @@ export default function SuccessPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Get Directions
+            {t('success.getDirections')}
           </button>
         </div>
 
@@ -166,12 +168,12 @@ export default function SuccessPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Rebook Same Service
+          {t('success.rebookSameService')}
         </button>
 
         {/* Share */}
         <div className="text-center">
-          <p className="text-gray-500 text-sm mb-3">Share with friends</p>
+          <p className="text-gray-500 text-sm mb-3">{t('success.shareWithFriends')}</p>
           <div className="flex justify-center gap-3">
             <button
               onClick={handleShare}
@@ -196,7 +198,7 @@ export default function SuccessPage() {
         {/* Instagram CTA */}
         <div className="mt-8 text-center border-t border-gray-200 pt-6">
           <p className="text-gray-500 text-sm">
-            Follow us @nailify for nail inspiration 💅
+            {t('success.followUs')}
           </p>
         </div>
       </div>

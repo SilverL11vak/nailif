@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
+import { useTranslation } from '@/lib/i18n';
 
 export function ConfirmStep() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   
@@ -36,8 +38,8 @@ export function ConfirmStep() {
   if (!selectedService || !selectedSlot) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">Missing booking details.</p>
-        <p className="text-sm text-gray-400">Please go back and complete all steps.</p>
+        <p className="text-gray-500">{t('confirm.missingDetails')}</p>
+        <p className="text-sm text-gray-400">{t('confirm.completeAllSteps')}</p>
       </div>
     );
   }
@@ -46,10 +48,10 @@ export function ConfirmStep() {
     <div className="animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          Confirm Booking
+          {t('confirm.title')}
         </h2>
         <p className="text-gray-500">
-          Review your appointment details
+          {t('confirm.reviewDetails')}
         </p>
       </div>
 
@@ -62,7 +64,7 @@ export function ConfirmStep() {
           </h3>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">
-              {selectedService.duration} min
+              {selectedService.duration} {t('common.minutes')}
             </span>
             <span className="font-semibold text-gray-800">
               €{selectedService.price}
@@ -87,7 +89,7 @@ export function ConfirmStep() {
                   year: 'numeric'
                 })}
               </p>
-              <p className="text-sm text-gray-500">at {selectedSlot.time}</p>
+              <p className="text-sm text-gray-500">{t('confirm.at')} {selectedSlot.time}</p>
             </div>
           </div>
         </div>
@@ -95,7 +97,7 @@ export function ConfirmStep() {
         {/* Extras */}
         {selectedExtras.length > 0 && (
           <div className="pb-4 mb-4 border-b border-gray-100">
-            <h4 className="text-sm font-medium text-gray-600 mb-2">Extras</h4>
+            <h4 className="text-sm font-medium text-gray-600 mb-2">{t('confirm.extras')}</h4>
             {selectedExtras.map((extra) => (
               <div key={extra.id} className="flex items-center justify-between text-sm py-1">
                 <span className="text-gray-600">{extra.name}</span>
@@ -128,8 +130,8 @@ export function ConfirmStep() {
         {/* Total */}
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-lg font-semibold text-gray-800">Total</span>
-            <p className="text-sm text-gray-500">{totalDuration} min total</p>
+            <span className="text-lg font-semibold text-gray-800">{t('confirm.total')}</span>
+            <p className="text-sm text-gray-500">{totalDuration} {t('confirm.totalTime')}</p>
           </div>
           <span className="text-2xl font-semibold text-[#D4A59A]">
             €{totalPrice}
@@ -138,8 +140,8 @@ export function ConfirmStep() {
       </div>
 
       {/* Terms */}
-      <p className="text-xs text-gray-400 text-center mb-6">
-        By confirming, you agree to our booking terms and cancellation policy.
+      <p className="text-xs gray-400 text-center mb-6">
+        {t('confirm.agreeTerms')}
       </p>
 
       {/* Confirm Button */}
@@ -161,14 +163,14 @@ export function ConfirmStep() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            Confirming...
+            {t('confirm.confirming')}
           </>
         ) : (
           <>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Confirm Booking • €{totalPrice}
+            {t('confirm.confirmBooking')} • €{totalPrice}
           </>
         )}
       </button>

@@ -1,8 +1,10 @@
 'use client';
 
 import { useBookingStore } from '@/store/booking-store';
+import { useTranslation } from '@/lib/i18n';
 
 export function ExtrasStep() {
+  const { t } = useTranslation();
   const selectedAddOns = useBookingStore((state) => state.selectedAddOns);
   const toggleAddOn = useBookingStore((state) => state.toggleAddOn);
   const nextStep = useBookingStore((state) => state.nextStep);
@@ -20,10 +22,10 @@ export function ExtrasStep() {
     <div className="animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          Add Extras
+          {t('extras.addExtras')}
         </h2>
         <p className="text-gray-500">
-          Make your visit even more special
+          {t('extras.makeSpecial')}
         </p>
       </div>
 
@@ -31,11 +33,11 @@ export function ExtrasStep() {
       <div className="bg-[#FFF9F5] rounded-2xl p-4 mb-6">
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-600">
-            {selectedService?.name} (+ extras)
+            {selectedService?.name} (+ {t('extras.addExtras').toLowerCase()})
           </span>
           <div className="text-right">
             <span className="font-semibold text-gray-800">€{totalPrice}</span>
-            <span className="text-gray-500 ml-2">• {totalDuration} min</span>
+            <span className="text-gray-500 ml-2">• {totalDuration} {t('common.minutes')}</span>
           </div>
         </div>
       </div>
@@ -47,8 +49,8 @@ export function ExtrasStep() {
             <span className="text-lg">💆</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-800 mb-1">Turn your appointment into self-care</p>
-            <p className="text-xs text-gray-500">Add a little extra relaxation. These treatments pair beautifully with your {selectedService?.name?.toLowerCase() || 'selected service'}.</p>
+            <p className="text-sm font-medium text-gray-800 mb-1">{t('extras.turnIntoSelfCare')}</p>
+            <p className="text-xs text-gray-500">{t('extras.pairBeautifully')}</p>
           </div>
         </div>
       </div>
@@ -101,7 +103,7 @@ export function ExtrasStep() {
               <div className="text-right">
                 <span className="font-semibold text-[#D4A59A]">+€{addOn.price}</span>
                 {addOn.duration > 0 && (
-                  <span className="text-sm text-gray-500 ml-1">• {addOn.duration} min</span>
+                  <span className="text-sm text-gray-500 ml-1">• {addOn.duration} {t('common.minutes')}</span>
                 )}
               </div>
             </button>
@@ -116,7 +118,7 @@ export function ExtrasStep() {
           onClick={handleSkip}
           className="flex-1 py-4 border-2 border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 transition-colors duration-200"
         >
-          Skip
+          {t('extras.skip')}
         </button>
 
         {/* Continue Button */}
@@ -125,8 +127,8 @@ export function ExtrasStep() {
           className="flex-[2] py-4 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200"
         >
           {selectedCount > 0 
-            ? `Continue (+€${selectedAddOns.filter(a => a.selected).reduce((sum, a) => sum + a.price, 0)})`
-            : 'Continue'
+            ? `${t('extras.continue')} (+€${selectedAddOns.filter(a => a.selected).reduce((sum, a) => sum + a.price, 0)})`
+            : t('extras.continue')
           }
         </button>
       </div>

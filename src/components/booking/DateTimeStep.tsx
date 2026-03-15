@@ -3,10 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { generateSlotsForDate } from '@/store/mock-data';
+import { useTranslation } from '@/lib/i18n';
 import type { TimeSlot } from '@/store/booking-types';
 import TimeSlotComponent from './TimeSlot';
 
 export function DateTimeStep() {
+  const { t } = useTranslation();
   const selectedDate = useBookingStore((state) => state.selectedDate);
   const selectedSlot = useBookingStore((state) => state.selectedSlot);
   const selectDate = useBookingStore((state) => state.selectDate);
@@ -104,10 +106,10 @@ export function DateTimeStep() {
     <div className="animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          Choose Date & Time
+          {t('datetime.choose')}
         </h2>
         <p className="text-gray-500">
-          Pick a convenient time for your appointment
+          {t('datetime.pickTime')}
         </p>
       </div>
 
@@ -116,7 +118,7 @@ export function DateTimeStep() {
         <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span>Earliest available appointment highlighted</span>
+        <span>{t('datetime.earliestAvailable')}</span>
       </div>
 
       {/* Beauty Context Microcopy */}
@@ -126,8 +128,8 @@ export function DateTimeStep() {
             <span className="text-lg">✨</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-800 mb-1">Your nails will thank you</p>
-            <p className="text-xs text-gray-500">Relax in our Mustamäe studio. Each appointment includes a consultation to ensure your nails are perfectly suited to your lifestyle.</p>
+            <p className="text-sm font-medium text-gray-800 mb-1">{t('datetime.yourNailsWillThankYou')}</p>
+            <p className="text-xs text-gray-500">{t('datetime.studioInfo')}</p>
           </div>
         </div>
       </div>
@@ -160,10 +162,10 @@ export function DateTimeStep() {
             >
               {/* Earliest badge */}
               {isEarliest && (
-                <span className="text-[10px] font-semibold text-amber-600 mb-0.5">Earliest</span>
+                <span className="text-[10px] font-semibold text-amber-600 mb-0.5">{t('datetime.earliest')}</span>
               )}
               <span className={`text-xs font-medium ${isSelected ? 'text-[#D4A59A]' : hasSlots ? 'text-gray-500' : 'text-gray-300'}`}>
-                {isToday(date) ? 'Today' : formatDate(date).split(' ')[0]}
+                {isToday(date) ? t('datetime.today') : formatDate(date).split(' ')[0]}
               </span>
               <span className={`text-xl font-semibold ${isSelected ? 'text-[#D4A59A]' : hasSlots ? 'text-gray-800' : 'text-gray-300'}`}>
                 {date.getDate()}
@@ -176,7 +178,7 @@ export function DateTimeStep() {
       {/* Slot List */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-700 mb-3">
-          Available Times
+          {t('datetime.availableTimes')}
         </h3>
         
         {/* Auto preselected microcopy */}
@@ -185,7 +187,7 @@ export function DateTimeStep() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span>Earliest available time preselected</span>
+            <span>{t('datetime.preselected')}</span>
           </div>
         )}
         
@@ -214,8 +216,8 @@ export function DateTimeStep() {
 
         {!isLoading && slots.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            <p>No available slots for this date.</p>
-            <p className="text-sm">Please try another date.</p>
+            <p>{t('datetime.noSlots')}</p>
+            <p className="text-sm">{t('datetime.tryAnother')}</p>
           </div>
         )}
       </div>
@@ -225,7 +227,7 @@ export function DateTimeStep() {
         <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
-        <span>Free reschedule if your plans change</span>
+        <span>{t('datetime.freeReschedule')}</span>
       </div>
 
       {/* Continue Button */}
@@ -240,7 +242,7 @@ export function DateTimeStep() {
           }
         `}
       >
-        {selectedSlot ? 'Continue to Details' : 'Select a time'}
+        {selectedSlot ? t('datetime.continue') : t('datetime.selectTime')}
       </button>
       
       {/* Hidden ref for scroll */}

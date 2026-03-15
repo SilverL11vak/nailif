@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
+import { useTranslation } from '@/lib/i18n';
 
 interface StickyBookingCTAProps {
   hideOnPaths?: string[];
@@ -11,6 +12,7 @@ interface StickyBookingCTAProps {
 export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   
   const { selectedService, totalPrice } = useBookingStore();
@@ -63,9 +65,9 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
         >
           {selectedService ? (
             <>
-              <span>Book {selectedService.name}</span>
+              <span>{t('common.book')} {selectedService.name}</span>
               {totalPrice > 0 && (
-                <span className="opacity-80">from €{totalPrice}</span>
+                <span className="opacity-80">€{totalPrice}</span>
               )}
             </>
           ) : (
@@ -74,7 +76,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Book Now
+              {t('nav.bookNow')}
             </>
           )}
         </button>

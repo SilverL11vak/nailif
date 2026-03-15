@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
+import { useTranslation } from '@/lib/i18n';
 import { BookingProgressBar } from '@/components/booking/BookingProgressBar';
 import { ServiceStep } from '@/components/booking/ServiceStep';
 import { DateTimeStep } from '@/components/booking/DateTimeStep';
@@ -22,6 +23,7 @@ const nailStyles = [
 ];
 
 function BookingContent() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentStep = useBookingStore((state) => state.currentStep);
@@ -106,12 +108,12 @@ function BookingContent() {
               <span className="text-sm text-[#D4A59A]">S</span>
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-800">Booking with Sandra</p>
-              <p className="text-xs text-gray-400">Mustamäe Studio</p>
+              <p className="text-sm font-medium text-gray-800">{t('booking.bookingWith')} Sandra</p>
+              <p className="text-xs text-gray-400">{t('trust.mustamaeStudio')}</p>
             </div>
           </div>
           <span className="text-gray-200">•</span>
-          <span className="text-xs text-gray-400">Certified nail technician</span>
+          <span className="text-xs text-gray-400">{t('trust.certifiedTechnician')}</span>
         </div>
       </div>
 
@@ -127,7 +129,7 @@ function BookingContent() {
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span className="text-sm font-medium">Back</span>
+              <span className="text-sm font-medium">{t('booking.back')}</span>
             </button>
 
             {/* Logo */}
@@ -171,7 +173,7 @@ function BookingContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span>
-                      {selectedSlot.date} at {selectedSlot.time}
+                      {selectedSlot.date} {t('confirm.at')} {selectedSlot.time}
                     </span>
                   </div>
                 )}
@@ -223,7 +225,7 @@ export default function BookingPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#F5F0EB] flex items-center justify-center">
-        <div className="animate-pulse text-[#D4A59A]">Loading...</div>
+        <div className="animate-pulse text-[#D4A59A]">Laadimine...</div>
       </div>
     }>
       <BookingContent />

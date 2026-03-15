@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useBookingStore } from '@/store/booking-store';
+import { useTranslation } from '@/lib/i18n';
 
 export function ContactStep() {
+  const { t } = useTranslation();
   const contactInfo = useBookingStore((state) => state.contactInfo);
   const setContactInfo = useBookingStore((state) => state.setContactInfo);
   const nextStep = useBookingStore((state) => state.nextStep);
@@ -59,15 +61,15 @@ export function ContactStep() {
     const newErrors: Record<string, string> = {};
     
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = t('contact.required');
     }
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = t('contact.required');
     } else if (!/^\+?[\d\s-]{10,}$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
+      newErrors.phone = t('contact.validPhone');
     }
     if (showEmail && formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+      newErrors.email = t('contact.validEmail');
     }
 
     setErrors(newErrors);
@@ -100,10 +102,10 @@ export function ContactStep() {
     <div className="animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          Your Details
+          {t('contact.yourDetails')}
         </h2>
         <p className="text-gray-500">
-          We&apos;ll send your confirmation here
+          {t('contact.sendConfirmation')}
         </p>
       </div>
 
@@ -112,7 +114,7 @@ export function ContactStep() {
         <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
         </svg>
-        <p className="text-xs text-gray-500">Your details stay private and secure. We&apos;ll only use them for your appointment.</p>
+        <p className="text-xs text-gray-500">{t('contact.privateSecure')}</p>
       </div>
 
       {/* Booking Summary Card */}
@@ -124,11 +126,11 @@ export function ContactStep() {
         <div className="flex items-center justify-between text-sm text-gray-500">
           <span>
             {selectedSlot 
-              ? `${new Date(selectedSlot.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} at ${selectedSlot.time}`
-              : 'No time selected'
+              ? `${new Date(selectedSlot.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} {t('confirm.at')} ${selectedSlot.time}`
+              : t('contact.noTimeSelected')
             }
           </span>
-          <span>{totalDuration || selectedService?.duration} min</span>
+          <span>{totalDuration || selectedService?.duration} {t('contact.minutes') || 'min'}</span>
         </div>
       </div>
 
@@ -164,7 +166,7 @@ export function ContactStep() {
               ${errors.firstName && touched.firstName ? 'text-red-500' : ''}
             `}
           >
-            First Name *
+            {t('contact.firstName')} *
           </label>
           {errors.firstName && touched.firstName && (
             <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
@@ -192,7 +194,7 @@ export function ContactStep() {
               }
             `}
           >
-            Last Name <span className="text-gray-400">(optional)</span>
+            {t('contact.lastName')} <span className="text-gray-400">{t('contact.optional')}</span>
           </label>
         </div>
 
@@ -225,7 +227,7 @@ export function ContactStep() {
               ${errors.phone && touched.phone ? 'text-red-500' : ''}
             `}
           >
-            Phone Number *
+            {t('contact.phone')} *
           </label>
           {errors.phone && touched.phone && (
             <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
@@ -240,7 +242,7 @@ export function ContactStep() {
               onClick={() => setShowEmail(true)}
               className="text-sm text-[#D4A59A] hover:text-[#C47D6D] font-medium"
             >
-              + Add email for booking confirmation
+              {t('contact.addEmail')}
             </button>
           ) : (
             <div className="relative">
@@ -270,7 +272,7 @@ export function ContactStep() {
                   }
                 `}
               >
-                Email <span className="text-gray-400">(optional)</span>
+                {t('contact.email')} <span className="text-gray-400">{t('contact.optional')}</span>
               </label>
               {errors.email && touched.email && (
                 <p className="mt-1 text-sm text-red-500">{errors.email}</p>
@@ -283,7 +285,7 @@ export function ContactStep() {
                 }}
                 className="mt-2 text-sm text-gray-500 hover:text-gray-700"
               >
-                Remove email
+                {t('contact.removeEmail')}
               </button>
             </div>
           )}
@@ -296,15 +298,15 @@ export function ContactStep() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
         <p className="text-xs text-gray-500">
-          We only use your contact to confirm the booking.
+          {t('contact.contactForBooking')}
         </p>
       </div>
 
       {/* Decision Safety Microcopy */}
       <div className="flex items-center justify-center gap-4 text-xs text-gray-400 mb-4">
-        <span>✓ Takes less than a minute</span>
+        <span>✓ {t('contact.lessThanMinute')}</span>
         <span>•</span>
-        <span>You can reschedule anytime</span>
+        <span>{t('contact.rescheduleAnytime')}</span>
       </div>
 
       {/* Continue Button - Large tap area */}
@@ -312,7 +314,7 @@ export function ContactStep() {
         onClick={handleSubmit}
         className="w-full mt-2 py-5 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-xl"
       >
-        Confirm Booking
+        {t('contact.confirmBooking')}
       </button>
       
       {/* Hidden ref for scroll */}

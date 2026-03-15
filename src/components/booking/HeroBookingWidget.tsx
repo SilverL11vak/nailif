@@ -6,9 +6,11 @@ import { TimeSlot } from './TimeSlot';
 import { FastBookingSheet } from './FastBookingSheet';
 import { useBookingStore } from '@/store/booking-store';
 import { mockSlots, getNextAvailableSlot } from '@/store/mock-data';
+import { useTranslation } from '@/lib/i18n';
 import type { Service, TimeSlot as TimeSlotType } from '@/store/booking-types';
 
 export function HeroBookingWidget() {
+  const { t } = useTranslation();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   
   const { 
@@ -53,25 +55,31 @@ export function HeroBookingWidget() {
 
   // Get next available time for display
   const getNextAvailableText = () => {
-    if (!nextSlot) return 'No slots available';
+    if (!nextSlot) return t('widget.noSlotsAvailable');
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'short' });
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
     if (nextSlot.date === new Date().toISOString().split('T')[0]) {
-      return `Today at ${nextSlot.time}`;
+      return `${t('widget.todayAt')} ${nextSlot.time}`;
     }
-    return `${today}, ${nextSlot.date.split('-')[2]} at ${nextSlot.time}`;
+    if (nextSlot.date === tomorrow.toISOString().split('T')[0]) {
+      return `${t('widget.tomorrowAt')} ${nextSlot.time}`;
+    }
+    return `${today}, ${nextSlot.date.split('-')[2]} ${t('confirm.at')} ${nextSlot.time}`;
   };
 
   return (
     <div id="hero-booking" className="bg-white rounded-2xl shadow-lg p-6 lg:p-8">
       {/* Helper Headline */}
       <p className="text-center text-sm text-gray-500 mb-4 font-medium">
-        Book your appointment in under 30 seconds.
+        {t('widget.bookInSeconds')}
       </p>
       
       {/* Next Available Badge */}
       <div className="flex items-center gap-2 text-sm text-green-600 mb-6">
         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-        <span className="font-medium">Next available {getNextAvailableText()}</span>
+        <span className="font-medium">{t('widget.nextAvailable')} {getNextAvailableText()}</span>
       </div>
       
       {/* Service Selector */}
@@ -84,7 +92,7 @@ export function HeroBookingWidget() {
 
       {/* Date Picker - Simplified for hero */}
       <div className="mb-6">
-        <p className="text-sm font-medium text-gray-600 mb-3">Select a time</p>
+        <p className="text-sm font-medium text-gray-600 mb-3">{t('widget.selectTime')}</p>
         <div className="flex flex-wrap gap-2">
           {mockSlots.slice(0, 3).map((slot) => (
             <TimeSlot
@@ -113,7 +121,7 @@ export function HeroBookingWidget() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
-        {selectedService ? 'SECURE THIS SLOT' : 'Select a service'}
+        {selectedService ? t('widget.secureThisSlot') : t('widget.selectService')}
       </button>
 
       {/* Trust badges */}
@@ -122,10 +130,10 @@ export function HeroBookingWidget() {
           <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
           </svg>
-          <span>4.9 (1,200+)</span>
+          <span>{t('trust.rating')} ({t('trust.clients')})</span>
         </div>
         <span>•</span>
-        <span>✓ Medical-grade sterilization</span>
+        <span>✓ {t('widget.medicalGrade')}</span>
       </div>
 
       {/* Fast Booking Sheet */}

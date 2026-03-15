@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { mockServices } from '@/store/mock-data';
+import { useTranslation } from '@/lib/i18n';
 import type { Service } from '@/store/booking-types';
 
 const serviceBenefits: Record<string, string> = {
@@ -14,6 +15,7 @@ const serviceBenefits: Record<string, string> = {
 };
 
 export function ServiceStep() {
+  const { t } = useTranslation();
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectService = useBookingStore((state) => state.selectService);
   const nextStep = useBookingStore((state) => state.nextStep);
@@ -34,16 +36,16 @@ export function ServiceStep() {
     <div className="animate-fade-in">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          Choose Your Service
+          {t('service.choose')}
         </h2>
         {selectedStyle ? (
           <div className="flex items-center justify-center gap-2 text-sm text-[#D4A59A] mb-2">
             <span>{selectedStyle.emoji}</span>
-            <span>Style selected from gallery</span>
+            <span>{t('service.styleSelected')}</span>
           </div>
         ) : (
           <p className="text-gray-500">
-            Select a treatment to get started
+            {t('service.getStarted')}
           </p>
         )}
       </div>
@@ -87,7 +89,7 @@ export function ServiceStep() {
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  Most booked
+                  {t('service.mostBooked')}
                 </span>
               )}
 
@@ -109,7 +111,7 @@ export function ServiceStep() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {service.duration} min
+                    {service.duration} {t('service.minutes')}
                   </div>
                 </div>
                 {/* Clearer Price Hierarchy */}
@@ -138,9 +140,9 @@ export function ServiceStep() {
       
       {/* Decision Safety Microcopy */}
       <div className="flex items-center justify-center gap-4 text-xs text-gray-400 pt-4">
-        <span>✓ Book in seconds</span>
+        <span>✓ {t('service.bookInSeconds')}</span>
         <span>•</span>
-        <span>Free reschedule</span>
+        <span>{t('service.freeReschedule')}</span>
       </div>
       
       <style jsx>{`
