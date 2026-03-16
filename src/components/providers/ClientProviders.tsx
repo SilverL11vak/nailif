@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { I18nProvider } from '@/lib/i18n';
+import { MessengerBubble } from '@/components/chat/MessengerBubble';
 
 const SmartChatWidget = dynamic(
   () =>
@@ -26,12 +27,14 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   const isAdminPath = pathname.startsWith('/admin');
   const isSuccessPath = pathname.includes('/success');
   const disableExperienceLayers = isBookingPath || isAdminPath || isSuccessPath;
+  const enableNailifyChatWidget = false;
 
   return (
     <I18nProvider>
       {!disableExperienceLayers ? <HomepageMotion /> : null}
       {children}
-      {!disableExperienceLayers ? <SmartChatWidget /> : null}
+      <MessengerBubble />
+      {!disableExperienceLayers && enableNailifyChatWidget ? <SmartChatWidget /> : null}
     </I18nProvider>
   );
 }

@@ -188,11 +188,11 @@ function SuccessPageContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.02em] text-[#352936]">{text('success_headline', language === 'en' ? 'Great, your appointment is confirmed!' : 'Suureparane, sinu aeg on kinnitatud!')}</h1>
-          <p className="mx-auto mt-2 max-w-[52ch] text-sm text-[#6d5a68]">
+          <h1 className="type-h2 text-[#352936]">{text('success_headline', language === 'en' ? 'Great, your appointment is confirmed!' : 'Suurepärane, sinu aeg on kinnitatud!')}</h1>
+          <p className="type-small measure-copy mx-auto mt-2 text-[#6d5a68]">
             {text('success_subheadline', language === 'en' ? 'See you at the studio. We will also send your confirmation shortly.' : 'Kohtumiseni stuudios. Saadame peagi ka kinnituse.')}
           </p>
-          <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-[#b27f9f]">
+          <p className="type-overline mt-3 text-[#b27f9f]">
             {t('success.ref')}: {bookingRef}
           </p>
         </section>
@@ -212,7 +212,7 @@ function SuccessPageContent() {
         )}
 
         <section className="mb-5 rounded-[26px] border border-[#ead9cf] bg-[#fffaf7] p-6 shadow-[0_24px_38px_-34px_rgba(90,62,48,0.46)]">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#b08476]">{text('success_summary_title', language === 'en' ? 'Your booking details' : 'Sinu broneering')}</p>
+          <p className="type-overline text-[#b08476]">{text('success_summary_title', language === 'en' ? 'Your booking details' : 'Sinu broneering')}</p>
           <div className="mt-2 border-b border-[#efdfd6] pb-4">
             <h2 className="text-lg font-semibold text-[#3d3028]">{selectedService?.name ?? copy.bookingNameFallback}</h2>
             <p className="text-sm text-[#6f5f55]">

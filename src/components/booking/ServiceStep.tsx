@@ -10,16 +10,25 @@ import { useBookingContent } from '@/hooks/use-booking-content';
 import { useBookingAddOns } from '@/hooks/use-booking-addons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
-const serviceVisuals: Record<string, { accent: string; detail: string }> = {
-  'gel-manicure': { accent: 'from-[#f5e5de] to-[#d9a89c]', detail: 'bg-[#fff7f3]' },
-  'acrylic-extensions': { accent: 'from-[#ead8e7] to-[#c6a6bf]', detail: 'bg-[#faf5f9]' },
-  'luxury-spa-manicure': { accent: 'from-[#efe3d8] to-[#ceb29a]', detail: 'bg-[#fdf8f3]' },
-  'gel-pedicure': { accent: 'from-[#e3e6ef] to-[#b7c2da]', detail: 'bg-[#f6f8fc]' },
-  'nail-art': { accent: 'from-[#f0dfd6] to-[#d9b0a3]', detail: 'bg-[#fcf7f4]' },
-};
-
 function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function normalizeCopy(value?: string | null) {
+  return (value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function cleanPrefixedValue(value: string, prefixes: string[]) {
+  const normalized = normalizeCopy(value);
+  if (!normalized) return normalized;
+  const lowered = normalized.toLowerCase();
+  for (const prefix of prefixes) {
+    const prefixLower = prefix.toLowerCase();
+    if (lowered.startsWith(prefixLower)) {
+      return normalized.slice(prefix.length).trim();
+    }
+  }
+  return normalized;
 }
 
 export function ServiceStep() {
@@ -65,7 +74,6 @@ export function ServiceStep() {
   const premiumMaterials = text('service_chip_materials', language === 'en' ? 'Premium materials' : 'Premium materjalid');
   const maintenanceHint = text('service_maintenance_hint', language === 'en' ? 'Maintenance every 3-4 weeks' : 'Hooldus iga 3-4 nadala jarel');
   const clientFavourite = text('service_client_favourite', language === 'en' ? 'Client favourite' : 'Kliendi lemmik');
-  const lastBookedHint = text('service_last_booked_hint', language === 'en' ? 'Popular choice this week' : 'Selle nadala populaarne valik');
   const detailsPreparation = text(
     'service_modal_preparation',
     language === 'en' ? 'Preparation: arrive with clean nails. If gel removal is needed, add removal service.' : 'Ettevalmistus: tule puhaste kuuntega. Kui vajad geeli eemaldust, lisa see teenusena.'
@@ -79,23 +87,22 @@ export function ServiceStep() {
     language === 'en' ? 'Realistic result: final tone and finish are confirmed with Sandra before work starts.' : 'Realistlik tulemus: loplik toon ja viimistlus kinnitatakse Sandraga enne too algust.'
   );
   const whoForLabel = text('service_who_for_label', language === 'en' ? 'Best for' : 'Sobib');
-  const staysLabel = text('service_stays_label', language === 'en' ? 'Stays' : 'Pusib');
   const fromLabel = text('service_from_label', language === 'en' ? 'Starting from' : 'Alates');
 
   return (
     <div className="animate-fade-in">
       <div className="mb-7 text-center">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#b08979]">Samm 1</p>
-        <h2 className="mb-2 text-2xl font-semibold text-gray-800">{t('service.choose')}</h2>
+        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#b77f9f]">Samm 1</p>
+        <h2 className="mb-2 text-2xl font-semibold text-[#2f2530]">{t('service.choose')}</h2>
         {selectedStyle ? (
-          <div className="mb-2 flex items-center justify-center gap-2 text-sm text-[#b58373]">
+          <div className="mb-2 flex items-center justify-center gap-2 text-sm text-[#c24d86]">
             <span>{selectedStyle.emoji}</span>
             <span>{styleHint}</span>
           </div>
         ) : (
-          <p className="text-gray-500">{t('service.getStarted')}</p>
+          <p className="text-[#7f6677]">{t('service.getStarted')}</p>
         )}
-        <p className="mt-2 text-sm text-[#8c7568]">
+        <p className="mt-2 text-sm text-[#7f6677]">
           {text('service_step_motivation', language === 'en' ? 'You are one step away from your next beautiful nails.' : 'Oled vaid uhe sammu kaugusel uutest kaunitest kuuntest.')}
         </p>
       </div>
@@ -103,8 +110,7 @@ export function ServiceStep() {
       <div className="mb-5 grid gap-4 sm:grid-cols-2">
         {loading && services.length === 0 &&
           Array.from({ length: 4 }).map((_, index) => (
-            <div key={`service-loading-${index}`} className="rounded-[26px] border border-[#efe5de] bg-white px-5 py-5">
-              <SkeletonBlock className="mb-4 h-14 w-14 rounded-[18px]" />
+            <div key={`service-loading-${index}`} className="rounded-[24px] border border-[#eedfe8] bg-white px-5 py-5">
               <SkeletonBlock className="mb-2 h-4 w-28 rounded-lg" />
               <SkeletonBlock className="mb-2 h-6 w-2/3 rounded-lg" />
               <SkeletonBlock className="mb-2 h-4 w-full rounded-lg" />
@@ -113,108 +119,101 @@ export function ServiceStep() {
           ))}
 
         {services.map((service) => {
-            const isSelected = selectedService?.id === service.id;
-            const visual = serviceVisuals[service.id] || serviceVisuals['gel-manicure'];
-            const result = service.resultDescription || service.resultDescriptionEt || service.description || defaultResult;
-            const longevity = service.longevityDescription || service.longevityDescriptionEt || defaultLongevity;
-            const suitability = service.suitabilityNote || service.suitabilityNoteEt || defaultSuitability;
+          const isSelected = selectedService?.id === service.id;
+          const rawResult = normalizeCopy(service.resultDescription || service.resultDescriptionEt || service.description || defaultResult);
+          const rawDescription = normalizeCopy(service.description || defaultResult);
+          const result = rawResult || rawDescription;
+          const description = rawDescription && rawDescription.toLowerCase() !== rawResult.toLowerCase() ? rawDescription : '';
+          const longevity = cleanPrefixedValue(
+            service.longevityDescription || service.longevityDescriptionEt || defaultLongevity,
+            ['Pusivus:', 'Püsivus:', 'Stays:', 'Longevity:']
+          );
+          const suitability = cleanPrefixedValue(
+            service.suitabilityNote || service.suitabilityNoteEt || defaultSuitability,
+            ['Sobivus:', 'Suitability:', 'Best for:']
+          );
 
-            return (
-              <article
-                key={service.id}
-                onClick={() => handleChooseTime(service)}
-                className={`group relative overflow-hidden rounded-[26px] border px-5 py-5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_34px_-24px_rgba(72,49,35,0.45)] ${
-                  isSelected ? 'border-[#d7b0a1] bg-[#fffaf7] shadow-[0_18px_30px_-22px_rgba(72,49,35,0.45)] ring-1 ring-[#f2e5de]' : 'border-[#efe5de] bg-white hover:border-[#d9beaf]'
-                } cursor-pointer`}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,165,154,0.14),transparent_40%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-                <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br ${visual.accent} shadow-[inset_0_1px_1px_rgba(255,255,255,0.75),0_12px_18px_-14px_rgba(72,49,35,0.6)] transition duration-300 group-hover:brightness-105`}>
-                  <div className={`h-10 w-10 rounded-[14px] ${visual.detail} p-2 shadow-inner`}>
-                    <div className="flex h-full items-end gap-1">
-                      <span className="h-4 w-1.5 rounded-full bg-white/90" />
-                      <span className="h-6 w-1.5 rounded-full bg-white/80" />
-                      <span className="h-5 w-1.5 rounded-full bg-white/70" />
-                    </div>
-                  </div>
-                </div>
-
+          return (
+            <article
+              key={service.id}
+              onClick={() => handleChooseTime(service)}
+              className={`group relative overflow-hidden rounded-[24px] border bg-white px-5 py-5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_34px_-24px_rgba(116,47,93,0.26)] ${
+                isSelected ? 'border-[#d7b0c7] bg-[#fff8fc] shadow-[0_18px_30px_-22px_rgba(116,47,93,0.38)] ring-1 ring-[#f3e6ee]' : 'border-[#eedfe8] hover:border-[#d9becc]'
+              } cursor-pointer`}
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-[#b89e91]">
+                  {service.category === 'nail-art' ? (language === 'en' ? 'Signature detail' : 'Signatuurstiil') : language === 'en' ? 'Premium service' : 'Premium teenus'}
+                </p>
                 {service.isPopular && (
-                  <span className="absolute left-4 top-4 rounded-full bg-[#f7efe9] px-2.5 py-1 text-[11px] font-medium text-[#8e6f61] ring-1 ring-[#efe2da]">
+                  <span className="inline-flex rounded-full bg-[#f9edf4] px-2.5 py-1 text-[11px] font-medium text-[#8e5d79] ring-1 ring-[#eddce7]">
                     {clientFavourite}
                   </span>
                 )}
+              </div>
 
-                <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b89e91]">
-                  {service.category === 'nail-art' ? (language === 'en' ? 'Signature detail' : 'Signatuurstiil') : language === 'en' ? 'Premium service' : 'Premium teenus'}
-                </p>
+              <h3 className="mb-2 text-[1.36rem] font-semibold leading-tight text-[#2f2530]">{service.name}</h3>
+              <p className="mb-3 text-sm font-medium leading-6 text-[#5f4a5b]">{result}</p>
+              {description && <p className="mb-4 line-clamp-2 text-xs leading-5 text-[#7f6878]">{description}</p>}
 
-                <div className="mb-2 flex items-start justify-between gap-3 pr-10">
-                  <h3 className="text-lg font-semibold text-gray-800">{service.name}</h3>
+              <div className="mb-4 flex flex-wrap gap-2 text-[11px] text-[#715b69]">
+                <span className="inline-flex items-center rounded-full bg-[#fff7fc] px-2.5 py-1 ring-1 ring-[#eddde7]">{service.duration} {t('service.minutes')}</span>
+                <span className="inline-flex items-center rounded-full bg-[#fff7fc] px-2.5 py-1 ring-1 ring-[#eddde7]">{longevity || maintenanceHint}</span>
+                <span className="inline-flex items-center rounded-full bg-[#fff7fc] px-2.5 py-1 ring-1 ring-[#eddde7]">{premiumMaterials}</span>
+              </div>
+
+              <p className="mb-4 text-xs text-[#715b69]">
+                <span className="font-medium text-[#60495a]">{whoForLabel}: </span>
+                {suitability || defaultSuitability}
+              </p>
+
+              <div className="rounded-2xl border border-[#eddde7] bg-[#fff8fc] px-3 py-2.5">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7990]">{fromLabel}</p>
+                <div className="text-2xl font-semibold leading-none text-[#c24d86]">€{service.price}</div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleChooseTime(service);
+                  }}
+                  className="w-full rounded-full bg-[#c24d86] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_22px_-16px_rgba(116,47,93,0.62)] transition hover:-translate-y-0.5 hover:bg-[#a93d71]"
+                >
+                  {chooseTimeLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setDetailsService(service);
+                  }}
+                  className="w-full rounded-full border border-[#eadce5] bg-[#fffafe] px-3 py-2 text-xs font-medium text-[#755f70] hover:bg-[#fff4fb]"
+                >
+                  {detailsLabel}
+                </button>
+              </div>
+
+              {isSelected && (
+                <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-white shadow-[0_10px_22px_-12px_rgba(116,47,93,0.7)] animate-scale-in">
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
                 </div>
-
-                <p className="mb-2 text-sm font-medium leading-6 text-[#6a5247]">{result}</p>
-                <p className="mb-3 line-clamp-2 text-xs text-[#887469]">{service.description || defaultResult}</p>
-
-                <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-[#7a655b]">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fcf4ef] px-2.5 py-1 ring-1 ring-[#efe1d8]">⏱ {service.duration} {t('service.minutes')}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fcf4ef] px-2.5 py-1 ring-1 ring-[#efe1d8]">🔁 {maintenanceHint}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fcf4ef] px-2.5 py-1 ring-1 ring-[#efe1d8]">💎 {premiumMaterials}</span>
-                </div>
-
-                <div className="mb-3 space-y-1 text-xs text-[#7a655b]">
-                  <p><span className="font-medium text-[#69564d]">{whoForLabel}: </span>{suitability}</p>
-                  <p><span className="font-medium text-[#69564d]">{staysLabel}: </span>{longevity}</p>
-                  {service.isPopular && <p className="font-medium text-[#986f60]">{lastBookedHint}</p>}
-                </div>
-
-                <div className="mt-auto rounded-2xl border border-[#f0e2d8] bg-[#fff8f3] px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#a18374]">{fromLabel}</p>
-                  <div className="text-2xl font-semibold leading-none text-[#b58373]">EUR {service.price}</div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleChooseTime(service);
-                    }}
-                    className="w-full rounded-full bg-[#b58373] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_22px_-16px_rgba(90,61,46,0.75)] transition hover:-translate-y-0.5 hover:bg-[#a87463]"
-                  >
-                    {chooseTimeLabel}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDetailsService(service);
-                    }}
-                    className="w-full rounded-full border border-[#ead9cf] bg-[#fffaf7] px-3 py-2 text-xs font-medium text-[#7f695f] hover:bg-[#fff4ee]"
-                  >
-                    {detailsLabel}
-                  </button>
-                </div>
-
-                {isSelected && (
-                  <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[#b58373] text-white shadow-[0_10px_22px_-12px_rgba(99,71,56,0.9)] animate-scale-in">
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+              )}
+            </article>
+          );
+        })}
       </div>
 
       <div className="mb-5">
-        <p className="mb-2 text-center text-sm font-medium text-[#7d685d]">
+        <p className="mb-2 text-center text-sm font-medium text-[#7d6275]">
           {text('service_addons_title', language === 'en' ? 'Add optional enhancements right away:' : 'Lisa soovi korral kohe juurde:')}
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           {addOns.slice(0, 4).map((chip) => (
-            <span key={chip.id} className="rounded-full border border-[#e8d7cf] bg-[#fffaf7] px-3 py-1 text-xs font-medium text-[#7d685d]">
+            <span key={chip.id} className="rounded-full border border-[#e8d7e2] bg-[#fffafe] px-3 py-1 text-xs font-medium text-[#7d6275]">
               {chip.name}
             </span>
           ))}
@@ -223,7 +222,7 @@ export function ServiceStep() {
 
       <div ref={continueButtonRef} />
 
-      <div className="flex items-center justify-center gap-4 pt-3 text-xs text-[#9e8a80]">
+      <div className="flex items-center justify-center gap-4 pt-3 text-xs text-[#8b7387]">
         <span>{language === 'en' ? 'Most clients finish booking in under 30 seconds.' : 'Enamik kliente lopetab broneeringu vahem kui 30 sekundiga.'}</span>
       </div>
 
@@ -246,62 +245,62 @@ export function ServiceStep() {
 
       {detailsService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" onClick={() => setDetailsService(null)}>
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[#ead9cf] bg-white shadow-[0_30px_64px_-36px_rgba(56,34,24,0.75)]" onClick={(event) => event.stopPropagation()}>
-            <div className="relative h-52 w-full bg-[#f7efe9]">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[#eadce5] bg-white shadow-[0_30px_64px_-36px_rgba(95,38,77,0.48)]" onClick={(event) => event.stopPropagation()}>
+            <div className="relative h-52 w-full bg-[#f9edf4]">
               {detailsService.imageUrl ? (
                 <Image src={detailsService.imageUrl} alt={detailsService.name} fill className="object-cover" />
               ) : (
-                <div className="flex h-full items-center justify-center text-[#8b6c5e]">{detailsService.name}</div>
+                <div className="flex h-full items-center justify-center text-[#8b7387]">{detailsService.name}</div>
               )}
-              <button type="button" onClick={() => setDetailsService(null)} className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-[#6f5a50]">
+              <button type="button" onClick={() => setDetailsService(null)} className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-[#6d5868]">
                 {language === 'en' ? 'Close details' : 'Sulge detailid'}
               </button>
             </div>
             <div className="p-6">
-              <h3 className="text-xl font-semibold text-[#3c2f28]">{detailsService.name}</h3>
-              <p className="mt-2 text-sm text-[#6f5a50]">{detailsService.description || defaultResult}</p>
+              <h3 className="text-xl font-semibold text-[#3f2d3e]">{detailsService.name}</h3>
+              <p className="mt-2 text-sm text-[#6d5868]">{detailsService.description || defaultResult}</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="overflow-hidden rounded-2xl border border-[#eadcd2] bg-[#fff9f5]">
+                <div className="overflow-hidden rounded-2xl border border-[#eadce5] bg-[#fffafe]">
                   <div className="relative h-28 w-full">
-                    {detailsService.imageUrl ? <Image src={detailsService.imageUrl} alt={`${detailsService.name} before`} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#8b6c5e]">Before</div>}
+                    {detailsService.imageUrl ? <Image src={detailsService.imageUrl} alt={`${detailsService.name} before`} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#8b7387]">Before</div>}
                   </div>
-                  <p className="px-3 py-2 text-[11px] font-medium text-[#7a655b]">{language === 'en' ? 'Before consultation' : 'Enne konsultatsiooni'}</p>
+                  <p className="px-3 py-2 text-[11px] font-medium text-[#7d6275]">{language === 'en' ? 'Before consultation' : 'Enne konsultatsiooni'}</p>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-[#eadcd2] bg-[#fff9f5]">
+                <div className="overflow-hidden rounded-2xl border border-[#eadce5] bg-[#fffafe]">
                   <div className="relative h-28 w-full">
-                    {detailsService.imageUrl ? <Image src={detailsService.imageUrl} alt={`${detailsService.name} after`} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#8b6c5e]">After</div>}
+                    {detailsService.imageUrl ? <Image src={detailsService.imageUrl} alt={`${detailsService.name} after`} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#8b7387]">After</div>}
                   </div>
-                  <p className="px-3 py-2 text-[11px] font-medium text-[#7a655b]">{language === 'en' ? 'Expected finish' : 'Oodatav viimistlus'}</p>
+                  <p className="px-3 py-2 text-[11px] font-medium text-[#7d6275]">{language === 'en' ? 'Expected finish' : 'Oodatav viimistlus'}</p>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-[#eadcd2] bg-[#fff9f5] p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9a7c6d]">{includeLabel}</p>
-                  <ul className="mt-2 space-y-1 text-xs text-[#6f5a50]">
+                <div className="rounded-2xl border border-[#eadce5] bg-[#fffafe] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9b7a8d]">{includeLabel}</p>
+                  <ul className="mt-2 space-y-1 text-xs text-[#6d5868]">
                     <li>{detailsService.resultDescription || defaultResult}</li>
                     <li>{detailsService.longevityDescription || defaultLongevity}</li>
                     <li>{detailsService.suitabilityNote || defaultSuitability}</li>
                   </ul>
                 </div>
-                <div className="rounded-2xl border border-[#eadcd2] bg-[#fff9f5] p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9a7c6d]">{language === 'en' ? 'Before and after care' : 'Enne ja parast hooldus'}</p>
-                  <ul className="mt-2 space-y-1 text-xs text-[#6f5a50]">
+                <div className="rounded-2xl border border-[#eadce5] bg-[#fffafe] p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9b7a8d]">{language === 'en' ? 'Before and after care' : 'Enne ja parast hooldus'}</p>
+                  <ul className="mt-2 space-y-1 text-xs text-[#6d5868]">
                     <li>{detailsPreparation}</li>
                     <li>{detailsAftercare}</li>
                     <li>{detailsResult}</li>
                   </ul>
                 </div>
               </div>
-              <p className="mt-4 text-xs text-[#7f695f]">{addOnHint}</p>
+              <p className="mt-4 text-xs text-[#7d6275]">{addOnHint}</p>
               <div className="mt-4 flex items-center justify-between">
-                <p className="text-lg font-semibold text-[#b58373]">EUR {detailsService.price}</p>
+                <p className="text-lg font-semibold text-[#c24d86]">€{detailsService.price}</p>
                 <button
                   type="button"
                   onClick={() => {
                     handleChooseTime(detailsService);
                     setDetailsService(null);
                   }}
-                  className="rounded-full bg-[#b58373] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a87463]"
+                  className="rounded-full bg-[#c24d86] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a93d71]"
                 >
                   {chooseTimeLabel}
                 </button>

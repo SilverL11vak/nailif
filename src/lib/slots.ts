@@ -17,7 +17,6 @@ export interface SlotRecord {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_slots_ensure__: Promise<void> | undefined;
 }
 

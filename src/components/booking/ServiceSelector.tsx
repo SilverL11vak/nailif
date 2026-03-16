@@ -81,7 +81,7 @@ export function ServiceSelector({ onSelect, selectedService }: ServiceSelectorPr
                 <span className="text-sm text-gray-400">{service.duration} {t('common.minutes')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-[#D4A59A]">EUR {service.price}</span>
+                    <span className="font-semibold text-[#D4A59A]">€{service.price}</span>
                 {service.isPopular && (
                   <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                     {t('slot.popular')}

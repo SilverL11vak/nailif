@@ -28,7 +28,6 @@ interface CreateOrderInput {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_orders_ensure__: Promise<void> | undefined;
 }
 

@@ -32,6 +32,12 @@ export type BookingContentKey =
   | 'service_step_motivation'
   | 'service_addons_title'
   | 'contact_step_hint'
+  | 'ai_knowledge_specialist_name'
+  | 'ai_knowledge_specialist_role'
+  | 'ai_knowledge_owner_name'
+  | 'ai_knowledge_brand_about'
+  | 'ai_knowledge_location'
+  | 'ai_knowledge_guideline'
   | 'contact_optional_nails_title'
   | 'preparation_tip_1'
   | 'preparation_tip_2'
@@ -214,6 +220,12 @@ const defaultContent: DefaultContentItem[] = [
   { key: 'success_upsell_gift', et: 'Kinkekaardid', en: 'Gift cards' },
   { key: 'success_primary_cta', et: 'Tagasi avalehele', en: 'Back to homepage' },
   { key: 'success_secondary_cta', et: 'Vaata teenuseid', en: 'View services' },
+  { key: 'ai_knowledge_specialist_name', et: 'Sandra Samun', en: 'Sandra Samun' },
+  { key: 'ai_knowledge_specialist_role', et: 'Sertifitseeritud kuunetehnik', en: 'Certified nail technician' },
+  { key: 'ai_knowledge_owner_name', et: 'Sandra Samun', en: 'Sandra Samun' },
+  { key: 'ai_knowledge_brand_about', et: 'Nailify on premium kuunehoolduse stuudio, mis keskendub personaalsetele tulemustele, puhtale tookeskkonnale ja rahulikule kliendikogemusele.', en: 'Nailify is a premium nail care studio focused on personalized results, clean standards and a calm client experience.' },
+  { key: 'ai_knowledge_location', et: 'Mustamae stuudio, Tallinn', en: 'Mustamae studio, Tallinn' },
+  { key: 'ai_knowledge_guideline', et: 'Kui kusimus vajab loplikku kinnitust, suuna klient otse kuunetehnikule.', en: 'If final confirmation is needed, direct the client to the technician.' },
   { key: 'success_contact_cta', et: 'Võta salongiga ühendust', en: 'Contact the salon' },
 ];
 
@@ -222,7 +234,6 @@ function localize(locale: LocaleCode, et: string, en: string) {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_booking_content_ensure__: Promise<void> | undefined;
 }
 

@@ -182,8 +182,8 @@ export function ContactStep() {
   ];
 
   const uploadCard = (kind: UploadKind, title: string, imageValue: string, inputRef: React.RefObject<HTMLInputElement | null>) => (
-    <div className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8e7465]">{title}</p>
+    <div className="rounded-2xl border border-[#e8dce6] bg-[#fffafd] p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#84667a]">{title}</p>
       {!imageValue ? (
         <button
           type="button"
@@ -199,7 +199,7 @@ export function ContactStep() {
             void handleImageUpload(kind, event.dataTransfer.files);
           }}
           className={`mt-2 w-full rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm font-medium transition ${
-            dragOver === kind ? 'border-[#ceb7a8] bg-[#f7f2ee] text-[#6f5d53]' : 'border-[#ddd1c8] bg-white text-[#6f5d53] hover:border-[#ceb7a8]'
+            dragOver === kind ? 'border-[#d1b3c8] bg-[#fff4fb] text-[#6d5868]' : 'border-[#e5d7e1] bg-white text-[#6d5868] hover:border-[#d1b3c8]'
           }`}
         >
           {text('upload_cta', language === 'en' ? 'Upload photo from device' : 'Lisa foto seadmest')}
@@ -234,12 +234,12 @@ export function ContactStep() {
         </p>
       </div>
 
-      <div className="mb-5 rounded-2xl border border-[#e7dfd7] bg-[#faf7f4] p-4">
+      <div className="mb-5 rounded-2xl border border-[#eadce5] bg-[#fffafe] p-4">
         <div className="mb-1 flex items-center justify-between text-sm">
-          <span className="font-medium text-[#3f332d]">{selectedService?.name}</span>
-          <span className="font-semibold text-[#9f7058]">EUR {totalPrice || selectedService?.price}</span>
+          <span className="font-medium text-[#4a3344]">{selectedService?.name}</span>
+          <span className="font-semibold text-[#b04b80]">€{totalPrice || selectedService?.price}</span>
         </div>
-        <div className="flex items-center justify-between text-xs text-[#7b6f67]">
+        <div className="flex items-center justify-between text-xs text-[#7d6275]">
           <span>
             {selectedSlot
               ? `${new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'short', day: 'numeric', month: 'short' })} ${t('confirm.at')} ${selectedSlot.time}`
@@ -251,15 +251,15 @@ export function ContactStep() {
 
       <div className="mb-5 flex flex-wrap gap-2">
         {prepTips.map((item) => (
-          <span key={item} className="rounded-full border border-[#e2d8d0] bg-white px-3 py-1.5 text-xs font-medium text-[#75655b]">
+          <span key={item} className="rounded-full border border-[#eadce5] bg-[#fffafe] px-3 py-1.5 text-xs font-medium text-[#7d6275]">
             {item}
           </span>
         ))}
       </div>
 
-      <section className="mb-5 rounded-2xl border border-[#e7dfd7] bg-white p-4">
-        <h3 className="text-sm font-semibold text-[#443630]">{text('preparation_title', language === 'en' ? 'Before your appointment' : 'Enne visiiti')}</h3>
-        <p className="mt-1 text-xs text-[#74675f]">
+      <section className="mb-5 rounded-2xl border border-[#eadce5] bg-white p-4">
+        <h3 className="text-sm font-semibold text-[#4a3344]">{text('preparation_title', language === 'en' ? 'Before your appointment' : 'Enne visiiti')}</h3>
+        <p className="mt-1 text-xs text-[#7d6275]">
           {text('preparation_helper', language === 'en' ? 'Clean nails and avoid strong oils on the same day.' : 'Puhasta kuuned ja vali samal paeval kergem hooldus.')}
         </p>
       </section>
@@ -333,7 +333,7 @@ export function ContactStep() {
         </label>
 
         {!showEmail ? (
-          <button type="button" onClick={() => setShowEmail(true)} className="text-sm font-medium text-[#9f7058] transition hover:text-[#8b5f4a]">
+          <button type="button" onClick={() => setShowEmail(true)} className="text-sm font-medium text-[#b04b80] transition hover:text-[#953d6e]">
             {t('contact.addEmail')}
           </button>
         ) : (

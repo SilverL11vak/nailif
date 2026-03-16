@@ -109,7 +109,7 @@ export function HeroBookingWidget() {
   return (
     <div
       id="hero-booking-widget"
-      className="relative overflow-hidden rounded-[30px] border border-[#f0dbe7] bg-[linear-gradient(180deg,#fffdfd_0%,#fff5fb_100%)] p-6 shadow-[0_34px_56px_-34px_rgba(109,69,97,0.48),0_16px_30px_-24px_rgba(109,69,97,0.32)] lg:p-8"
+      className="relative overflow-hidden rounded-[30px] border border-[#f0dbe7] bg-[linear-gradient(180deg,#fffdfd_0%,#fff5fb_100%)] p-6 shadow-[0_48px_84px_-12px_rgba(109,69,97,0.18),0_24px_40px_-16px_rgba(109,69,97,0.12)] lg:p-8"
     >
       <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(215,157,192,0.28)_0%,rgba(215,157,192,0)_70%)]" />
       <div className="pointer-events-none absolute inset-x-8 bottom-3 h-12 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(207,124,172,0.22)_0%,rgba(207,124,172,0)_70%)] blur-sm" />
@@ -120,7 +120,7 @@ export function HeroBookingWidget() {
             <div className="absolute inset-[3px] rounded-full bg-[radial-gradient(circle_at_30%_30%,#fff9fd,_#e7b8d4_70%,#cf86b2_100%)]" />
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#ba7ca2]">{t('widget.identityEyebrow')}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] opacity-75 text-[#ba7ca2]">{t('widget.identityEyebrow')}</p>
             <p className="text-sm font-semibold text-[#3f2b3a]">{t('widget.identityTitle')}</p>
           </div>
         </div>
@@ -167,10 +167,10 @@ export function HeroBookingWidget() {
       <button
         onClick={handleSecureSlot}
         disabled={!selectedService}
-        className={`cta-premium flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-semibold transition-all duration-200
+        className={`btn-primary btn-primary-lg w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-semibold transition-all duration-140
           ${selectedService
-            ? 'bg-[#c24d86] text-white shadow-[0_24px_34px_-24px_rgba(141,60,108,0.62)] hover:-translate-y-0.5 hover:bg-[#a93d71] hover:shadow-[0_28px_38px_-24px_rgba(141,60,108,0.68)] active:scale-[0.99]'
-            : 'cursor-not-allowed bg-gray-200 text-gray-400'
+            ? 'bg-[#c24d86] text-white shadow-[0_24px_34px_-24px_rgba(141,60,108,0.62)] hover:-translate-y-0.5 hover:bg-[#a93d71] hover:shadow-[0_28px_38px_-24px_rgba(141,60,108,0.68)] active:scale-[0.995]'
+            : 'bg-[#ececec] text-[#999]/60 border border-[#e0e0e0]'
           }`}
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

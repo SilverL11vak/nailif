@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
+import { useFavorites } from '@/hooks/use-favorites';
+import { useCart } from '@/hooks/use-cart';
 
 interface Product {
   id: string;
@@ -12,19 +15,16 @@ interface Product {
   imageUrl: string | null;
 }
 
-interface CartItem {
-  productId: string;
-  quantity: number;
-}
-
 export default function ShopPage() {
-  const { language } = useTranslation();
+  const router = useRouter();
+  const { language, localizePath } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaying, setIsPaying] = useState(false);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { favoritesCount, isFavorite, toggleFavorite } = useFavorites();
+  const { items: cart, addToCart, setCartItems } = useCart();
 
   const copy = useMemo(
     () =>
@@ -34,7 +34,7 @@ export default function ShopPage() {
             title: 'Premium care products',
             subtitle: 'Curated aftercare for salon-level results at home.',
             loading: 'Loading products...',
-            addToCart: 'Add to cart',
+            addToCart: 'Add to bag',
             cart: 'Cart',
             yourItems: 'Your items',
             empty: 'Your cart is empty.',
@@ -45,25 +45,29 @@ export default function ShopPage() {
             checkoutError: 'Checkout failed. Please configure Stripe keys and try again.',
             fallbackBrand: 'Nailify',
             stockPrefix: 'Stock',
+            viewDetails: 'View details',
+            favorites: 'Favourites',
           }
         : {
             eyebrow: 'Nailify pood',
             title: 'Premium hooldustooted',
-            subtitle: 'Hoolikalt valitud järelhooldus salongitulemuse hoidmiseks kodus.',
+            subtitle: 'Hoolikalt valitud jarelhooldus salongitulemuse hoidmiseks kodus.',
             loading: 'Laen tooteid...',
             addToCart: 'Lisa korvi',
             cart: 'Ostukorv',
             yourItems: 'Sinu tooted',
-            empty: 'Ostukorv on tühi.',
+            empty: 'Ostukorv on tuhi.',
             email: 'E-post (valikuline)',
             total: 'Kokku',
             checkout: 'Maksa Stripega',
             redirecting: 'Suunan maksmisse...',
-            checkoutError: 'Maksmine ebaõnnestus. Kontrolli Stripe seadeid ja proovi uuesti.',
+            checkoutError: 'Maksmine ebaonnestus. Kontrolli Stripe seadeid ja proovi uuesti.',
             fallbackBrand: 'Nailify',
             stockPrefix: 'Laos',
+            viewDetails: 'Vaata detaile',
+            favorites: 'Lemmikud',
           },
-    [language]
+    [language],
   );
 
   useEffect(() => {
@@ -74,8 +78,8 @@ export default function ShopPage() {
         if (!response.ok) throw new Error('Failed to load products');
         const data = (await response.json()) as { products?: Product[] };
         if (mounted) setProducts(data.products ?? []);
-      } catch (e) {
-        console.error(e);
+      } catch (errorLoad) {
+        console.error(errorLoad);
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -94,23 +98,15 @@ export default function ShopPage() {
         if (!product) return sum;
         return sum + product.price * item.quantity;
       }, 0),
-    [cart, productsById]
+    [cart, productsById],
   );
-
-  const addToCart = (productId: string) => {
-    setCart((prev) => {
-      const found = prev.find((item) => item.productId === productId);
-      if (found) return prev.map((item) => (item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item));
-      return [...prev, { productId, quantity: 1 }];
-    });
-  };
 
   const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
-      setCart((prev) => prev.filter((item) => item.productId !== productId));
+      setCartItems(cart.filter((item) => item.productId !== productId));
       return;
     }
-    setCart((prev) => prev.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
+    setCartItems(cart.map((item) => (item.productId === productId ? { ...item, quantity } : item)));
   };
 
   const handleCheckout = async () => {
@@ -127,8 +123,8 @@ export default function ShopPage() {
       const data = (await response.json()) as { checkoutUrl?: string };
       if (!data.checkoutUrl) throw new Error('Missing checkout URL');
       window.location.href = data.checkoutUrl;
-    } catch (e) {
-      console.error(e);
+    } catch (checkoutError) {
+      console.error(checkoutError);
       setError(copy.checkoutError);
       setIsPaying(false);
     }
@@ -139,9 +135,20 @@ export default function ShopPage() {
       <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_340px]">
         <section className="rounded-3xl border border-[#eadfd7] bg-white/90 p-6 shadow-[0_24px_40px_-32px_rgba(59,42,33,0.6)]">
           <div className="mb-6">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#b08979]">{copy.eyebrow}</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#2a211d]">{copy.title}</h1>
-            <p className="mt-2 text-sm text-[#6f5d53]">{copy.subtitle}</p>
+            <p className="type-overline text-[#b08979]">{copy.eyebrow}</p>
+            <h1 className="type-h2 mt-1 text-[#2a211d]">{copy.title}</h1>
+            <p className="type-small mt-2 measure-copy text-[#6f5d53]">{copy.subtitle}</p>
+            <button
+              onClick={() => router.push(localizePath('/favorites'))}
+              className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#e6d8cf] bg-white px-4 py-2 text-xs font-semibold text-[#6d5650]"
+            >
+              <span>{copy.favorites}</span>
+              {favoritesCount > 0 && (
+                <span className="rounded-full bg-[#c24d86] px-1.5 text-[10px] font-semibold text-white">
+                  {favoritesCount > 9 ? '9+' : favoritesCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {isLoading ? (
@@ -149,22 +156,42 @@ export default function ShopPage() {
           ) : (
             <div className="grid gap-5 sm:grid-cols-2">
               {products.map((product) => (
-                <article key={product.id} className="overflow-hidden rounded-2xl border border-[#efe4dc] bg-[#fffdfa] shadow-[0_20px_30px_-24px_rgba(59,42,33,0.45)]">
-                  <div className="aspect-[4/3] bg-[#f6ece6]">
+                <article key={product.id} className="group overflow-hidden rounded-2xl border border-[#efe4dc] bg-[#fffdfa] shadow-[0_20px_30px_-24px_rgba(59,42,33,0.45)]">
+                  <div className="relative aspect-[4/3] bg-[#f6ece6]">
                     {product.imageUrl ? (
-                      <Image src={product.imageUrl} alt={product.name} width={700} height={525} unoptimized className="h-full w-full object-cover" />
+                      <Image src={product.imageUrl} alt={product.name} width={700} height={525} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-sm text-[#8f776b]">{copy.fallbackBrand}</div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => toggleFavorite(product.id)}
+                      className={`absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/95 ${
+                        isFavorite(product.id) ? 'border-[#c24d86] text-[#c24d86]' : 'border-[#ead6e2] text-[#8f7086]'
+                      }`}
+                      aria-label={language === 'en' ? 'Toggle favourite' : 'Muuda lemmikut'}
+                    >
+                      <svg className="h-4 w-4" fill={isFavorite(product.id) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21s-7.5-4.35-9.5-8.6C.9 9.05 2.15 5.5 5.9 5.5c2.1 0 3.4 1.1 4.1 2.15.7-1.05 2-2.15 4.1-2.15 3.75 0 5 3.55 3.4 6.9C19.5 16.65 12 21 12 21z" />
+                      </svg>
+                    </button>
                   </div>
                   <div className="p-4">
                     <h2 className="text-lg font-semibold text-[#2f2520]">{product.name}</h2>
                     <p className="mt-1 text-sm text-[#7e6a5f]">{product.description}</p>
                     <div className="mt-4 flex items-center justify-between">
                       <span className="text-base font-semibold text-[#b58373]">EUR {product.price}</span>
-                      <button onClick={() => addToCart(product.id)} className="rounded-full bg-[#b58373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#9f6d5c]">
-                        {copy.addToCart}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => router.push(localizePath(`/shop/${product.id}`))}
+                          className="rounded-full border border-[#e6d8cf] px-3 py-2 text-xs font-semibold text-[#6f5d53]"
+                        >
+                          {copy.viewDetails}
+                        </button>
+                        <button onClick={() => addToCart(product.id)} className="rounded-full bg-[#b58373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#9f6d5c]">
+                          {copy.addToCart}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </article>

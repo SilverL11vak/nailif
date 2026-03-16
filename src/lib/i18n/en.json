@@ -252,6 +252,8 @@
     "whatsapp": "WhatsApp",
     "messenger": "Messenger",
     "open": "Open",
+    "close": "Close",
+    "closeAria": "Close chat panel",
     "triggerAria": "Open quick contact",
     "whatsappPrefillEt": "Tere! Soovin küsida vaba aja või teenuse kohta.",
     "whatsappPrefillEn": "Hi! I would like to ask about availability or a service."
@@ -286,6 +288,7 @@
       "longevityFallback": "Results usually last around 3-4 weeks."
     },
     "servicesUi": {
+      "featuredTitle": "Featured Service",
       "whoForLabel": "Who it's for:",
       "durationLabel": "Duration",
       "longevityLabel": "Longevity",

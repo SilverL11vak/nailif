@@ -70,6 +70,19 @@ const textSections = [
     ],
   },
   {
+    id: 'ai',
+    title: 'AI teadmised',
+    description: 'Chat-assistendi taust ja brändikontekst.',
+    keys: [
+      'ai_knowledge_specialist_name',
+      'ai_knowledge_specialist_role',
+      'ai_knowledge_owner_name',
+      'ai_knowledge_brand_about',
+      'ai_knowledge_location',
+      'ai_knowledge_guideline',
+    ],
+  },
+  {
     id: 'upload',
     title: 'Foto uleslaadimine',
     description: 'Inspiratsioonifoto ploki sonumid.',

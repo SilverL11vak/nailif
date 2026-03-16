@@ -43,7 +43,6 @@ export interface BookingRecord {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_bookings_ensure__: Promise<void> | undefined;
 }
 

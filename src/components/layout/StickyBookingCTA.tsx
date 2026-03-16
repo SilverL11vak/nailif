@@ -70,7 +70,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
                 <span>
                   {configuredPrimary}: {selectedService.name}
                 </span>
-                {totalPrice > 0 && <span className="opacity-80">EUR {totalPrice}</span>}
+                {totalPrice > 0 && <span className="opacity-80">€{totalPrice}</span>}
               </>
             ) : (
               <>
@@ -90,10 +90,10 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
         </div>
       </div>
 
-      <div className="fixed bottom-6 right-6 z-40 hidden md:block">
+      <div className="fixed bottom-6 left-1/2 z-40 hidden -translate-x-1/2 md:block">
         <button
           onClick={handleClick}
-          className="inline-flex items-center gap-2 rounded-full bg-[#c24d86] px-5 py-3 font-semibold text-white shadow-[0_24px_34px_-20px_rgba(141,60,108,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#a93d71]"
+          className="inline-flex min-w-[280px] items-center justify-center gap-2 rounded-full bg-[#c24d86] px-6 py-3 font-semibold text-white shadow-[0_24px_34px_-20px_rgba(141,60,108,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#a93d71]"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path

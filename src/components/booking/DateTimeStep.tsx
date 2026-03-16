@@ -48,7 +48,7 @@ export function DateTimeStep() {
   const weekDates = useMemo(() => {
     const base = new Date();
     base.setHours(0, 0, 0, 0);
-    return Array.from({ length: 7 }, (_, i) => addDays(base, weekOffset * 7 + i));
+    return Array.from({ length: 10 }, (_, i) => addDays(base, weekOffset * 7 + i));
   }, [weekOffset]);
 
   const selectedDateKey = selectedDate ? toIsoDate(selectedDate) : toIsoDate(weekDates[0]);
@@ -156,54 +156,59 @@ export function DateTimeStep() {
   return (
     <div className="animate-fade-in">
       <div className="mb-7 text-center">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#9a7c6d]">Samm 2</p>
+        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#b77f9f]">Samm 2</p>
         <h2 className="mb-2 text-2xl font-semibold text-[#2f2622]">{t('datetime.choose')}</h2>
-        <p className="text-[#6f655f]">{t('datetime.pickTime')}</p>
-        <p className="mt-2 text-sm text-[#7f7068]">
+        <p className="text-[#745f6e]">{t('datetime.pickTime')}</p>
+        <p className="mt-2 text-sm text-[#7f6677]">
           {language === 'en' ? 'Choose a day first, then pick a time.' : 'Vali koigepealt paev, siis kellaaeg.'}
         </p>
       </div>
 
-      <div className="mb-4 rounded-2xl border border-[#e7dfd7] bg-white px-4 py-3.5 sm:px-5">
+      <div className="mb-4 rounded-2xl border border-[#efdfe8] bg-white px-4 py-3.5 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-medium text-[#6f5d53]">{monthLabel}</span>
+          <span className="text-sm font-medium text-[#6f5769]">{monthLabel}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setWeekOffset((prev) => Math.max(0, prev - 4))}
               disabled={weekOffset === 0}
-              className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+              className="rounded-full border border-[#e7d7e1] px-3 py-1.5 text-xs text-[#6f5769] disabled:opacity-40"
             >
               {language === 'en' ? 'Prev month' : 'Eelmine kuu'}
             </button>
             <button
               onClick={() => setWeekOffset((prev) => Math.min(maxWeekOffset, prev + 4))}
               disabled={weekOffset >= maxWeekOffset}
-              className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+              className="rounded-full border border-[#e7d7e1] px-3 py-1.5 text-xs text-[#6f5769] disabled:opacity-40"
             >
-              {language === 'en' ? 'Next month' : 'Jargmine kuu'}
+              {language === 'en' ? 'Next month' : 'Järgmine kuu'}
             </button>
           </div>
         </div>
-
         <div className="mt-3 flex items-center gap-2">
           <button
             onClick={() => setWeekOffset((prev) => Math.max(0, prev - 1))}
             disabled={weekOffset === 0}
-            className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+            className="rounded-full border border-[#e7d7e1] px-3 py-1.5 text-xs text-[#6f5769] disabled:opacity-40"
           >
-            {language === 'en' ? 'Prev week' : 'Eelmine nadal'}
+            {language === 'en' ? 'Prev week' : 'Eelmine nädal'}
           </button>
           <button
             onClick={() => setWeekOffset((prev) => Math.min(maxWeekOffset, prev + 1))}
             disabled={weekOffset >= maxWeekOffset}
-            className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+            className="rounded-full border border-[#e7d7e1] px-3 py-1.5 text-xs text-[#6f5769] disabled:opacity-40"
           >
-            {language === 'en' ? 'Next week' : 'Jargmine nadal'}
+            {language === 'en' ? 'Next week' : 'Järgmine nädal'}
+          </button>
+          <button
+            onClick={() => setWeekOffset(0)}
+            className="rounded-full border border-[#e7d7e1] px-3 py-1.5 text-xs text-[#6f5769]"
+          >
+            {language === 'en' ? 'This week' : 'See nädal'}
           </button>
         </div>
       </div>
 
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
+      <div className="mb-5 grid grid-cols-5 gap-2 sm:flex sm:overflow-x-auto sm:pb-2">
         {weekDates.map((date, index) => {
           const isSelected = selectedDate?.toDateString() === date.toDateString();
           const hasSlots = hasAvailableSlots(date);
@@ -215,25 +220,25 @@ export function DateTimeStep() {
               onClick={() => handleDateSelect(date)}
               className={`flex h-[5.1rem] w-[4.2rem] flex-shrink-0 flex-col items-center justify-center rounded-[20px] border transition-all duration-200 ${
                 isSelected
-                  ? 'border-[#cda996] bg-[#faf6f3] shadow-[0_14px_22px_-18px_rgba(72,49,35,0.45)]'
+                  ? 'border-[#d9a9c4] bg-[#fff5fb] shadow-[0_14px_22px_-18px_rgba(116,47,93,0.34)]'
                   : hasSlots
-                    ? 'border-[#e7dfd7] bg-white hover:border-[#d6beaf]'
-                    : 'border-[#efe8e2] bg-[#f9f6f4]'
+                    ? 'border-[#ecdde7] bg-white hover:border-[#d5b1c8]'
+                    : 'border-[#f1e6ee] bg-[#fff8fc]'
               }`}
             >
-              <span className={`text-[11px] font-medium ${isSelected ? 'text-[#9a6f57]' : 'text-[#756a62]'}`}>
-                {isToday(date) ? (language === 'en' ? 'Today' : 'Tana') : weekday}
+              <span className={`text-[11px] font-medium ${isSelected ? 'text-[#8c5f79]' : 'text-[#75657a]'}`}>
+                {isToday(date) ? (language === 'en' ? 'Today' : 'Täna') : weekday}
               </span>
-              <span className={`text-xl font-semibold ${isSelected ? 'text-[#8f644f]' : 'text-[#3f332d]'}`}>{date.getDate()}</span>
-              <span className={`mt-1 h-1.5 w-1.5 rounded-full ${hasSlots ? 'bg-[#8ea677]' : 'bg-[#c6b8ae]'}`} />
+              <span className={`text-xl font-semibold ${isSelected ? 'text-[#a0497b]' : 'text-[#4a3344]'}`}>{date.getDate()}</span>
+              <span className={`mt-1 h-1.5 w-1.5 rounded-full ${hasSlots ? 'bg-[#82a671]' : 'bg-[#d4c1cd]'}`} />
             </button>
           );
         })}
       </div>
 
       {recommendedSlots.length > 0 && (
-        <div className="mb-4 rounded-2xl border border-[#e7dfd7] bg-[#faf7f4] p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8f7568]">
+        <div className="mb-4 rounded-2xl border border-[#ecdce6] bg-[#fff7fc] p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#9d6c89]">
             {language === 'en' ? 'Recommended times' : 'Soovitatud ajad'}
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -245,16 +250,16 @@ export function DateTimeStep() {
                   selectDate(new Date(`${slot.date}T00:00:00`));
                   handleSlotSelect(slot);
                 }}
-                className="rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-left transition hover:border-[#cda996] hover:bg-[#fdfaf8]"
+                className="rounded-xl border border-[#e7d8e2] bg-white px-3 py-2 text-left transition hover:border-[#d3a8c2] hover:bg-[#fff6fb]"
               >
-                <p className="text-xs font-semibold text-[#7d665b]">
+                  <p className="text-xs font-semibold text-[#7d6275]">
                   {new Date(`${slot.date}T00:00:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
                     day: 'numeric',
                     month: 'short',
                   })}
                 </p>
-                <p className="text-base font-semibold text-[#5f4a40]">{slot.time}</p>
-                <p className="mt-1 text-[11px] text-[#7f7068]">
+                  <p className="text-base font-semibold text-[#5f4358]">{slot.time}</p>
+                  <p className="mt-1 text-[11px] text-[#7f6677]">
                   {slot.isSos
                     ? language === 'en'
                       ? 'Urgent slot'
@@ -283,15 +288,15 @@ export function DateTimeStep() {
       )}
 
       <div className="mb-6">
-        <h3 className="mb-3 text-sm font-medium text-[#4a3d35]">{language === 'en' ? 'Available times' : 'Vabad kellaajad'}</h3>
+        <h3 className="mb-3 text-sm font-medium text-[#4d3a53]">{language === 'en' ? 'Available times' : 'Vabad kellaajad'}</h3>
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
             {Array.from({ length: 8 }).map((_, index) => (
               <SkeletonBlock key={index} className="h-14 rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
             {currentSlots.map((slot) => (
               <TimeSlotComponent key={slot.id} slot={slot} isSelected={selectedSlot?.id === slot.id} onSelect={handleSlotSelect} />
             ))}
@@ -299,12 +304,12 @@ export function DateTimeStep() {
         )}
 
         {!isLoading && currentSlots.length === 0 && (
-          <div className="rounded-xl border border-[#eadfd7] bg-[#faf7f4] px-4 py-6 text-center text-[#6f655f]">
+          <div className="rounded-xl border border-[#eee0e9] bg-[#fff8fc] px-4 py-6 text-center text-[#745f6e]">
             <p>{text('availability_no_slots', t('datetime.noSlots'))}</p>
             <p className="text-sm">{text('availability_try_another', t('datetime.tryAnother'))}</p>
             {nextAvailableSlot && (
-              <p className="mt-2 text-sm font-medium text-[#8f6f60]">
-                {language === 'en' ? 'Next free time:' : 'Jargmine vaba aeg:'}{' '}
+              <p className="mt-2 text-sm font-medium text-[#9d6e8a]">
+                {language === 'en' ? 'Next free time:' : 'Järgmine vaba aeg:'}{' '}
                 {new Date(`${nextAvailableSlot.date}T00:00:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
                   day: 'numeric',
                   month: 'short',
@@ -321,11 +326,11 @@ export function DateTimeStep() {
         disabled={!selectedSlot}
         className={`cta-premium w-full rounded-2xl py-5 text-base font-semibold transition-all duration-200 ${
           selectedSlot
-            ? 'bg-[#b58373] text-white shadow-[0_22px_34px_-24px_rgba(72,49,35,0.92)] hover:-translate-y-0.5 hover:bg-[#a87463] hover:shadow-[0_26px_38px_-24px_rgba(72,49,35,0.95)] active:scale-[0.99]'
+            ? 'bg-[#c24d86] text-white shadow-[0_22px_34px_-24px_rgba(116,47,93,0.64)] hover:-translate-y-0.5 hover:bg-[#a93d71] hover:shadow-[0_26px_38px_-24px_rgba(116,47,93,0.72)] active:scale-[0.99]'
             : 'cursor-not-allowed bg-gray-100 text-gray-400'
         }`}
       >
-        {selectedSlot ? text('availability_continue', language === 'en' ? 'Continue confidently' : 'Jatkan enesekindlalt') : text('availability_select_for_continue', language === 'en' ? 'Select time to continue' : 'Vali aeg jatkamiseks')}
+        {selectedSlot ? text('availability_continue', language === 'en' ? 'Continue confidently' : 'Jätkan enesekindlalt') : text('availability_select_for_continue', language === 'en' ? 'Select time to continue' : 'Vali aeg jätkamiseks')}
       </button>
 
       <div ref={continueButtonRef} />

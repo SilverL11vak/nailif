@@ -175,7 +175,6 @@ function localizedValue(locale: LocaleCode, et: string | null, en: string | null
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_catalog_ensure__: Promise<void> | undefined;
 }
 

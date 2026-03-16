@@ -1,0 +1,337 @@
+
+> nailify@0.1.0 dev:3003
+> node ./scripts/dev-with-prewarm.mjs
+
+   ▲ Next.js 15.2.9
+   - Local:        http://localhost:3003
+   - Network:      http://192.168.8.8:3003
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1614ms
+ ✓ Compiled /middleware in 170ms (102 modules)
+ ○ Compiling /api/services ...
+ ✓ Compiled /api/services in 518ms (389 modules)
+ GET /api/services?lang=et 200 in 6632ms
+ ✓ Compiled /api/products in 216ms (391 modules)
+ GET /api/products?lang=et 200 in 613ms
+ ✓ Compiled /api/slots in 80ms (395 modules)
+ GET /api/slots?days=7&lang=et 200 in 1997ms
+ ✓ Compiled /api/booking-content in 106ms (397 modules)
+ GET /api/booking-content?lang=et 200 in 1152ms
+ ✓ Compiled /api/booking-addons in 165ms (399 modules)
+ GET /api/booking-addons?lang=et 200 in 347ms
+ ✓ Compiled /api/gallery in 118ms (402 modules)
+ ✓ Compiled /api/assistant-chat in 135ms (404 modules)
+ GET /api/gallery 200 in 630ms
+ ○ Compiling /[locale] ...
+ ✓ Compiled /[locale] in 1207ms (886 modules)
+ GET /et 200 in 2031ms
+ ○ Compiling /[locale]/book ...
+ ✓ Compiled /[locale]/book in 794ms (906 modules)
+
+[prewarm] Completed in 15108ms (8 ok, 0 failed)
+[prewarm] 200 /api/services?lang=et (6915ms)
+[prewarm] 200 /api/products?lang=et (632ms)
+[prewarm] 200 /api/slots?days=7&lang=et (2004ms)
+[prewarm] 200 /api/booking-content?lang=et (1157ms)
+[prewarm] 200 /api/booking-addons?lang=et (358ms)
+[prewarm] 200 /api/gallery (637ms)
+[prewarm] 200 /et (2022ms)
+[prewarm] 200 /et/book (1383ms)
+ GET /et/book 200 in 1363ms
+ POST /api/assistant-chat 200 in 4516ms
+ POST /api/assistant-chat 200 in 7666ms
+ GET /et 200 in 189ms
+ ✓ Compiled /favicon.ico in 226ms (519 modules)
+ GET /favicon.ico 200 in 461ms
+ GET /api/services?lang=et 200 in 181ms
+ GET /api/services?lang=et 200 in 141ms
+ GET /api/products?lang=et 200 in 1496ms
+ GET /api/gallery 200 in 1421ms
+ GET /api/booking-content?lang=et 200 in 1633ms
+ GET /api/slots?upcoming=1&limit=1 200 in 1646ms
+ GET /api/slots?upcoming=1&limit=6 200 in 1647ms
+ GET /api/booking-content?lang=et 200 in 285ms
+ POST /api/assistant-chat 200 in 11964ms
+ ✓ Compiled in 167ms (389 modules)
+ GET /et 200 in 43ms
+ ✓ Compiled in 404ms (894 modules)
+ GET /et 200 in 50ms
+ ✓ Compiled in 138ms (389 modules)
+ GET /et 200 in 44ms
+ ✓ Compiled /[locale]/book in 103ms (458 modules)
+ GET /et/book 200 in 227ms
+ ✓ Compiled /api/booking-addons in 108ms (501 modules)
+ GET /api/booking-addons?lang=et 200 in 1623ms
+ GET /api/booking-addons?lang=et 200 in 158ms
+ GET /api/booking-addons?lang=et 200 in 136ms
+ GET /api/booking-addons?lang=et 200 in 135ms
+ ✓ Compiled in 280ms (389 modules)
+ GET /et/book 200 in 68ms
+ GET /et 200 in 30ms
+ ✓ Compiled /api/services in 107ms (504 modules)
+ ✓ Compiled (513 modules)
+ GET /api/slots?upcoming=1&limit=1 200 in 547ms
+ GET /api/slots?upcoming=1&limit=1 200 in 140ms
+ GET /api/products?lang=et 200 in 1690ms
+ GET /api/services?lang=et 200 in 1692ms
+ GET /api/gallery 200 in 1694ms
+ GET /api/services?lang=et 200 in 160ms
+ GET /api/gallery 200 in 158ms
+ GET /api/slots?upcoming=1&limit=6 200 in 1879ms
+ GET /api/products?lang=et 200 in 295ms
+ GET /api/slots?upcoming=1&limit=6 200 in 285ms
+ ✓ Compiled /api/assistant-chat in 195ms (515 modules)
+ POST /api/assistant-chat 200 in 4418ms
+ ✓ Compiled in 218ms (389 modules)
+ GET /et 200 in 69ms
+ ✓ Compiled in 166ms (389 modules)
+ GET /et 200 in 22ms
+ ✓ Compiled in 167ms (389 modules)
+ GET /et 200 in 25ms
+ ✓ Compiled in 510ms (847 modules)
+ GET /et 200 in 104ms
+ ✓ Compiled in 173ms (389 modules)
+ GET /et 200 in 22ms
+ ✓ Compiled in 123ms (389 modules)
+ ✓ Compiled in 119ms (389 modules)
+ GET /et 200 in 122ms
+ GET /et 200 in 17ms
+ ✓ Compiled in 183ms (389 modules)
+ ✓ Compiled in 444ms (949 modules)
+ GET /et 200 in 410ms
+ GET /et 200 in 13ms
+ GET /et 200 in 15ms
+ ✓ Compiled in 190ms (389 modules)
+ ✓ Compiled in 313ms (935 modules)
+ GET /et 200 in 249ms
+ GET /et 200 in 14ms
+ GET /et 200 in 12ms
+ ✓ Compiled /api/assistant-chat in 346ms (869 modules)
+ GET /et 200 in 64ms
+ POST /api/assistant-chat 200 in 13893ms
+ ✓ Compiled in 424ms (847 modules)
+ GET /et 200 in 100ms
+ ✓ Compiled /api/assistant-chat in 105ms (494 modules)
+ GET /et 200 in 64ms
+ POST /api/assistant-chat 200 in 5238ms
+ GET /et 200 in 220ms
+ ✓ Compiled /favicon.ico in 137ms (496 modules)
+ GET /favicon.ico 200 in 383ms
+ ✓ Compiled /api/gallery in 286ms (506 modules)
+ ✓ Compiled (517 modules)
+ GET /api/booking-content?lang=et 200 in 962ms
+ GET /api/booking-content?lang=et 200 in 318ms
+ GET /api/gallery 200 in 2108ms
+ GET /api/services?lang=et 200 in 2265ms
+ GET /api/products?lang=et 200 in 2264ms
+ GET /api/slots?upcoming=1&limit=6 200 in 2400ms
+ GET /api/services?lang=et 200 in 135ms
+ GET /api/slots?upcoming=1&limit=1 200 in 2406ms
+ POST /api/assistant-chat 200 in 8290ms
+ GET /et 200 in 293ms
+ GET /favicon.ico 200 in 228ms
+ GET /api/services?lang=et 200 in 1402ms
+ GET /api/products?lang=et 200 in 1403ms
+ GET /api/gallery 200 in 1404ms
+ GET /api/services?lang=et 200 in 143ms
+ GET /api/booking-content?lang=et 200 in 1575ms
+ GET /api/slots?upcoming=1&limit=1 200 in 1545ms
+ GET /api/slots?upcoming=1&limit=6 200 in 1576ms
+ GET /api/booking-content?lang=et 200 in 276ms
+ POST /api/assistant-chat 200 in 3054ms
+ ✓ Compiled in 205ms (389 modules)
+ GET /et 200 in 23ms
+ ✓ Compiled in 367ms (847 modules)
+ GET /et 200 in 96ms
+ ✓ Compiled in 283ms (847 modules)
+ ✓ Compiled /api/gallery in 76ms (502 modules)
+ ✓ Compiled (513 modules)
+ GET /api/products?lang=et 200 in 1648ms
+ GET /api/gallery 200 in 1652ms
+ GET /api/services?lang=et 200 in 1670ms
+ GET /et 200 in 61ms
+ GET /api/booking-content?lang=et 200 in 1832ms
+ GET /api/slots?upcoming=1&limit=6 200 in 1857ms
+ GET /api/slots?upcoming=1&limit=1 200 in 1857ms
+ GET /api/services?lang=et 200 in 174ms
+ GET /api/booking-content?lang=et 200 in 278ms
+ ✓ Compiled in 209ms (902 modules)
+ GET /api/products?lang=et 200 in 217ms
+ GET /api/gallery 200 in 218ms
+ GET /api/services?lang=et 200 in 223ms
+ GET /et 200 in 53ms
+ GET /api/booking-content?lang=et 200 in 368ms
+ GET /api/services?lang=et 200 in 142ms
+ GET /api/slots?upcoming=1&limit=6 200 in 375ms
+ GET /api/slots?upcoming=1&limit=1 200 in 373ms
+ GET /api/booking-content?lang=et 200 in 289ms
+ ✓ Compiled in 459ms (902 modules)
+ GET /et 200 in 49ms
+ ✓ Compiled /api/assistant-chat in 186ms (515 modules)
+ POST /api/assistant-chat 200 in 6199ms
+ ✓ Compiled in 184ms (389 modules)
+ GET /et 200 in 38ms
+ ✓ Compiled in 512ms (847 modules)
+ ✓ Compiled in 123ms (389 modules)
+ ✓ Compiled /api/assistant-chat in 123ms (494 modules)
+ POST /api/assistant-chat 200 in 3733ms
+ ✓ Compiled in 376ms (883 modules)
+ POST /api/assistant-chat 200 in 3430ms
+   Reload env: .env.local
+ ✓ Compiled in 135ms (971 modules)
+ ✓ Compiled in 192ms (389 modules)
+ ✓ Compiled in 323ms (949 modules)
+ ✓ Compiled in 440ms (935 modules)
+ ✓ Compiled in 358ms (847 modules)
+ ✓ Compiled /api/assistant-chat in 396ms (869 modules)
+ POST /api/assistant-chat 200 in 7910ms
+ ✓ Compiled in 345ms (883 modules)
+ ✓ Compiled in 132ms (389 modules)
+ ✓ Compiled in 283ms (847 modules)
+ ✓ Compiled in 184ms (389 modules)
+   Reload env: .env.local
+ ✓ Compiled in 130ms (935 modules)
+ ✓ Compiled /api/assistant-chat in 99ms (494 modules)
+ POST /api/assistant-chat 200 in 5612ms
+ ✓ Compiled in 126ms (389 modules)
+ ✓ Compiled in 210ms (883 modules)
+ ✓ Compiled in 369ms (847 modules)
+ ✓ Compiled in 124ms (389 modules)
+ ✓ Compiled /api/assistant-chat in 96ms (494 modules)
+ POST /api/assistant-chat 200 in 13903ms
+ ✓ Compiled in 157ms (389 modules)
+ ✓ Compiled in 241ms (883 modules)
+ POST /api/assistant-chat 200 in 6722ms
+ ✓ Compiled in 122ms (389 modules)
+ ✓ Compiled in 524ms (949 modules)
+ ✓ Compiled in 181ms (389 modules)
+ ✓ Compiled in 154ms (935 modules)
+ ✓ Compiled in 140ms (389 modules)
+ ✓ Compiled /api/assistant-chat in 184ms (869 modules)
+ POST /api/assistant-chat 200 in 1973ms
+ ✓ Compiled in 214ms (883 modules)
+ POST /api/assistant-chat 200 in 164ms
+ ✓ Compiled in 196ms (389 modules)
+ ✓ Compiled in 167ms (389 modules)
+ ✓ Compiled in 146ms (389 modules)
+ ✓ Compiled in 227ms (389 modules)
+ ✓ Compiled in 381ms (847 modules)
+ ✓ Compiled /api/assistant-chat in 202ms (495 modules)
+ POST /api/assistant-chat 200 in 2071ms
+ POST /api/assistant-chat 200 in 2141ms
+ POST /api/assistant-chat 200 in 2108ms
+ ✓ Compiled in 305ms (884 modules)
+ ✓ Compiled in 611ms (949 modules)
+ ✓ Compiled in 501ms (935 modules)
+ ✓ Compiled /api/assistant-chat in 224ms (870 modules)
+ POST /api/assistant-chat 200 in 2017ms
+ POST /api/assistant-chat 200 in 405ms
+ POST /api/assistant-chat 200 in 396ms
+ POST /api/assistant-chat 200 in 282ms
+ POST /api/assistant-chat 200 in 267ms
+ POST /api/assistant-chat 200 in 5511ms
+ ✓ Compiled in 153ms (389 modules)
+ ✓ Compiled in 148ms (389 modules)
+ ✓ Compiled in 664ms (855 modules)
+ ✓ Compiled in 241ms (393 modules)
+ ✓ Compiled in 399ms (849 modules)
+ ✓ Compiled in 384ms (849 modules)
+ ✓ Compiled in 485ms (849 modules)
+ ✓ Compiled in 483ms (849 modules)
+ ✓ Compiled in 374ms (849 modules)
+ ✓ Compiled in 269ms (849 modules)
+ ✓ Compiled in 396ms (849 modules)
+ ✓ Compiled in 317ms (849 modules)
+ ✓ Compiled in 332ms (849 modules)
+ ✓ Compiled in 447ms (849 modules)
+ ✓ Compiled in 476ms (849 modules)
+ ✓ Compiled in 634ms (849 modules)
+ ✓ Compiled in 402ms (849 modules)
+ ✓ Compiled in 178ms (381 modules)
+ ✓ Compiled in 135ms (381 modules)
+ ✓ Compiled in 129ms (381 modules)
+ ✓ Compiled in 154ms (381 modules)
+ ✓ Compiled in 141ms (381 modules)
+ ✓ Compiled in 138ms (381 modules)
+ ✓ Compiled in 127ms (381 modules)
+ ✓ Compiled in 161ms (381 modules)
+ ✓ Compiled in 144ms (381 modules)
+ ✓ Compiled in 1038ms (858 modules)
+ ✓ Compiled in 257ms (390 modules)
+ ✓ Compiled in 203ms (390 modules)
+ ✓ Compiled in 221ms (390 modules)
+ ✓ Compiled in 519ms (849 modules)
+ ✓ Compiled in 518ms (853 modules)
+ ✓ Compiled in 404ms (853 modules)
+ ✓ Compiled in 651ms (853 modules)
+ ✓ Compiled in 542ms (853 modules)
+ ✓ Compiled in 548ms (853 modules)
+ ✓ Compiled in 379ms (853 modules)
+ ✓ Compiled in 576ms (955 modules)
+ ✓ Compiled in 197ms (392 modules)
+ ✓ Compiled in 212ms (392 modules)
+ ✓ Compiled in 546ms (941 modules)
+ ✓ Compiled in 168ms (392 modules)
+ ✓ Compiled in 187ms (392 modules)
+ ✓ Compiled in 265ms (955 modules)
+ ✓ Compiled in 542ms (941 modules)
+ ✓ Compiled in 585ms (853 modules)
+ ✓ Compiled in 460ms (853 modules)
+ ✓ Compiled in 927ms (853 modules)
+ ✓ Compiled in 369ms (853 modules)
+ ✓ Compiled in 414ms (853 modules)
+ ✓ Compiled in 522ms (853 modules)
+ ✓ Compiled in 487ms (853 modules)
+ ✓ Compiled in 313ms (853 modules)
+ ✓ Compiled in 400ms (853 modules)
+ ✓ Compiled in 295ms (853 modules)
+ ✓ Compiled in 297ms (853 modules)
+ ✓ Compiled in 334ms (853 modules)
+ ✓ Compiled in 385ms (853 modules)
+ ✓ Compiled in 299ms (853 modules)
+ ✓ Compiled in 299ms (853 modules)
+ ✓ Compiled in 443ms (853 modules)
+ ✓ Compiled in 323ms (853 modules)
+ ✓ Compiled in 313ms (853 modules)
+ ✓ Compiled in 294ms (853 modules)
+ ✓ Compiled in 267ms (853 modules)
+ ✓ Compiled in 460ms (853 modules)
+ ✓ Compiled in 156ms (392 modules)
+ ✓ Compiled in 508ms (853 modules)
+ ✓ Compiled in 315ms (853 modules)
+ ✓ Compiled in 337ms (853 modules)
+ ✓ Compiled in 298ms (853 modules)
+ ✓ Compiled in 186ms (392 modules)
+ ✓ Compiled in 423ms (853 modules)
+ ✓ Compiled in 329ms (853 modules)
+ ✓ Compiled in 314ms (853 modules)
+ ✓ Compiled in 320ms (853 modules)
+ ✓ Compiled in 2s (392 modules)
+ ✓ Compiled in 265ms (392 modules)
+ ✓ Compiled in 219ms (392 modules)
+ ✓ Compiled in 454ms (941 modules)
+ ✓ Compiled in 190ms (392 modules)
+ ✓ Compiled in 319ms (941 modules)
+ ✓ Compiled in 236ms (392 modules)
+ ✓ Compiled in 204ms (392 modules)
+ ✓ Compiled in 812ms (853 modules)
+ ✓ Compiled in 654ms (853 modules)
+ ✓ Compiled in 482ms (853 modules)
+ ✓ Compiled in 528ms (853 modules)
+ ✓ Compiled in 434ms (853 modules)
+ ✓ Compiled in 500ms (853 modules)
+ ✓ Compiled in 455ms (853 modules)
+ ✓ Compiled in 511ms (853 modules)
+ ✓ Compiled in 479ms (853 modules)
+ ✓ Compiled in 242ms (392 modules)
+ ✓ Compiled in 1711ms (392 modules)
+ ✓ Compiled in 641ms (392 modules)
+ ✓ Compiled in 234ms (392 modules)
+ ✓ Compiled in 187ms (392 modules)
+ ✓ Compiled in 155ms (392 modules)
+ ✓ Compiled in 153ms (392 modules)
+ ✓ Compiled in 169ms (392 modules)
+ ✓ Compiled in 175ms (392 modules)
+ ✓ Compiled in 1674ms (392 modules)

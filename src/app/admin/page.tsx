@@ -10,6 +10,7 @@ const businessCards = [
   { title: 'Teenused', description: 'Hinnad, kestused, nahtavus', href: '/admin/services' },
   { title: 'Tooted', description: 'Pood, laoseis, pildid', href: '/admin/products' },
   { title: 'Galerii', description: 'Avalehe inspiratsioon', href: '/admin/gallery' },
+  { title: 'Avalehe pildid', description: 'Hero, team, testimonial, asukoht', href: '/admin/homepage-media' },
   { title: 'Bookingu sisu', description: 'Mikrocopy ja sammud', href: '/admin/booking' },
   { title: 'Tellimused', description: 'Maksed ja staatused', href: '/admin/orders' },
   { title: 'Konto', description: 'Turvalisus ja profiil', href: '/admin/account' },
@@ -17,8 +18,8 @@ const businessCards = [
 
 function statusLabel(status: string) {
   if (status === 'confirmed') return 'Kinnitatud';
-  if (status === 'completed') return 'Lopetatud';
-  if (status === 'cancelled') return 'Tuhistatud';
+  if (status === 'completed') return 'Lõpetatud';
+  if (status === 'cancelled') return 'Tühistatud';
   if (status === 'pending_payment') return 'Makse ootel';
   return status;
 }
@@ -46,10 +47,11 @@ export default async function AdminHomePage() {
         <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#6b7280]">Nailify Super Admin</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.02em] text-[#111827]">Command Deck</h1>
-              <p className="mt-2 max-w-2xl text-sm text-[#4b5563]">
-                Tere {displayName}. Tana on {todayLabel}. Paneel on ules ehitatud paevase too tempo jargi: operatsioonid, ajakava, ari.
+              <p className="type-overline text-[#6b7280]">Nailify Super Admin</p>
+              <h1 className="type-h2 mt-1 text-[#111827]">Command Deck</h1>
+              <p className="type-small measure-copy mt-2 text-[#4b5563]">
+                Tere {displayName}. Täna on {todayLabel}. Paneel on üles ehitatud päevase töö tempo järgi:
+                operatsioonid, ajakava ja äri.
               </p>
             </div>
             <AdminLogoutButton />
@@ -57,16 +59,16 @@ export default async function AdminHomePage() {
 
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Broneeringud tana: {stats.todayBookings.length}
+              Broneeringud täna: {stats.todayBookings.length}
             </span>
             <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Vabad ajad tana: {stats.freeSlotsToday}
+              Vabad ajad täna: {stats.freeSlotsToday}
             </span>
             <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
               SOS ajad: {stats.sosSlotsToday}
             </span>
             <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Kaive tana: EUR {stats.revenueToday}
+              Käive täna: EUR {stats.revenueToday}
             </span>
             <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
               Trend: {bookingTrendPrefix}
@@ -80,13 +82,13 @@ export default async function AdminHomePage() {
         <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
           <aside className="space-y-4">
             <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Operatsioonid tana</p>
+              <p className="type-overline text-[#6b7280]">Operatsioonid täna</p>
               <div className="mt-3 space-y-2 text-sm">
                 <Link
                   href="/admin/bookings?view=today"
                   className="flex items-center justify-between rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-[#374151]"
                 >
-                  <span>Tanased broneeringud</span>
+                  <span>Tänased broneeringud</span>
                   <span className="font-semibold">{stats.todayBookings.length}</span>
                 </Link>
                 <Link
@@ -107,16 +109,16 @@ export default async function AdminHomePage() {
             </article>
 
             <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Kiired soovitused</p>
+              <p className="type-overline text-[#6b7280]">Kiired soovitused</p>
               <div className="mt-3 space-y-2 text-sm text-[#374151]">
                 <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="font-medium">Jargmine vaba aeg</p>
+                  <p className="font-medium">Järgmine vaba aeg</p>
                   <p className="text-xs text-[#6b7280]">
                     {stats.nextFreeSlot?.slotDate || '-'} {stats.nextFreeSlot?.slotTime || ''}
                   </p>
                 </div>
                 <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="font-medium">Jargmine SOS aeg</p>
+                  <p className="font-medium">Järgmine SOS aeg</p>
                   <p className="text-xs text-[#6b7280]">
                     {stats.nextSosSlot?.slotDate || '-'} {stats.nextSosSlot?.slotTime || ''}
                   </p>
@@ -129,7 +131,7 @@ export default async function AdminHomePage() {
                   }
                   className="block rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-center font-semibold text-[#374151]"
                 >
-                  Margi jargmine aeg SOS-iks
+                  Märgi järgmine aeg SOS-iks
                 </Link>
               </div>
             </article>
@@ -140,8 +142,8 @@ export default async function AdminHomePage() {
 
             <section className="admin-panel rounded-3xl p-5">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[#111827]">Ari ja sisu moodulid</h2>
-                <p className="text-xs text-[#6b7280]">Core haldus</p>
+                <h2 className="type-h4 text-[#111827]">Äri ja sisu moodulid</h2>
+                <p className="type-small text-[#6b7280]">Core haldus</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {businessCards.map((card) => (
@@ -159,7 +161,7 @@ export default async function AdminHomePage() {
 
           <aside className="space-y-4">
             <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Jargmine klient</p>
+              <p className="type-overline text-[#6b7280]">Järgmine klient</p>
               {stats.nextBooking ? (
                 <div className="mt-3">
                   <p className="text-base font-semibold text-[#111827]">{stats.nextBooking.clientName}</p>
@@ -180,11 +182,11 @@ export default async function AdminHomePage() {
               <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Finantsplokk</p>
               <div className="mt-3 grid gap-2">
                 <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Kaive tana</p>
+                  <p className="text-xs text-[#6b7280]">Käive täna</p>
                   <p className="text-lg font-semibold text-[#111827]">EUR {stats.revenueToday}</p>
                 </div>
                 <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Kaive nadal</p>
+                  <p className="text-xs text-[#6b7280]">Käive nädal</p>
                   <p className="text-lg font-semibold text-[#111827]">EUR {stats.revenueThisWeek}</p>
                 </div>
                 <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
@@ -198,7 +200,7 @@ export default async function AdminHomePage() {
             </article>
 
             <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Susteemi maht</p>
+              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Süsteemi maht</p>
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
                   <p className="text-xs text-[#6b7280]">Teenused</p>

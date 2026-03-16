@@ -238,20 +238,22 @@
     "title": "Küsi kiiresti",
     "subtitle": "Kirjuta meile enne broneerimist",
     "aiWelcome": "Tere! Aitan sind broneerimise, vabade aegade ja teenuse valikuga.",
-    "aiPlaceholder": "Kusi teenuste, aja voi broneerimise kohta...",
+    "aiPlaceholder": "Küsi teenuste, aja või broneerimise kohta...",
     "aiSend": "Saada",
-    "aiTyping": "Mottlen...",
-    "aiPricing": "Teenuse hind soltub valitud teenusest ja voimalikest lisadest. Soovin korral aidata sul sobiva valiku teha.",
-    "aiAvailability": "Vabu aegu naed bookingu vaates. Kui vajad kohest kinnitust, saad suhelda otse kuunetehnikuga.",
-    "aiDesign": "Tapsed disaini- ja kuunte seisukorra kusimused on koige parem kinnitada otse tehnikuga.",
+    "aiTyping": "Mõtlen...",
+    "aiPricing": "Teenuse hind sõltub valitud teenusest ja võimalikest lisadest. Soovi korral aitan sul sobiva valiku teha.",
+    "aiAvailability": "Vabu aegu näed broneerimise vaates. Kui vajad kohest kinnitust, saad suhelda otse küünetehnikuga.",
+    "aiDesign": "Täpsed disaini- ja küünte seisukorra küsimused on kõige parem kinnitada otse tehnikuga.",
     "aiBookingHelp": "Saan juhendada sind samm-sammult. Ava booking ja valime koos teenuse ning aja.",
-    "aiFallback": "Mul ei pruugi hetkel olla piisavalt konteksti tapselt vastamiseks.",
-    "handoffAction": "Suhtle otse kuunetehnikuga",
-    "handoffSuggestion": "Kui soovid, saad kohe otse kuunetehnikuga suhelda.",
+    "aiFallback": "Mul ei pruugi hetkel olla piisavalt konteksti täpselt vastamiseks.",
+    "handoffAction": "Suhtle otse küünetehnikuga",
+    "handoffSuggestion": "Kui soovid, saad kohe otse küünetehnikuga suhelda.",
     "openingMessenger": "Avan Messengeri...",
     "whatsapp": "WhatsApp",
     "messenger": "Messenger",
     "open": "Ava",
+    "close": "Sulge",
+    "closeAria": "Sulge vestlusaken",
     "triggerAria": "Ava kiire kontakt",
     "whatsappPrefillEt": "Tere! Soovin küsida vaba aja või teenuse kohta.",
     "whatsappPrefillEn": "Hi! I would like to ask about availability or a service."
@@ -283,9 +285,10 @@
       "badge": "Kliendi lemmik",
       "cta": "Soovitatud valik - broneeri",
       "priceTrust": "Loplik hind kinnitatakse enne teenuse algust. Ettemaks 10 EUR.",
-      "longevityFallback": "Tulemus pusib tavaliselt 3-4 nadalat."
+      "longevityFallback": "Tulemus püsib tavaliselt 3-4 nädalat."
     },
     "servicesUi": {
+      "featuredTitle": "Soovitatud teenus",
       "whoForLabel": "Kellele:",
       "durationLabel": "Kestus",
       "longevityLabel": "Pusivus",
@@ -298,11 +301,11 @@
     },
     "localAuthority": {
       "eyebrow": "Kohalik usaldus",
-      "title": "Nailify Mustamae: lihtne tulla, lihtne tagasi tulla",
-      "subtitle": "Meid kulastavad enim Mustamae ja Kesklinna kliendid, kes soovivad tapset tulemust ja kiiret broneerimist.",
-      "item1": "Mustamae tee 55",
+      "title": "Nailify Mustamäe: lihtne tulla, lihtne tagasi tulla",
+      "subtitle": "Meid külastavad enim Mustamäe ja Kesklinna kliendid, kes soovivad täpset tulemust ja kiiret broneerimist.",
+      "item1": "Mustamäe tee 55",
       "item2": "Parkimine lahedal",
-      "item3": "Hea uhistranspordi uhendus"
+      "item3": "Hea ühistranspordi ühendus"
     },
     "gallery": {
       "subtitle": "Hoolikalt valitud signatuurstiilid, mis inspireerivad su järgmist broneeringut.",
@@ -332,23 +335,23 @@
       "suitabilityLabel": "Kellele sobib:",
       "fallback": {
         "gel-manicure": {
-          "result": "Uhtlane laikiv geellakk ja korrektne kuju.",
-          "longevity": "Kuni 3-4 nadalat olenevalt kodusest hooldusest.",
-          "suitability": "Kui soovid kauapusivat tulemust igapaevaseks kandmiseks."
+          "result": "Ühtlane läikiv geellakk ja korrektne kuju.",
+          "longevity": "Kuni 3-4 nädalat olenevalt kodusest hooldusest.",
+          "suitability": "Kui soovid kauapüsivat tulemust igapäevaseks kandmiseks."
         },
         "acrylic-extensions": {
-          "result": "Pikem vorm, tugevam konstruktsioon ja tapselt viimistletud disain.",
-          "longevity": "Hooldusega pusib tulemus 3-4 nadalat.",
-          "suitability": "Kui soovid pikemat kuunt voi tugevamat kuju."
+          "result": "Pikem vorm, tugevam konstruktsioon ja täpselt viimistletud disain.",
+          "longevity": "Hooldusega püsib tulemus 3-4 nädalat.",
+          "suitability": "Kui soovid pikemat küünt või tugevamat kuju."
         },
         "luxury-spa-manicure": {
-          "result": "Hooldatud kaed, pehme nahk ja viimistletud detail.",
-          "longevity": "Parim efekt regulaarse 3-4 nadala rutmiga.",
+          "result": "Hooldatud käed, pehme nahk ja viimistletud detail.",
+          "longevity": "Parim efekt regulaarse 3-4 nädalat rütmiga.",
           "suitability": "Kui soovid hooldushetke koos premium enesehooldusega."
         },
         "gel-pedicure": {
-          "result": "Puhas pedikuur ja vastupidav geellakk.",
-          "longevity": "Keskmiselt 4-6 nadalat, olenevalt koormusest.",
+          "result": "Puhas pediküür ja vastupidav geellakk.",
+          "longevity": "Keskmiselt 4-6 nädalat, olenevalt koormusest.",
           "suitability": "Kui soovid korralikku ja pika kestvusega jalahooldust."
         }
       }
@@ -487,9 +490,9 @@
       "previewText": "Privaatne ja rahulik ilukeskkond premium hügieenistandardiga."
     },
     "aftercare": {
-      "tip1": "• Geelmanikuur pusib tavaliselt 3-4 nadalat.",
-      "tip2": "• Planeeri hooldus, kui valjakasv muutub nahtavaks.",
-      "tip3": "• Kasuta kuuneoli iga paev, et valitda kuivust.",
+      "tip1": "• Geelmaniküür püsib tavaliselt 3-4 nädalat.",
+      "tip2": "• Planeeri hooldus, kui väljakasv muutub nähtavaks.",
+      "tip3": "• Kasuta küüneõli iga päev, et võita kuivust.",
       "eyebrow": "Järelhoolduse valik",
       "title": "Hoia värske tulemus kodus",
       "subtitle": "Igapäevased hooldussoovitused ja tooted, mis aitavad läiget ning kuju säilitada.",

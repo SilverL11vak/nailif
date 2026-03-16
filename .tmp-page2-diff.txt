@@ -1,0 +1,32 @@
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 4327271..ebe4a30 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -877,25 +877,8 @@ export default function Home() {
+         </div>
+       </section>
+ 
+-      {/* ===================== */}
+-      {/* 4. POPULAR SERVICES - CONVERSION OPTIMIZED */}
+-      {/* ===================== */}
+-      <section
+-        id="services-media"
+-        className="hidden"
+-        style={{
+-          background:
+-            'radial-gradient(circle at 15% 0%, rgba(242, 203, 224, 0.34), transparent 36%), radial-gradient(circle at 85% 18%, rgba(244, 224, 236, 0.46), transparent 42%), linear-gradient(180deg, #fffdfd 0%, #fff8fc 48%, #fffdfc 100%)',
+-        }}
+-      >
+-        <div
+-          className="pointer-events-none absolute inset-0 opacity-[0.16]"
+-          style={{
+-            backgroundImage: 'radial-gradient(rgba(181,129,153,0.16) 0.6px, transparent 0.6px)',
+-            backgroundSize: '14px 14px',
+-          }}
+-        />
+-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
++      <section id="services" className="border-t border-[#f2e6ed] bg-[#fffbfd] py-20 lg:py-26">
++        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="mb-12 text-center lg:mb-16">
+             <h2 className={`mb-4 ${sectionTitleClass}`}>{t('services.title')}</h2>
+             <p className={sectionLeadClass}>{t('services.subtitle')}</p>

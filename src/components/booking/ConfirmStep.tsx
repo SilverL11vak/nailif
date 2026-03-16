@@ -75,21 +75,21 @@ export function ConfirmStep() {
         <p className="text-[#6f655f]">{t('confirm.reviewDetails')}</p>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-[#e7dfd7] bg-white">
-        <div className="border-b border-[#eee5de] px-5 py-4">
-          <h3 className="mb-1 text-lg font-semibold text-[#332923]">{selectedService.name}</h3>
+      <div className="mb-6 rounded-2xl border border-[#eadce5] bg-white">
+        <div className="border-b border-[#f1e5ec] px-5 py-4">
+          <h3 className="mb-1 text-lg font-semibold text-[#3f2d3e]">{selectedService.name}</h3>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-[#746860]">
+            <span className="text-[#7d6275]">
               {selectedService.duration} {t('common.minutes')}
             </span>
-            <span className="font-semibold text-[#9f7058]">EUR {selectedService.price}</span>
+            <span className="font-semibold text-[#b04b80]">€{selectedService.price}</span>
           </div>
         </div>
 
         <div className="space-y-4 px-5 py-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{language === 'en' ? 'Visit time' : 'Visiidi aeg'}</p>
-            <p className="mt-1 font-medium text-[#473a33]">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{language === 'en' ? 'Visit time' : 'Visiidi aeg'}</p>
+            <p className="mt-1 font-medium text-[#4a3344]">
               {new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
                 weekday: 'long',
                 day: 'numeric',
@@ -97,34 +97,34 @@ export function ConfirmStep() {
                 year: 'numeric',
               })}
             </p>
-            <p className="text-sm text-[#746860]">
+            <p className="text-sm text-[#7d6275]">
               {t('confirm.at')} {selectedSlot.time}
             </p>
             {selectedSlot.isSos && (
               <p className="mt-1 text-xs font-medium text-[#965e7d]">
                 SOS: {selectedSlot.sosLabel || (language === 'en' ? 'Urgent slot' : 'Kiire aeg')}{' '}
-                {selectedSlot.sosSurcharge ? `(+EUR ${selectedSlot.sosSurcharge})` : language === 'en' ? '(no surcharge)' : '(lisatasuta)'}
+                {selectedSlot.sosSurcharge ? `(+€${selectedSlot.sosSurcharge})` : language === 'en' ? '(no surcharge)' : '(lisatasuta)'}
               </p>
             )}
           </div>
 
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{language === 'en' ? 'Client' : 'Klient'}</p>
-            <p className="mt-1 font-medium text-[#473a33]">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{language === 'en' ? 'Client' : 'Klient'}</p>
+            <p className="mt-1 font-medium text-[#4a3344]">
               {contactInfo?.firstName} {contactInfo?.lastName}
             </p>
-            <p className="text-sm text-[#746860]">{contactInfo?.phone}</p>
-            {contactInfo?.email && <p className="text-sm text-[#8a7f78]">{contactInfo.email}</p>}
+            <p className="text-sm text-[#7d6275]">{contactInfo?.phone}</p>
+            {contactInfo?.email && <p className="text-sm text-[#8a6e82]">{contactInfo.email}</p>}
           </div>
 
           {selectedExtras.length > 0 && (
             <div>
-              <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{t('confirm.extras')}</p>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{t('confirm.extras')}</p>
               <div className="mt-1 space-y-1">
                 {selectedExtras.map((extra) => (
                   <div key={extra.id} className="flex items-center justify-between text-sm">
-                    <span className="text-[#5d514a]">{extra.name}</span>
-                    <span className="font-medium text-[#7a6559]">+EUR {extra.price}</span>
+                    <span className="text-[#5d4558]">{extra.name}</span>
+                    <span className="font-medium text-[#7d6275]">+€{extra.price}</span>
                   </div>
                 ))}
               </div>
@@ -133,8 +133,8 @@ export function ConfirmStep() {
 
           {(contactInfo?.inspirationImage || contactInfo?.currentNailImage || contactInfo?.inspirationNote) && (
             <div>
-              <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{language === 'en' ? 'Inspiration' : 'Inspiratsioon'}</p>
-              <div className="mt-2 rounded-xl border border-[#e2d8d0] bg-[#fcfaf8] p-3">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{language === 'en' ? 'Inspiration' : 'Inspiratsioon'}</p>
+              <div className="mt-2 rounded-xl border border-[#eadce5] bg-[#fffafe] p-3">
                 <div className="grid gap-2 sm:grid-cols-2">
                   {contactInfo?.inspirationImage && (
                     <div className="relative h-28 w-full overflow-hidden rounded-lg">
@@ -147,28 +147,28 @@ export function ConfirmStep() {
                     </div>
                   )}
                 </div>
-                {contactInfo?.inspirationNote && <p className="mt-2 text-sm text-[#6d5b51]">{contactInfo.inspirationNote}</p>}
+                {contactInfo?.inspirationNote && <p className="mt-2 text-sm text-[#6d5868]">{contactInfo.inspirationNote}</p>}
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex items-end justify-between border-t border-[#eee5de] bg-[#faf7f4] px-5 py-4">
+        <div className="flex items-end justify-between border-t border-[#f1e5ec] bg-[#fffafe] px-5 py-4">
           <div>
-            <span className="text-lg font-semibold text-[#3c2f29]">{t('confirm.total')}</span>
-            <p className="text-sm text-[#746860]">
+            <span className="text-lg font-semibold text-[#3f2d3e]">{t('confirm.total')}</span>
+            <p className="text-sm text-[#7d6275]">
               {totalDuration} {t('confirm.totalTime')}
             </p>
           </div>
-          <span className="text-3xl font-semibold text-[#9f7058]">EUR {totalPrice}</span>
+          <span className="text-3xl font-semibold text-[#b04b80]">€{totalPrice}</span>
         </div>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-[#e5dcd5] bg-[#fcfaf8] p-4">
-        <p className="text-sm font-semibold text-[#463831]">
+      <div className="mb-6 rounded-2xl border border-[#eadce5] bg-[#fffafe] p-4">
+        <p className="text-sm font-semibold text-[#4a3344]">
           {text('confirm_expectation_title', language === 'en' ? 'Before your visit' : 'Enne visiiti')}
         </p>
-        <ul className="mt-2 space-y-1 text-sm text-[#74675f]">
+        <ul className="mt-2 space-y-1 text-sm text-[#7d6275]">
           <li>- {text('confirm_expectation_1', language === 'en' ? 'Arrive with clean nails. If you need gel removal, add it as a service.' : 'Tule puhaste kuuntega. Kui vajad geeli eemaldust, lisa see teenusena.')}</li>
           <li>- {text('confirm_expectation_2', language === 'en' ? 'An inspiration photo helps us prepare better, but it is optional.' : 'Inspiratsioonipilt aitab meil paremini ette valmistada, kuid on valikuline.')}</li>
           <li>- {text('confirm_expectation_3', language === 'en' ? 'Service duration can vary slightly depending on details.' : 'Teenuse kestus voib detailidest soltvalt veidi muutuda.')}</li>
@@ -178,8 +178,8 @@ export function ConfirmStep() {
 
       <p className="mb-4 text-center text-xs text-[#887c74]">
         {language === 'en'
-          ? 'A 10 EUR deposit confirms your booking. The rest is paid in the studio.'
-          : '10 EUR ettemaks kinnitab aja. Ulejaanud summa maksad kohapeal.'}
+          ? 'A 10 € deposit confirms your booking. The rest is paid in the studio.'
+          : '10 € ettemaks kinnitab aja. Ulejaanud summa maksad kohapeal.'}
       </p>
 
       <button
@@ -187,8 +187,8 @@ export function ConfirmStep() {
         disabled={isLoading}
         className={`cta-premium w-full rounded-2xl py-5 text-base font-semibold transition-all duration-200 ${
           isLoading
-            ? 'cursor-wait bg-[#f2ece8] text-[#8f7567] ring-2 ring-[#e4d7ce] animate-pulse'
-            : 'bg-[#b88468] text-white shadow-[0_20px_32px_-24px_rgba(72,49,35,0.8)] hover:-translate-y-0.5 hover:bg-[#a67359] hover:shadow-[0_24px_36px_-24px_rgba(72,49,35,0.85)] active:scale-[0.99]'
+            ? 'cursor-wait bg-[#f7eef4] text-[#8f6c82] ring-2 ring-[#edd8e6] animate-pulse'
+            : 'bg-[#c24d86] text-white shadow-[0_20px_32px_-24px_rgba(116,47,93,0.65)] hover:-translate-y-0.5 hover:bg-[#a93d71] hover:shadow-[0_24px_36px_-24px_rgba(116,47,93,0.72)] active:scale-[0.99]'
         }`}
       >
         {isLoading ? t('confirm.confirming') : language === 'en' ? 'Confirm my appointment' : 'Kinnita minu aeg'}
