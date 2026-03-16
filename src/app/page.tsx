@@ -707,7 +707,7 @@ export default function Home() {
               >
                 <Heart size={18} strokeWidth={1.8} fill={favoritesCount > 0 ? 'currentColor' : 'none'} />
                 {favoritesCount > 0 && (
-                  <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[10px] font-semibold text-white">
+                  <span className="absolute right-0 top-0 -translate-y-1/2 translate-x-1/4 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-[#c24d86] px-0.5 text-[9px] font-semibold text-white">
                     {favoritesCount > 9 ? '9+' : favoritesCount}
                   </span>
                 )}
@@ -721,7 +721,7 @@ export default function Home() {
               >
                 <ShoppingBag size={18} strokeWidth={1.8} />
                 {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[10px] font-semibold text-white">
+                  <span className="absolute right-0 top-0 -translate-y-1/2 translate-x-1/4 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-[#c24d86] px-0.5 text-[9px] font-semibold text-white">
                     {cartCount > 9 ? '9+' : cartCount}
                   </span>
                 )}
@@ -974,7 +974,6 @@ export default function Home() {
                   className="btn-primary btn-primary-lg mt-6 inline-flex gap-2"
                 >
                   {getI18nTextOrFallback('homepage.hero.luxuryCta', language === 'en' ? 'Choose your time' : 'Vali oma aeg')}
-                  <span aria-hidden="true">-&gt;</span>
                   <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
                     <path d="M4 10h11" />
                     <path d="M11.5 6.5L15 10l-3.5 3.5" />
@@ -1084,10 +1083,8 @@ export default function Home() {
           }}
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center lg:mb-16">
-            <h2 className={`mb-4 ${sectionTitleClass}`}>{t('services.title')}</h2>
-            <p className={sectionLeadClass}>{t('services.subtitle')}</p>
-          </div>
+          <div className="mb-12 text-center lg:mb-16" />
+
 
           <div className="space-y-8 lg:space-y-10">
             {featuredService && (
