@@ -124,7 +124,13 @@
     "selectService": "Valige teenus",
     "selectTime": "Valige aeg",
     "secureThisSlot": "KINDLUSTA SEE KOHT",
-    "medicalGrade": "Meditsiinikvaliteediga"
+    "medicalGrade": "Meditsiinikvaliteediga",
+    "identityEyebrow": "Premium küünehooldus",
+    "identityTitle": "Broneerimine Sandraga",
+    "identityStudio": "Mustamäe stuudio",
+    "designedEasy": "Loodud lihtsaks broneerimiseks",
+    "depositNotice": "Koha kinnitamiseks 10 EUR ettemaks. Ülejäänud summa tasud stuudios.",
+    "hygiene": "Meditsiinilise taseme hügieen"
   },
   "booking": {
     "back": "Tagasi",
@@ -228,10 +234,292 @@
     "popular": "Populaarne",
     "left": "jäänud"
   },
+  "chat": {
+    "title": "Küsi kiiresti",
+    "subtitle": "Kirjuta meile enne broneerimist",
+    "aiWelcome": "Tere! Aitan sind broneerimise, vabade aegade ja teenuse valikuga.",
+    "aiPlaceholder": "Kusi teenuste, aja voi broneerimise kohta...",
+    "aiSend": "Saada",
+    "aiTyping": "Mottlen...",
+    "aiPricing": "Teenuse hind soltub valitud teenusest ja voimalikest lisadest. Soovin korral aidata sul sobiva valiku teha.",
+    "aiAvailability": "Vabu aegu naed bookingu vaates. Kui vajad kohest kinnitust, saad suhelda otse kuunetehnikuga.",
+    "aiDesign": "Tapsed disaini- ja kuunte seisukorra kusimused on koige parem kinnitada otse tehnikuga.",
+    "aiBookingHelp": "Saan juhendada sind samm-sammult. Ava booking ja valime koos teenuse ning aja.",
+    "aiFallback": "Mul ei pruugi hetkel olla piisavalt konteksti tapselt vastamiseks.",
+    "handoffAction": "Suhtle otse kuunetehnikuga",
+    "handoffSuggestion": "Kui soovid, saad kohe otse kuunetehnikuga suhelda.",
+    "openingMessenger": "Avan Messengeri...",
+    "whatsapp": "WhatsApp",
+    "messenger": "Messenger",
+    "open": "Ava",
+    "triggerAria": "Ava kiire kontakt",
+    "whatsappPrefillEt": "Tere! Soovin küsida vaba aja või teenuse kohta.",
+    "whatsappPrefillEn": "Hi! I would like to ask about availability or a service."
+  },
   "loading": {
     "loading": "Laadimine...",
     "booking": "Broneering laadimisel...",
     "success": "Edu!"
+  },
+  "homepage": {
+    "nav": {
+      "products": "Tooted"
+    },
+    "mobile": {
+      "home": "Avaleht",
+      "team": "Meeskond",
+      "language": "Keel"
+    },
+    "hero": {
+      "eyebrow": "Toimetuslik ilubroneering",
+      "nextAvailableLine": "Järgmine vaba aeg täna kell",
+      "loyalClients": "120+ püsiklienti",
+      "trustAnchor": "Personaalne konsultatsioon, hoolikas hügieen ja tulemus, mis püsib kaunis nädalateks."
+    },
+    "trust": {
+      "premium": "Premium"
+    },
+    "featuredService": {
+      "badge": "Kliendi lemmik",
+      "cta": "Soovitatud valik - broneeri",
+      "priceTrust": "Loplik hind kinnitatakse enne teenuse algust. Ettemaks 10 EUR.",
+      "longevityFallback": "Tulemus pusib tavaliselt 3-4 nadalat."
+    },
+    "servicesUi": {
+      "whoForLabel": "Kellele:",
+      "durationLabel": "Kestus",
+      "longevityLabel": "Pusivus",
+      "lastsLabel": "Pusib",
+      "priceLabel": "Alates",
+      "trustCue": "Sertifitseeritud hooldus, premium tooted ja puhas tootsoon.",
+      "trustTag1": "Premium materjalid",
+      "trustTag2": "Personaalne kuju",
+      "cardCta": "Broneeri see teenus"
+    },
+    "localAuthority": {
+      "eyebrow": "Kohalik usaldus",
+      "title": "Nailify Mustamae: lihtne tulla, lihtne tagasi tulla",
+      "subtitle": "Meid kulastavad enim Mustamae ja Kesklinna kliendid, kes soovivad tapset tulemust ja kiiret broneerimist.",
+      "item1": "Mustamae tee 55",
+      "item2": "Parkimine lahedal",
+      "item3": "Hea uhistranspordi uhendus"
+    },
+    "gallery": {
+      "subtitle": "Hoolikalt valitud signatuurstiilid, mis inspireerivad su järgmist broneeringut.",
+      "inspirationLook": "Inspiratsioonistiil",
+      "styleNames": {
+        "glossy-pink-french": "Laikiv roosa French",
+        "matte-nude": "Matt nude manikuur",
+        "chrome-silver": "Kroomitud hobe",
+        "ombre-sunset": "Pehme ombre",
+        "ruby-red": "Sugav rubiinpunane",
+        "pearl-white": "Parlvalge klassika"
+      },
+      "styleCaptions": {
+        "glossy-pink-french": "French geeldisain pehme laikega",
+        "matte-nude": "Naturaalne nude viimistlus igapaevaks",
+        "chrome-silver": "Efektne kroomviimistlus eriliseks sundmuseks",
+        "ombre-sunset": "Orn varviuleminek modernse tulemusega",
+        "ruby-red": "Klassikaline geellakk sugava tooniga",
+        "pearl-white": "Puhas hele toon minimalistlikuks lookiks"
+      },
+      "featuredLabel": "Nädala signatuur",
+      "featuredQuote": "Pehme läige, puhas kuju ja kauapüsiv viimistlus."
+    },
+    "serviceDecision": {
+      "resultLabel": "Tulemus:",
+      "longevityLabel": "Pusivus:",
+      "suitabilityLabel": "Kellele sobib:",
+      "fallback": {
+        "gel-manicure": {
+          "result": "Uhtlane laikiv geellakk ja korrektne kuju.",
+          "longevity": "Kuni 3-4 nadalat olenevalt kodusest hooldusest.",
+          "suitability": "Kui soovid kauapusivat tulemust igapaevaseks kandmiseks."
+        },
+        "acrylic-extensions": {
+          "result": "Pikem vorm, tugevam konstruktsioon ja tapselt viimistletud disain.",
+          "longevity": "Hooldusega pusib tulemus 3-4 nadalat.",
+          "suitability": "Kui soovid pikemat kuunt voi tugevamat kuju."
+        },
+        "luxury-spa-manicure": {
+          "result": "Hooldatud kaed, pehme nahk ja viimistletud detail.",
+          "longevity": "Parim efekt regulaarse 3-4 nadala rutmiga.",
+          "suitability": "Kui soovid hooldushetke koos premium enesehooldusega."
+        },
+        "gel-pedicure": {
+          "result": "Puhas pedikuur ja vastupidav geellakk.",
+          "longevity": "Keskmiselt 4-6 nadalat, olenevalt koormusest.",
+          "suitability": "Kui soovid korralikku ja pika kestvusega jalahooldust."
+        }
+      }
+    },
+    "products": {
+      "eyebrow": "Ilutooted",
+      "title": "Kaasa hoolduse lemmikud",
+      "subtitle": "Valitud premium järelhooldus, et tulemus püsiks kauem.",
+      "retailTitle": "Hoia salongitulemus kauem kaunis",
+      "retailSubtitle": "Sandra soovitatud järelhooldus läike, püsivuse ja tervemate küünte hoidmiseks.",
+      "retailSupport": "Valitud tooted, mida saad lisada broneeringule või võtta koju kaasa.",
+      "explore": "Avasta tooteid",
+      "badgeBestseller": "Enimmüüdud",
+      "badgeMostLoved": "Klientide lemmik",
+      "badgeSalonPick": "Salongi valik",
+      "badgeRecommended": "Sandra soovitab",
+      "forAftercare": "Järelhoolduse lemmik",
+      "useCaseFeatured": "Soovitatud pärast geelhooldust, et hoida läiget ja küünenahad tasakaalus.",
+      "cardUseCase": "Toetab kauapüsivamat salongitulemust.",
+      "ctaViewProduct": "Vaata toodet",
+      "ctaAddWithBooking": "Lisa broneeringule",
+      "ctaShort": "Vaata toodet",
+      "addToBookingHint": "Lisa broneeringule: saadaval checkoutis",
+      "view": "Vaata",
+      "fallback": {
+        "rose-cuticle-oil": {
+          "name": "Roosi küüneõli",
+          "description": "Igapäevane hooldus läikivate ja tervete küünte jaoks."
+        },
+        "silk-hand-cream": {
+          "name": "Siidine kätekreem",
+          "description": "Sametine niisutus, mis toetab kauapüsivat maniküüri."
+        },
+        "nail-strength-serum": {
+          "name": "Küünte tugevdav seerum",
+          "description": "Sihtotstarbeline hooldus õrnadele küüntele kohtamiste vahel."
+        },
+        "premium-aftercare-set": {
+          "name": "Premium järelhoolduskomplekt",
+          "description": "Valitud kodused hooldustooted sinu küünerutiiniks."
+        }
+      }
+    },
+    "flow": {
+      "eyebrow": "Sujuv kogemus"
+    },
+    "addons": {
+      "eyebrow": "Lisateenused",
+      "title": "Kohanda oma broneeringut",
+      "subtitle": "Piiratud samapäeva lisad. Lisa juurde, kuni vabu aegu jätkub.",
+      "helper": "Lihtsad uuendused, mida saad lisada kohe broneerimisel.",
+      "items": {
+        "nailArt": "Küünedisain",
+        "repair": "Parandus",
+        "chromeFinish": "Kroomviimistlus",
+        "frenchUpgrade": "French detail"
+      }
+    },
+    "team": {
+      "eyebrow": "Isiklik spetsialist",
+      "subtitle": "Sertifitseeritud küünetehnik / Mustamäe stuudio",
+      "authorityLine": "Spetsialiseerumine: naturaalne luksusviimistlus ja täpne kuju disain.",
+      "exp": "5+ aastat kogemust",
+      "clients": "120+ püsiklienti",
+      "rating": "4.9 hinnang",
+      "trustPrecision": "Mikrotäpsusega töö",
+      "trustPremium": "Premium tootesüsteem",
+      "favoriteBadge": "Kliendi lemmik",
+      "imageAlt": "Sandra Samun Nailify stuudios",
+      "trustPremiumProducts": "Premium toodetesüsteem",
+      "trustHygiene": "Meditsiiniline hügieen",
+      "story": "Sandra armastab küünekunsti, sest see ühendab täpsuse ja isikliku stiili. Tema eesmärk on lihtne: iga klient lahkub enesekindla ja hoolitsetud tundega.",
+      "signature": "Signatuurstiil: puhas mandlikuju, pehmed roosad toonid ja läikiv kauapüsiv viimistlus.",
+      "point1": "Personaalne konsultatsioon enne igat hooldust",
+      "point2": "Meditsiinilise taseme steriliseerimine ja range hügieeniprotsess",
+      "point3": "Professionaalsed premium tooted kauapüsiva tulemuse jaoks",
+      "cta": "Broneeri Sandraga",
+      "ctaStrong": "Broneeri aeg Sandraga",
+      "weeklyAvailability": "Vabu aegu sel nädalal",
+      "signatureLabel": "Signature stiil",
+      "resultsLabel": "Päris töö tulemused",
+      "signatureTags": {
+        "1": "Nude luksus",
+        "2": "Gloss finish",
+        "3": "Minimal detail",
+        "4": "Tugev ehitus"
+      },
+      "workCaptions": {
+        "1": "Geelmaniküüri tulemus",
+        "2": "Luxury spa tulemus",
+        "3": "Minimal nude disain"
+      },
+      "benefits": {
+        "designs": "Personaalsed disainid",
+        "designsHint": "Kohandatud sinu käe kuju ja stiiliga.",
+        "results": "Kauapüsiv tulemus",
+        "resultsHint": "Püsivus, mis hoiab läike nädalaid.",
+        "consultation": "Konsultatsioon enne hooldust",
+        "consultationHint": "Selge plaan enne hoolduse algust."
+      }
+    },
+    "testimonials": {
+      "eyebrow": "Klientide tagasiside",
+      "title": "Päris kliendid. Päris enesekindlus.",
+      "subtitle": "Tõelised tulemused ja ausad arvamused klientidelt, kes usaldavad Sandrat regulaarselt.",
+      "heroMomentLabel": "Usaldus, mida tunned kohe",
+      "heroServiceRef": "Geelmaniküür + disain"
+    },
+    "feedback": {
+      "featured": {
+        "name": "Liisa",
+        "quote": "Minu küüned näevad ka 3 nädalat hiljem ideaalsed välja. Sandra töö on alati väga täpne."
+      },
+      "c1": {
+        "name": "Kadi",
+        "quote": "Super õrn teenindus ja ilus tulemus. Broneerimine oli tõesti kiire."
+      },
+      "c2": {
+        "name": "Merilin",
+        "quote": "Täpselt see stiil, mida soovisin. Stuudio on rahulik ja väga puhas."
+      },
+      "c3": {
+        "name": "Anett",
+        "quote": "Parim koht, kui tahad kauapüsivat ja elegantset maniküüri."
+      }
+    },
+    "location": {
+      "title": "Külasta meid Mustamäel",
+      "subtitle": "Rahulik stuudio, lihtne ligipääs, parkimine lähedal ja mugavad ühendused.",
+      "badge1": "Mustamäe tee 55, Tallinn",
+      "badge2": "5 min keskusest",
+      "badge3": "Parkimine lähedal",
+      "badge4": "Rahulik privaatstuudio",
+      "previewEyebrow": "Stuudio vaade",
+      "mapTitle": "Nailify Mustamäe kaart",
+      "previewText": "Privaatne ja rahulik ilukeskkond premium hügieenistandardiga."
+    },
+    "aftercare": {
+      "tip1": "• Geelmanikuur pusib tavaliselt 3-4 nadalat.",
+      "tip2": "• Planeeri hooldus, kui valjakasv muutub nahtavaks.",
+      "tip3": "• Kasuta kuuneoli iga paev, et valitda kuivust.",
+      "eyebrow": "Järelhoolduse valik",
+      "title": "Hoia värske tulemus kodus",
+      "subtitle": "Igapäevased hooldussoovitused ja tooted, mis aitavad läiget ning kuju säilitada.",
+      "cta": "Vaata järelhoolduse nõuandeid"
+    },
+    "giftcards": {
+      "helper": "Digitaalne kinkekaart valmib kiiresti ja sobib paindlikuks kasutamiseks.",
+      "eyebrow": "Kinkekaardid",
+      "title": "Kingi premium küünehoolduse kogemus",
+      "subtitle": "Ideaalne sünnipäevaks ja erilisteks hetkedeks paindliku summavalikuga.",
+      "cta": "Osta kinkekaart"
+    },
+    "revenue": {
+      "offerA": "Lisa teenusele samal visiidil",
+      "offerB": "Enim valitud lisad",
+      "offerC": "Kiire mini-upgrade"
+    },
+    "final": {
+      "limited": "Piiratud ajad igal nädalal",
+      "reassureLine": "Broneeringu kinnitamine on kiire ja ümberbroneerimine jääb paindlikuks."
+    },
+    "footer": {
+      "contactLine1": "Nailify Mustamäe",
+      "contactLine2": "Mustamäe tee 55",
+      "contactLine3": "Tallinn, Eesti",
+      "hours1Label": "E - L",
+      "hours1Value": "9:00 - 19:00",
+      "hours2Label": "Pühapäev",
+      "hours2Value": "10:00 - 17:00"
+    }
   },
   "error": {
     "somethingWrong": "Midagi läks valesti",

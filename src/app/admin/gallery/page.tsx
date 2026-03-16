@@ -1,8 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import { AdminQuickActions } from '@/components/admin/AdminQuickActions';
 
 interface GalleryImage {
@@ -43,7 +43,7 @@ export default function AdminGalleryPage() {
 
   const saveImage = async () => {
     if (!imageUrl) {
-      setError('Lisa pildi URL või lae fail üles.');
+      setError('Lisa pildi URL voi lae fail ules.');
       return;
     }
     setIsSaving(true);
@@ -54,14 +54,14 @@ export default function AdminGalleryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl, caption, isFeatured }),
       });
-      if (!response.ok) throw new Error('Pildi salvestamine ebaõnnestus');
+      if (!response.ok) throw new Error('Pildi salvestamine ebaonnestus');
       setImageUrl('');
       setCaption('');
       setIsFeatured(false);
       await loadImages();
     } catch (saveError) {
       console.error(saveError);
-      setError('Pildi salvestamine ebaõnnestus.');
+      setError('Pildi salvestamine ebaonnestus.');
     } finally {
       setIsSaving(false);
     }
@@ -76,7 +76,11 @@ export default function AdminGalleryPage() {
     await loadImages();
   };
 
-  const deleteImage = async (id: string) => {
+  const deleteImage = async (id: string, imageCaption: string) => {
+    const label = imageCaption.trim() || 'ilma kirjelduseta pilt';
+    const isConfirmed = window.confirm(`Kas kustutada "${label}"? Seda tegevust ei saa tagasi votta.`);
+    if (!isConfirmed) return;
+
     await fetch(`/api/gallery?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await loadImages();
   };
@@ -97,16 +101,16 @@ export default function AdminGalleryPage() {
   };
 
   return (
-    <main className="admin-shell min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff4fa_40%,_#f7ecf4_100%)] px-4 py-8 sm:px-6 lg:px-10">
+    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <header className="admin-header mb-6 rounded-3xl border border-[#e8e2dc] bg-white/90 p-6 shadow-[0_28px_42px_-34px_rgba(57,45,39,0.42)]">
+        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#b983a2]">Nailify Haldus</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#2f2230]">Galerii haldur</h1>
-              <p className="mt-2 text-sm text-[#6f5a6a]">Lae pilte üles, sorteeri ja märgi esile tõstetud foto.</p>
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
+              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Galerii haldur</h1>
+              <p className="mt-2 text-sm text-[#4b5563]">Lae pilte ules, sorteeri ja margi esile tostetud foto.</p>
             </div>
-            <Link className="rounded-full border border-[#ead8e2] bg-white px-4 py-2 text-sm text-[#6f5d53]" href="/admin">
+            <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563]" href="/admin">
               Halduspaneel
             </Link>
           </div>
@@ -116,22 +120,22 @@ export default function AdminGalleryPage() {
 
         {error && <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
-        <section className="admin-surface-soft mb-6 rounded-3xl border border-[#e8e0d9] bg-[linear-gradient(165deg,#fff_0%,#fbf7f2_100%)] p-5 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.28)]">
-          <h2 className="text-lg font-semibold text-[#2f2230]">Lisa uus pilt</h2>
+        <section className="admin-panel-soft mb-6 rounded-3xl p-5">
+          <h2 className="text-lg font-semibold text-[#111827]">Lisa uus pilt</h2>
           <div className="mt-3 grid gap-3 lg:grid-cols-3">
             <input
               value={imageUrl}
               onChange={(event) => setImageUrl(event.target.value)}
-              placeholder="Pildi URL või base64"
-              className="rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 text-sm outline-none focus:border-[#8a5e76]"
+              placeholder="Pildi URL voi base64"
+              className="rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 text-sm outline-none focus:border-[#9ca3af]"
             />
             <input
               value={caption}
               onChange={(event) => setCaption(event.target.value)}
               placeholder="Kirjeldus"
-              className="rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 text-sm outline-none focus:border-[#8a5e76]"
+              className="rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 text-sm outline-none focus:border-[#9ca3af]"
             />
-            <label className="rounded-xl border border-dashed border-[#dcc3d5] bg-[#fff6fb] px-3 py-2 text-sm text-[#6f5a6a]">
+            <label className="rounded-xl border border-dashed border-[#dcc3d5] bg-[#fff6fb] px-3 py-2 text-sm text-[#4b5563]">
               Lae fail
               <input
                 type="file"
@@ -145,14 +149,14 @@ export default function AdminGalleryPage() {
             </label>
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm text-[#6f5a6a]">
+            <label className="inline-flex items-center gap-2 text-sm text-[#4b5563]">
               <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
-              Märgi featured pildiks
+              Margi featured pildiks
             </label>
             <button
               onClick={saveImage}
               disabled={isSaving}
-              className="rounded-xl bg-[#8a5e76] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="rounded-xl bg-[#111827] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             >
               {isSaving ? 'Salvestan...' : 'Salvesta pilt'}
             </button>
@@ -161,10 +165,7 @@ export default function AdminGalleryPage() {
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {images.map((image, index) => (
-            <article
-              key={image.id}
-              className="admin-surface overflow-hidden rounded-3xl border border-[#ece3db] bg-white/95 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.35)]"
-            >
+            <article key={image.id} className="admin-panel overflow-hidden rounded-3xl">
               <Image
                 src={image.imageUrl}
                 alt={image.caption || 'Galerii pilt'}
@@ -174,22 +175,22 @@ export default function AdminGalleryPage() {
                 className="h-48 w-full object-cover"
               />
               <div className="p-4">
-                <p className="text-sm font-medium text-[#2f2230]">{image.caption || 'Ilma kirjelduseta'}</p>
+                <p className="text-sm font-medium text-[#111827]">{image.caption || 'Ilma kirjelduseta'}</p>
                 {image.isFeatured && (
                   <span className="mt-2 inline-block rounded-full bg-[#f9e9f2] px-2.5 py-1 text-xs text-[#8a4f73]">
-                    Esile tõstetud
+                    Esile tostetud
                   </span>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     onClick={() => moveImage(index, -1)}
-                    className="rounded-lg border border-[#ead8e2] px-2 py-1 text-xs text-[#6f5a6a]"
+                    className="rounded-lg border border-[#d1d5db] px-2 py-1 text-xs text-[#4b5563]"
                   >
-                    Üles
+                    Ules
                   </button>
                   <button
                     onClick={() => moveImage(index, 1)}
-                    className="rounded-lg border border-[#ead8e2] px-2 py-1 text-xs text-[#6f5a6a]"
+                    className="rounded-lg border border-[#d1d5db] px-2 py-1 text-xs text-[#4b5563]"
                   >
                     Alla
                   </button>
@@ -197,10 +198,10 @@ export default function AdminGalleryPage() {
                     onClick={() => setFeatured(image.id)}
                     className="rounded-lg border border-[#e8c9da] bg-[#fff5fb] px-2 py-1 text-xs text-[#8a4f73]"
                   >
-                    Märgi featured
+                    Margi featured
                   </button>
                   <button
-                    onClick={() => deleteImage(image.id)}
+                    onClick={() => void deleteImage(image.id, image.caption)}
                     className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-700"
                   >
                     Kustuta

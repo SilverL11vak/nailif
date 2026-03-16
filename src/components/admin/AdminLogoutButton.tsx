@@ -22,7 +22,7 @@ export function AdminLogoutButton() {
     <button
       onClick={handleLogout}
       disabled={loading}
-      className="rounded-full border border-[#ead8e2] bg-white px-4 py-2 text-sm text-[#6f5d53] transition-colors hover:bg-[#fff4fa] disabled:opacity-60"
+      className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563] transition-colors hover:bg-[#fff4fa] disabled:opacity-60"
     >
       {loading ? 'Logi välja...' : 'Logi välja'}
     </button>

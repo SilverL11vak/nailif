@@ -67,19 +67,19 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="admin-shell min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#f7efe9_48%,_#f3e8df_100%)] px-4 py-10 sm:px-6 lg:px-10">
+    <main className="admin-cockpit-bg px-4 py-10 sm:px-6 lg:px-10">
       <div className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-[1.05fr_1fr]">
-        <section className="admin-surface-soft rounded-3xl border border-[#e8e0d9] bg-[linear-gradient(165deg,#fff_0%,#fbf7f2_100%)] p-7 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.28)]">
+        <section className="admin-surface-soft rounded-3xl border border-[#e5e7eb] bg-[linear-gradient(165deg,#fff_0%,#fbf7f2_100%)] p-7 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.28)]">
           <p className="text-[11px] uppercase tracking-[0.24em] text-[#b08979]">Nailify Admin</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#2a211d]">
             {loadingStatus ? 'Laen...' : hasAdmin ? 'Logi sisse' : 'Loo admin'}
           </h1>
-          <p className="mt-2 text-sm text-[#6f5d53]">
+          <p className="mt-2 text-sm text-[#4b5563]">
             {hasAdmin
               ? 'Turvaline ligipääs teenustele, broneeringutele, aegadele ja toodetele.'
               : 'Admin kontot pole veel loodud. Loo esimene konto Neon andmebaasi.'}
           </p>
-          <div className="mt-6 rounded-2xl border border-[#eadfd7] bg-white/85 p-4 text-sm text-[#6f5d53]">
+          <div className="mt-6 rounded-2xl border border-[#eadfd7] bg-white/85 p-4 text-sm text-[#4b5563]">
             <p className="font-medium text-[#3f312a]">Kiirmärkmed</p>
             <ul className="mt-2 space-y-1 text-xs">
               <li>Kuvanimi kuvatakse tervituses: Tere, Sandra</li>
@@ -89,14 +89,14 @@ export default function AdminLoginPage() {
           </div>
         </section>
 
-        <section className="admin-surface rounded-3xl border border-[#ece3db] bg-white/95 p-6 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.35)]">
+        <section className="admin-surface rounded-3xl border border-[#e5e7eb] bg-white/95 p-6 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.35)]">
           <form onSubmit={handleSubmit} className="space-y-3">
             {!hasAdmin && !loadingStatus && (
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Admin nimi"
-                className="w-full rounded-xl border border-[#e5ddd3] px-3 py-2 outline-none transition-colors focus:border-[#8a5e76]"
+                className="w-full rounded-xl border border-[#e5ddd3] px-3 py-2 outline-none transition-colors focus:border-[#9ca3af]"
               />
             )}
             <input
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
               onChange={(event) => setEmail(event.target.value)}
               type="email"
               placeholder="admin@nailify.ee"
-              className="w-full rounded-xl border border-[#e5ddd3] px-3 py-2 outline-none transition-colors focus:border-[#8a5e76]"
+              className="w-full rounded-xl border border-[#e5ddd3] px-3 py-2 outline-none transition-colors focus:border-[#9ca3af]"
               required
             />
             <div className="flex items-center rounded-xl border border-[#e5ddd3] px-3">
@@ -128,7 +128,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={isSubmitting || loadingStatus}
-              className="w-full rounded-xl bg-[#8a5e76] py-3 font-semibold text-white transition-colors hover:bg-[#774f66] disabled:opacity-50"
+              className="w-full rounded-xl bg-[#111827] py-3 font-semibold text-white transition-colors hover:bg-[#0b1220] disabled:opacity-50"
             >
               {isSubmitting ? 'Palun oota...' : hasAdmin ? 'Logi sisse' : 'Loo konto ja logi sisse'}
             </button>

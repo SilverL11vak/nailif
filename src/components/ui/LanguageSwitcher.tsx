@@ -1,28 +1,16 @@
 'use client';
 
 import { useTranslation, languages, Language } from '@/lib/i18n';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export function LanguageSwitcher() {
-  const { language, setLanguage } = useTranslation();
+  const { language, setLanguage, localizePath } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
-    
-    // Update URL
-    const currentPath = window.location.pathname;
-    if (newLang === 'et') {
-      // Remove /en prefix if present
-      if (currentPath.startsWith('/en')) {
-        router.push(currentPath.replace('/en', '') || '/');
-      }
-    } else {
-      // Add /en prefix if not present
-      if (!currentPath.startsWith('/en')) {
-        router.push(`/en${currentPath}`);
-      }
-    }
+    router.push(localizePath(pathname, newLang));
   };
 
   return (

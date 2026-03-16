@@ -1,21 +1,28 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { ClientProviders } from "@/components/providers/ClientProviders";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import { ClientProviders } from '@/components/providers/ClientProviders';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "Nailify - Premium Nail Artistry in Tallinn",
-  description: "Expert nail technicians, lasting results. Book your appointment in Mustamäe, Tallinn.",
+  metadataBase: new URL('https://nailif.vercel.app'),
+  title: 'Nailify - Premium Nail Artistry in Tallinn',
+  description: 'Expert nail technicians, lasting results. Book your appointment in Mustamäe, Tallinn.',
+  alternates: {
+    languages: {
+      et: '/et',
+      en: '/en',
+    },
+  },
 };
 
 export default function RootLayout({
@@ -25,12 +32,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="et">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ClientProviders>
-          {children}
-        </ClientProviders>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
+import { useBookingContent } from '@/hooks/use-booking-content';
 import type { TimeSlot } from '@/store/booking-types';
 import TimeSlotComponent from './TimeSlot';
-import { useSearchParams } from 'next/navigation';
+import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 
 function toIsoDate(date: Date) {
   const year = date.getFullYear();
@@ -14,96 +16,100 @@ function toIsoDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function addDays(base: Date, amount: number) {
+  const date = new Date(base);
+  date.setDate(date.getDate() + amount);
+  return date;
+}
+
 export function DateTimeStep() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const { text } = useBookingContent();
   const searchParams = useSearchParams();
   const selectedDate = useBookingStore((state) => state.selectedDate);
   const selectedSlot = useBookingStore((state) => state.selectedSlot);
+  const selectedService = useBookingStore((state) => state.selectedService);
   const selectDate = useBookingStore((state) => state.selectDate);
   const selectSlot = useBookingStore((state) => state.selectSlot);
   const nextStep = useBookingStore((state) => state.nextStep);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
+  const [recommendedSlots, setRecommendedSlots] = useState<TimeSlot[]>([]);
   const [slotsByDate, setSlotsByDate] = useState<Record<string, TimeSlot[]>>({});
-  const [showPreselectedMsg, setShowPreselectedMsg] = useState(false);
+  const [showSelectedMsg, setShowSelectedMsg] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
   const continueButtonRef = useRef<HTMLDivElement>(null);
-  const initialSelectedDateRef = useRef(selectedDate);
-  const initialSelectedSlotRef = useRef(selectedSlot);
   const preferredTimeRef = useRef(searchParams.get('time'));
+  const initialSelectedDateRef = useRef<Date | null>(selectedDate);
+  const initialSelectedSlotIdRef = useRef<string | null>(selectedSlot?.id ?? null);
+  const maxWeekOffset = 12;
 
-  const dates = useMemo(
+  const weekDates = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => addDays(base, weekOffset * 7 + i));
+  }, [weekOffset]);
+
+  const selectedDateKey = selectedDate ? toIsoDate(selectedDate) : toIsoDate(weekDates[0]);
+  const currentSlots = slotsByDate[selectedDateKey] ?? [];
+
+  const nextAvailableSlot = useMemo(
     () =>
-      Array.from({ length: 7 }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        return date;
-      }),
-    []
+      allSlots
+        .filter((slot) => slot.available)
+        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] ?? null,
+    [allSlots]
   );
 
   useEffect(() => {
     let mounted = true;
     const loadSlots = async () => {
       setIsLoading(true);
-      const start = toIsoDate(dates[0]);
-      const end = toIsoDate(dates[dates.length - 1]);
+      const start = toIsoDate(new Date());
+      const end = toIsoDate(addDays(new Date(), 60));
 
       try {
         const response = await fetch(
-          `/api/slots?from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}`,
-          { cache: 'no-store' }
+          `/api/slots?from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}&smart=1&lang=${language}&serviceDuration=${selectedService?.duration ?? 0}`
         );
         if (!response.ok) throw new Error('Failed to load slots');
 
-        const data = (await response.json()) as { slots?: TimeSlot[] };
+        const data = (await response.json()) as { slots?: TimeSlot[]; recommendedTimes?: TimeSlot[] };
         const loaded = data.slots ?? [];
+        const recommended = (data.recommendedTimes ?? []).filter((slot) => slot.available).slice(0, 3);
         const map: Record<string, TimeSlot[]> = {};
 
-        for (const date of dates) {
-          map[toIsoDate(date)] = [];
-        }
         for (const slot of loaded) {
           if (!map[slot.date]) map[slot.date] = [];
           map[slot.date].push(slot);
         }
-        for (const key of Object.keys(map)) {
-          map[key] = map[key].sort((a, b) => a.time.localeCompare(b.time));
-        }
 
         if (!mounted) return;
+        setAllSlots(loaded);
+        setRecommendedSlots(recommended);
         setSlotsByDate(map);
 
-        const dateToUse = initialSelectedDateRef.current || dates[0];
-        const selectedDateKey = toIsoDate(dateToUse);
-        selectDate(dateToUse);
-        const daySlots = map[selectedDateKey] ?? [];
-        setSlots(daySlots);
+        const initialDate = initialSelectedDateRef.current ?? new Date();
+        const initialKey = toIsoDate(initialDate);
+        const daySlots = map[initialKey] ?? [];
+        selectDate(initialDate);
 
-        const selectedStillAvailable = daySlots.some(
-          (slot) => slot.id === initialSelectedSlotRef.current?.id && slot.available
-        );
-        if (!selectedStillAvailable) {
-          const preferredSlot = preferredTimeRef.current
-            ? daySlots.find((slot) => slot.available && slot.time === preferredTimeRef.current)
-            : null;
-          const firstAvailable = preferredSlot ?? daySlots.find((slot) => slot.available);
-          if (firstAvailable) {
-            selectSlot(firstAvailable);
-            setShowPreselectedMsg(true);
-            setTimeout(() => setShowPreselectedMsg(false), 3000);
-          }
+        const preferredSlot = preferredTimeRef.current ? daySlots.find((slot) => slot.available && slot.time === preferredTimeRef.current) : null;
+        const existingAvailable = daySlots.find((slot) => slot.id === initialSelectedSlotIdRef.current && slot.available);
+        const firstAvailable = preferredSlot ?? existingAvailable ?? daySlots.find((slot) => slot.available);
+        if (firstAvailable && firstAvailable.id !== initialSelectedSlotIdRef.current) {
+          selectSlot(firstAvailable);
         }
       } catch (error) {
         console.error('DateTimeStep slots load error:', error);
         if (mounted) {
+          setAllSlots([]);
+          setRecommendedSlots([]);
           setSlotsByDate({});
-          setSlots([]);
         }
       } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+        if (mounted) setIsLoading(false);
       }
     };
 
@@ -111,22 +117,29 @@ export function DateTimeStep() {
     return () => {
       mounted = false;
     };
-  }, [dates, selectDate, selectSlot]);
+  }, [language, selectedService?.duration, selectDate, selectSlot]);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+    const inCurrentWeek = weekDates.some((item) => toIsoDate(item) === toIsoDate(selectedDate));
+    if (!inCurrentWeek) {
+      selectDate(weekDates[0]);
+    }
+  }, [weekDates, selectedDate, selectDate]);
 
   const handleDateSelect = (date: Date) => {
     selectDate(date);
     const daySlots = slotsByDate[toIsoDate(date)] ?? [];
-    setSlots(daySlots);
-
-    const preferredSlot = preferredTimeRef.current
-      ? daySlots.find((slot) => slot.available && slot.time === preferredTimeRef.current)
-      : null;
-    const firstAvailable = preferredSlot ?? daySlots.find((slot) => slot.available);
-    if (firstAvailable) {
-      selectSlot(firstAvailable);
-      setShowPreselectedMsg(true);
-      setTimeout(() => setShowPreselectedMsg(false), 3000);
+    const preferredSlot = preferredTimeRef.current ? daySlots.find((slot) => slot.available && slot.time === preferredTimeRef.current) : null;
+    if (preferredSlot) {
+      selectSlot(preferredSlot);
     }
+  };
+
+  const handleSlotSelect = (slot: TimeSlot) => {
+    selectSlot(slot);
+    setShowSelectedMsg(true);
+    setTimeout(() => setShowSelectedMsg(false), 1200);
   };
 
   const handleContinue = () => {
@@ -136,146 +149,183 @@ export function DateTimeStep() {
     }
   };
 
-  const formatDate = (date: Date) => date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
-
-  const isToday = (date: Date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
-
+  const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
   const hasAvailableSlots = (date: Date) => (slotsByDate[toIsoDate(date)] ?? []).some((slot) => slot.available);
-  const hasSosSlots = slots.some((slot) => slot.available && slot.isSos);
+  const monthLabel = weekDates[0]?.toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { month: 'long', year: 'numeric' });
 
   return (
     <div className="animate-fade-in">
       <div className="mb-7 text-center">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#b08979]">Step 2</p>
-        <h2 className="mb-2 text-2xl font-semibold text-gray-800">{t('datetime.choose')}</h2>
-        <p className="text-gray-500">{t('datetime.pickTime')}</p>
-        <p className="mt-2 text-sm text-[#8c7568]">Approximate appointment time, tailored around your selected service.</p>
+        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#9a7c6d]">Samm 2</p>
+        <h2 className="mb-2 text-2xl font-semibold text-[#2f2622]">{t('datetime.choose')}</h2>
+        <p className="text-[#6f655f]">{t('datetime.pickTime')}</p>
+        <p className="mt-2 text-sm text-[#7f7068]">
+          {language === 'en' ? 'Choose a day first, then pick a time.' : 'Vali koigepealt paev, siis kellaaeg.'}
+        </p>
       </div>
 
-      <div className="mb-4 flex items-center gap-2 rounded-full bg-[#faf4ef] px-4 py-2 text-sm text-[#8d6d5e] ring-1 ring-[#efe2da]">
-        <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>{t('datetime.earliestAvailable')}</span>
-      </div>
-
-      <div className="mb-6 rounded-[24px] border border-[#eedfd6] bg-[linear-gradient(180deg,#fffaf7_0%,#fbf4ef_100%)] p-4 shadow-[0_18px_30px_-28px_rgba(72,49,35,0.45)]">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#f2dfd6] text-[#b58373]">N</div>
-          <div>
-            <p className="mb-1 text-sm font-medium text-gray-800">{t('datetime.yourNailsWillThankYou')}</p>
-            <p className="text-xs text-gray-500">Designed for easy booking. Calm timing, no back-and-forth.</p>
+      <div className="mb-4 rounded-2xl border border-[#e7dfd7] bg-white px-4 py-3.5 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-medium text-[#6f5d53]">{monthLabel}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWeekOffset((prev) => Math.max(0, prev - 4))}
+              disabled={weekOffset === 0}
+              className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+            >
+              {language === 'en' ? 'Prev month' : 'Eelmine kuu'}
+            </button>
+            <button
+              onClick={() => setWeekOffset((prev) => Math.min(maxWeekOffset, prev + 4))}
+              disabled={weekOffset >= maxWeekOffset}
+              className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+            >
+              {language === 'en' ? 'Next month' : 'Jargmine kuu'}
+            </button>
           </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={() => setWeekOffset((prev) => Math.max(0, prev - 1))}
+            disabled={weekOffset === 0}
+            className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+          >
+            {language === 'en' ? 'Prev week' : 'Eelmine nadal'}
+          </button>
+          <button
+            onClick={() => setWeekOffset((prev) => Math.min(maxWeekOffset, prev + 1))}
+            disabled={weekOffset >= maxWeekOffset}
+            className="rounded-full border border-[#e1d6cd] px-3 py-1.5 text-xs text-[#6f5d53] disabled:opacity-40"
+          >
+            {language === 'en' ? 'Next week' : 'Jargmine nadal'}
+          </button>
         </div>
       </div>
 
-      <div className="mb-6 flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
-        {dates.map((date, index) => {
+      <div className="mb-5 flex gap-2 overflow-x-auto pb-2">
+        {weekDates.map((date, index) => {
           const isSelected = selectedDate?.toDateString() === date.toDateString();
-          const isEarliest = index === 0 && hasAvailableSlots(date);
           const hasSlots = hasAvailableSlots(date);
+          const weekday = date.toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'short' });
 
           return (
             <button
               key={index}
-              onClick={() => hasSlots && handleDateSelect(date)}
-              disabled={!hasSlots}
-              className={`
-                flex h-20 w-16 flex-shrink-0 flex-col items-center justify-center rounded-[22px] border transition-all duration-200
-                ${isSelected
-                  ? 'border-[#d7b0a1] bg-[#fffaf7] shadow-[0_16px_24px_-18px_rgba(72,49,35,0.42)]'
+              onClick={() => handleDateSelect(date)}
+              className={`flex h-[5.1rem] w-[4.2rem] flex-shrink-0 flex-col items-center justify-center rounded-[20px] border transition-all duration-200 ${
+                isSelected
+                  ? 'border-[#cda996] bg-[#faf6f3] shadow-[0_14px_22px_-18px_rgba(72,49,35,0.45)]'
                   : hasSlots
-                    ? isEarliest
-                      ? 'border-[#ead9cf] bg-[#fbf5f0] hover:border-[#d9beaf] hover:shadow-[0_16px_24px_-20px_rgba(72,49,35,0.38)]'
-                      : 'border-[#efe5de] bg-white hover:border-[#d9beaf]'
-                    : 'cursor-not-allowed border-gray-50 bg-gray-50 opacity-40'}
-              `}
+                    ? 'border-[#e7dfd7] bg-white hover:border-[#d6beaf]'
+                    : 'border-[#efe8e2] bg-[#f9f6f4]'
+              }`}
             >
-              {isEarliest && <span className="mb-0.5 text-[10px] font-semibold text-[#a78576]">{t('datetime.earliest')}</span>}
-              <span className={`text-xs font-medium ${isSelected ? 'text-[#b58373]' : hasSlots ? 'text-gray-500' : 'text-gray-300'}`}>
-                {isToday(date) ? t('datetime.today') : formatDate(date).split(' ')[0]}
+              <span className={`text-[11px] font-medium ${isSelected ? 'text-[#9a6f57]' : 'text-[#756a62]'}`}>
+                {isToday(date) ? (language === 'en' ? 'Today' : 'Tana') : weekday}
               </span>
-              <span className={`text-xl font-semibold ${isSelected ? 'text-[#b58373]' : hasSlots ? 'text-gray-800' : 'text-gray-300'}`}>
-                {date.getDate()}
-              </span>
+              <span className={`text-xl font-semibold ${isSelected ? 'text-[#8f644f]' : 'text-[#3f332d]'}`}>{date.getDate()}</span>
+              <span className={`mt-1 h-1.5 w-1.5 rounded-full ${hasSlots ? 'bg-[#8ea677]' : 'bg-[#c6b8ae]'}`} />
             </button>
           );
         })}
       </div>
 
+      {recommendedSlots.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-[#e7dfd7] bg-[#faf7f4] p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8f7568]">
+            {language === 'en' ? 'Recommended times' : 'Soovitatud ajad'}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {recommendedSlots.map((slot) => (
+              <button
+                key={`recommended-${slot.id}`}
+                type="button"
+                onClick={() => {
+                  selectDate(new Date(`${slot.date}T00:00:00`));
+                  handleSlotSelect(slot);
+                }}
+                className="rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-left transition hover:border-[#cda996] hover:bg-[#fdfaf8]"
+              >
+                <p className="text-xs font-semibold text-[#7d665b]">
+                  {new Date(`${slot.date}T00:00:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </p>
+                <p className="text-base font-semibold text-[#5f4a40]">{slot.time}</p>
+                <p className="mt-1 text-[11px] text-[#7f7068]">
+                  {slot.isSos
+                    ? language === 'en'
+                      ? 'Urgent slot'
+                      : 'Kiire aeg'
+                    : slot.isPopular
+                      ? language === 'en'
+                        ? 'Popular time'
+                        : 'Populaarne aeg'
+                      : language === 'en'
+                        ? 'Good fit'
+                        : 'Hea sobivus'}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showSelectedMsg && selectedSlot && (
+        <div className="mb-3 flex items-center gap-2 rounded-xl border border-[#d7e7db] bg-[#f2f8f4] px-3 py-2 text-sm text-[#4f6f59]">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <span>{language === 'en' ? 'Time selected. Let us continue.' : 'Aeg valitud. Liigume edasi.'}</span>
+        </div>
+      )}
+
       <div className="mb-6">
-        <h3 className="mb-3 text-sm font-medium text-gray-700">{t('datetime.availableTimes')}</h3>
-
-        {hasSosSlots && (
-          <div className="mb-3 rounded-xl border border-[#f2d8e7] bg-[#fff5fb] px-3 py-2 text-sm text-[#8b4f71]">
-            SOS kiire aeg saadaval. Vajadusel lisandub express lisatasu.
-          </div>
-        )}
-
-        {showPreselectedMsg && selectedSlot && (
-          <div className="mb-3 flex items-center gap-2 rounded-xl bg-[#f6efe9] px-3 py-2 text-sm text-[#8d6d5e]">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span>{t('datetime.preselected')}</span>
-          </div>
-        )}
-
-        {selectedSlot?.isSos && (
-          <div className="mb-3 rounded-xl border border-[#efcfe0] bg-[#fff2f9] px-3 py-2 text-sm text-[#8b4f71]">
-            SOS valik: {selectedSlot.sosLabel || 'Kiire aeg'}{' '}
-            {selectedSlot.sosSurcharge ? `(+${selectedSlot.sosSurcharge}EUR)` : '(lisatasuta)'}
-          </div>
-        )}
-
+        <h3 className="mb-3 text-sm font-medium text-[#4a3d35]">{language === 'en' ? 'Available times' : 'Vabad kellaajad'}</h3>
         {isLoading ? (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="h-14 animate-pulse rounded-xl bg-gray-100" />
+              <SkeletonBlock key={index} className="h-14 rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-            {slots.map((slot) => (
-              <TimeSlotComponent
-                key={slot.id}
-                slot={slot}
-                isSelected={selectedSlot?.id === slot.id}
-                onSelect={selectSlot}
-              />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {currentSlots.map((slot) => (
+              <TimeSlotComponent key={slot.id} slot={slot} isSelected={selectedSlot?.id === slot.id} onSelect={handleSlotSelect} />
             ))}
           </div>
         )}
 
-        {!isLoading && slots.length === 0 && (
-          <div className="py-8 text-center text-gray-500">
-            <p>{t('datetime.noSlots')}</p>
-            <p className="text-sm">{t('datetime.tryAnother')}</p>
+        {!isLoading && currentSlots.length === 0 && (
+          <div className="rounded-xl border border-[#eadfd7] bg-[#faf7f4] px-4 py-6 text-center text-[#6f655f]">
+            <p>{text('availability_no_slots', t('datetime.noSlots'))}</p>
+            <p className="text-sm">{text('availability_try_another', t('datetime.tryAnother'))}</p>
+            {nextAvailableSlot && (
+              <p className="mt-2 text-sm font-medium text-[#8f6f60]">
+                {language === 'en' ? 'Next free time:' : 'Jargmine vaba aeg:'}{' '}
+                {new Date(`${nextAvailableSlot.date}T00:00:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
+                  day: 'numeric',
+                  month: 'short',
+                })}{' '}
+                {nextAvailableSlot.time}
+              </p>
+            )}
           </div>
         )}
-      </div>
-
-      <div className="mb-4 flex items-center gap-2 rounded-2xl bg-[#faf6f3] p-3 text-sm text-[#7d685d] ring-1 ring-[#efe3dc]">
-        <svg className="h-4 w-4 flex-shrink-0 text-[#b58373]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        <span>{t('datetime.freeReschedule')}</span>
       </div>
 
       <button
         onClick={handleContinue}
         disabled={!selectedSlot}
-        className={`
-          w-full rounded-2xl py-4 font-semibold transition-all duration-200
-          ${selectedSlot
-            ? 'bg-[#b58373] text-white shadow-[0_18px_26px_-20px_rgba(72,49,35,0.9)] hover:bg-[#a87463] active:scale-[0.99]'
-            : 'cursor-not-allowed bg-gray-100 text-gray-400'}
-        `}
+        className={`cta-premium w-full rounded-2xl py-5 text-base font-semibold transition-all duration-200 ${
+          selectedSlot
+            ? 'bg-[#b58373] text-white shadow-[0_22px_34px_-24px_rgba(72,49,35,0.92)] hover:-translate-y-0.5 hover:bg-[#a87463] hover:shadow-[0_26px_38px_-24px_rgba(72,49,35,0.95)] active:scale-[0.99]'
+            : 'cursor-not-allowed bg-gray-100 text-gray-400'
+        }`}
       >
-        {selectedSlot ? t('datetime.continue') : t('datetime.selectTime')}
+        {selectedSlot ? text('availability_continue', language === 'en' ? 'Continue confidently' : 'Jatkan enesekindlalt') : text('availability_select_for_continue', language === 'en' ? 'Select time to continue' : 'Vali aeg jatkamiseks')}
       </button>
 
       <div ref={continueButtonRef} />

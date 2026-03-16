@@ -14,6 +14,10 @@ declare global {
       XFBML?: {
         parse: () => void;
       };
+      CustomerChat?: {
+        show: () => void;
+        showDialog: () => void;
+      };
     };
     fbAsyncInit?: () => void;
   }

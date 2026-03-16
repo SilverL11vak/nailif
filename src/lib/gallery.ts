@@ -9,7 +9,49 @@ export interface GalleryImage {
   createdAt: string;
 }
 
+const defaultGallerySeed: Array<{ imageUrl: string; caption: string; isFeatured?: boolean; sortOrder: number }> = [
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1604902396830-aca29e19b067?w=1200&q=80',
+    caption: 'Peen läikiv viimistlus',
+    isFeatured: true,
+    sortOrder: 1,
+  },
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=900&q=80',
+    caption: 'Nude toon modernse detailiga',
+    sortOrder: 2,
+  },
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=900&q=80',
+    caption: 'Julgem toon õhtuseks lookiks',
+    sortOrder: 3,
+  },
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=900&q=80',
+    caption: 'Minimal detail puhta joonega',
+    sortOrder: 4,
+  },
+  {
+    imageUrl: 'https://images.unsplash.com/photo-1610992015732-2449b76344bc?w=900&q=80',
+    caption: 'Kauapüsiv klassikaline tulemus',
+    sortOrder: 5,
+  },
+];
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __nailify_gallery_ensure__: Promise<void> | undefined;
+}
+
+let galleryEnsurePromise: Promise<void> | null = global.__nailify_gallery_ensure__ ?? null;
+
 export async function ensureGalleryTable() {
+  if (galleryEnsurePromise) {
+    await galleryEnsurePromise;
+    return;
+  }
+
+  galleryEnsurePromise = (async () => {
   await sql`
     CREATE TABLE IF NOT EXISTS gallery_images (
       id BIGSERIAL PRIMARY KEY,
@@ -20,6 +62,23 @@ export async function ensureGalleryTable() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+    const [{ count }] = await sql<[{ count: string }]>`
+      SELECT COUNT(*)::text AS count FROM gallery_images
+    `;
+
+    if (Number(count) === 0) {
+      for (const item of defaultGallerySeed) {
+        await sql`
+          INSERT INTO gallery_images (image_url, caption, is_featured, sort_order)
+          VALUES (${item.imageUrl}, ${item.caption}, ${Boolean(item.isFeatured)}, ${item.sortOrder})
+        `;
+      }
+    }
+  })();
+  global.__nailify_gallery_ensure__ = galleryEnsurePromise;
+
+  await galleryEnsurePromise;
 }
 
 export async function listGalleryImages(): Promise<GalleryImage[]> {

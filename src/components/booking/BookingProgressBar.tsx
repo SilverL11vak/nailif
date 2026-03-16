@@ -27,12 +27,12 @@ export function BookingProgressBar() {
   if (isMinimalMode) {
     return (
       <div className="w-full border-b border-white/60 bg-white/55 py-2 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-xl items-center justify-center gap-2 px-4 text-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 px-6 text-sm">
           <span className="text-[#7d685d]">{selectedService?.name}</span>
           <span className="text-[#d7c9c1]">•</span>
           <span className="text-[#7d685d]">
             {selectedSlot
-              ? `${new Date(selectedSlot.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${t('confirm.at')} ${selectedSlot.time}`
+              ? `${new Date(selectedSlot.date).toLocaleDateString('et-EE', { weekday: 'short', day: 'numeric' })} ${t('confirm.at')} ${selectedSlot.time}`
               : ''}
           </span>
           <span className="text-[#d7c9c1]">•</span>
@@ -46,7 +46,7 @@ export function BookingProgressBar() {
 
   return (
     <div className="w-full overflow-hidden border-b border-white/60 bg-white/55 py-4 backdrop-blur-xl">
-      <div className="mx-auto max-w-xl px-4">
+      <div className="mx-auto max-w-6xl px-6">
         <div className="relative mb-5">
           <div className="absolute left-0 right-0 top-4 h-px bg-[#e8ddd6]" />
           <div
@@ -69,22 +69,28 @@ export function BookingProgressBar() {
                   disabled={!isClickable}
                   className={`
                     relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300
-                    ${isCompleted
-                      ? 'bg-[#c8a08f] text-white shadow-[0_8px_18px_-12px_rgba(99,71,56,0.75)]'
-                      : isCurrent
-                        ? 'bg-[#b58373] text-white shadow-[0_12px_22px_-14px_rgba(99,71,56,0.75)]'
-                        : 'bg-white text-gray-400 ring-1 ring-[#e8ddd6]'}
+                    ${
+                      isCompleted
+                        ? 'bg-[#c8a08f] text-white shadow-[0_8px_18px_-12px_rgba(99,71,56,0.75)]'
+                        : isCurrent
+                          ? 'scale-[1.06] bg-[#b58373] text-white shadow-[0_14px_24px_-14px_rgba(99,71,56,0.78)]'
+                          : 'bg-white text-gray-400 ring-1 ring-[#e8ddd6]'
+                    }
                     ${isClickable ? 'cursor-pointer hover:scale-110' : 'cursor-default'}
                   `}
                 >
                   {isCompleted ? (
                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   ) : (
                     <span>{step.id}</span>
                   )}
-                  {isCurrent && <span className="absolute inset-0 rounded-full bg-[#b58373]/20 animate-ping" />}
+                  {isCurrent && <span className="absolute inset-0 animate-ping rounded-full bg-[#b58373]/20" />}
                 </button>
                 <span
                   className={`

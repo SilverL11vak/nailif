@@ -1,7 +1,8 @@
 import etTranslations from './et.json';
 import enTranslations from './en.json';
+import { LOCALES, type LocaleCode } from './locale-path';
 
-export type Language = 'et' | 'en';
+export type Language = LocaleCode;
 
 const translations: Record<Language, typeof etTranslations> = {
   et: etTranslations,
@@ -25,11 +26,13 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string {
 }
 
 export function getTranslation(language: Language, key: string): string {
-  const translation = getNestedValue(translations[language] as unknown as Record<string, unknown>, key);
-  return translation || key;
+  const current = getNestedValue(translations[language] as unknown as Record<string, unknown>, key);
+  if (current !== key) return current;
+  const fallback = getNestedValue(translations.et as unknown as Record<string, unknown>, key);
+  return fallback || key;
 }
 
 export const languages: { code: Language; name: string; nativeName: string }[] = [
-  { code: 'et', name: 'Estonian', nativeName: 'Eesti' },
-  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: LOCALES[0], name: 'Estonian', nativeName: 'Eesti' },
+  { code: LOCALES[1], name: 'English', nativeName: 'English' },
 ];

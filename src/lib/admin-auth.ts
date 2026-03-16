@@ -11,6 +11,13 @@ export interface AdminUser {
   name: string | null;
 }
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __nailify_admin_ensure__: Promise<void> | undefined;
+}
+
+let adminEnsurePromise: Promise<void> | null = global.__nailify_admin_ensure__ ?? null;
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -29,7 +36,7 @@ function verifyPassword(password: string, fullHash: string) {
   return timingSafeEqual(storedBuffer, testHash);
 }
 
-export async function ensureAdminTables() {
+async function ensureAdminTablesInternal() {
   await sql`
     CREATE TABLE IF NOT EXISTS admin_users (
       id BIGSERIAL PRIMARY KEY,
@@ -48,6 +55,14 @@ export async function ensureAdminTables() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+}
+
+export async function ensureAdminTables() {
+  if (!adminEnsurePromise) {
+    adminEnsurePromise = ensureAdminTablesInternal();
+    global.__nailify_admin_ensure__ = adminEnsurePromise;
+  }
+  await adminEnsurePromise;
 }
 
 export async function adminCount() {

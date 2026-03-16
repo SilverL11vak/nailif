@@ -124,7 +124,13 @@
     "selectService": "Select a service",
     "selectTime": "Select a time",
     "secureThisSlot": "SECURE THIS SLOT",
-    "medicalGrade": "Medical-grade sterilization"
+    "medicalGrade": "Medical-grade sterilization",
+    "identityEyebrow": "Premium nail care",
+    "identityTitle": "Booking with Sandra",
+    "identityStudio": "Mustamäe Studio",
+    "designedEasy": "Designed for easy booking",
+    "depositNotice": "Secure with a 10 EUR deposit. Remaining balance is paid in studio.",
+    "hygiene": "Medical-grade hygiene"
   },
   "booking": {
     "back": "Back",
@@ -228,10 +234,292 @@
     "popular": "Popular",
     "left": "left"
   },
+  "chat": {
+    "title": "Quick question",
+    "subtitle": "Message us before booking",
+    "aiWelcome": "Hi! I can help with booking, availability and service guidance.",
+    "aiPlaceholder": "Ask about services, timing or booking...",
+    "aiSend": "Send",
+    "aiTyping": "Thinking...",
+    "aiPricing": "Service prices depend on selected service and possible add-ons. I can guide you to the best option in booking.",
+    "aiAvailability": "You can check current available slots in booking. If you need same-day confirmation, you can chat directly with the technician.",
+    "aiDesign": "For detailed design and nail condition questions, direct confirmation with the technician is best.",
+    "aiBookingHelp": "I can guide you step-by-step. Open booking and I will help you choose service and time.",
+    "aiFallback": "I may not have enough context for a precise answer right now.",
+    "handoffAction": "Chat directly with technician",
+    "handoffSuggestion": "If you prefer, you can chat directly with the nail technician.",
+    "openingMessenger": "Opening Messenger...",
+    "whatsapp": "WhatsApp",
+    "messenger": "Messenger",
+    "open": "Open",
+    "triggerAria": "Open quick contact",
+    "whatsappPrefillEt": "Tere! Soovin küsida vaba aja või teenuse kohta.",
+    "whatsappPrefillEn": "Hi! I would like to ask about availability or a service."
+  },
   "loading": {
     "loading": "Loading...",
     "booking": "Loading booking...",
     "success": "Success!"
+  },
+  "homepage": {
+    "nav": {
+      "products": "Products"
+    },
+    "mobile": {
+      "home": "Home",
+      "team": "Team",
+      "language": "Language"
+    },
+    "hero": {
+      "eyebrow": "Editorial beauty booking",
+      "nextAvailableLine": "Next available today at",
+      "loyalClients": "120+ loyal clients",
+      "trustAnchor": "Personal consultation, careful hygiene and a result that stays beautiful for weeks."
+    },
+    "trust": {
+      "premium": "Premium"
+    },
+    "featuredService": {
+      "badge": "Client Favourite",
+      "cta": "Recommended choice - book now",
+      "priceTrust": "Final price is confirmed before your appointment starts. 10 EUR deposit applies.",
+      "longevityFallback": "Results usually last around 3-4 weeks."
+    },
+    "servicesUi": {
+      "whoForLabel": "Who it's for:",
+      "durationLabel": "Duration",
+      "longevityLabel": "Longevity",
+      "lastsLabel": "Lasts",
+      "priceLabel": "From",
+      "trustCue": "Certified care, premium products and a hygienic work process.",
+      "trustTag1": "Premium materials",
+      "trustTag2": "Personalized shaping",
+      "cardCta": "Book this service"
+    },
+    "localAuthority": {
+      "eyebrow": "Local trust",
+      "title": "Nailify Mustamae: easy to reach, easy to return",
+      "subtitle": "Most of our clients come from Mustamae and central Tallinn for precise results and a smooth booking experience.",
+      "item1": "Mustamae tee 55",
+      "item2": "Parking nearby",
+      "item3": "Convenient public transport"
+    },
+    "gallery": {
+      "subtitle": "Curated signature looks designed to inspire your next appointment.",
+      "inspirationLook": "Inspiration look",
+      "styleNames": {
+        "glossy-pink-french": "Glossy Pink French",
+        "matte-nude": "Matte Nude Manicure",
+        "chrome-silver": "Chrome Silver",
+        "ombre-sunset": "Soft Ombre",
+        "ruby-red": "Deep Ruby Red",
+        "pearl-white": "Pearl White Classic"
+      },
+      "styleCaptions": {
+        "glossy-pink-french": "French gel design with a soft gloss finish",
+        "matte-nude": "Natural nude finish for everyday elegance",
+        "chrome-silver": "Statement chrome finish for special moments",
+        "ombre-sunset": "Soft color transition with a modern look",
+        "ruby-red": "Classic gel polish in a rich tone",
+        "pearl-white": "Clean light tone for a minimal style"
+      },
+      "featuredLabel": "Signature of the week",
+      "featuredQuote": "Soft gloss, clean shaping and long-wear finish."
+    },
+    "serviceDecision": {
+      "resultLabel": "Result:",
+      "longevityLabel": "Longevity:",
+      "suitabilityLabel": "Best for:",
+      "fallback": {
+        "gel-manicure": {
+          "result": "Even glossy gel polish with clean shaping.",
+          "longevity": "Usually lasts up to 3-4 weeks with proper aftercare.",
+          "suitability": "Great if you want a long-wear everyday manicure."
+        },
+        "acrylic-extensions": {
+          "result": "Longer length, stronger structure and precise design.",
+          "longevity": "With maintenance, results stay beautiful for 3-4 weeks.",
+          "suitability": "Best when you want extra length or more structure."
+        },
+        "luxury-spa-manicure": {
+          "result": "Polished hands, softened skin and refined detail.",
+          "longevity": "Most effective with a regular 3-4 week rhythm.",
+          "suitability": "Ideal if you want premium care with relaxation."
+        },
+        "gel-pedicure": {
+          "result": "Clean pedicure with durable gel color.",
+          "longevity": "Typically lasts 4-6 weeks depending on activity.",
+          "suitability": "Ideal for durable and neat foot care."
+        }
+      }
+    },
+    "products": {
+      "eyebrow": "Beauty retail",
+      "title": "Take-home beauty essentials",
+      "subtitle": "Shop premium aftercare picked to support your fresh set for longer.",
+      "retailTitle": "Keep your salon result beautiful for longer",
+      "retailSubtitle": "Sandra's recommended aftercare essentials for shine, durability and healthier nails.",
+      "retailSupport": "Curated products you can add to your booking or take home.",
+      "explore": "Explore products",
+      "badgeBestseller": "Bestseller",
+      "badgeMostLoved": "Most loved",
+      "badgeSalonPick": "Salon pick",
+      "badgeRecommended": "Sandra recommends",
+      "forAftercare": "Aftercare essential",
+      "useCaseFeatured": "Recommended after gel manicure to keep gloss and cuticles balanced.",
+      "cardUseCase": "Supports longer-lasting salon results.",
+      "ctaViewProduct": "View product",
+      "ctaAddWithBooking": "Add with booking",
+      "ctaShort": "See product",
+      "addToBookingHint": "Add to booking: available at checkout",
+      "view": "View",
+      "fallback": {
+        "rose-cuticle-oil": {
+          "name": "Rose Cuticle Oil",
+          "description": "Daily nourishment for glossy, healthy-looking nails."
+        },
+        "silk-hand-cream": {
+          "name": "Silk Hand Cream",
+          "description": "Velvet hydration that supports long-lasting manicure results."
+        },
+        "nail-strength-serum": {
+          "name": "Nail Strength Serum",
+          "description": "Targeted care for brittle nails between appointments."
+        },
+        "premium-aftercare-set": {
+          "name": "Premium Aftercare Set",
+          "description": "Curated essentials for your at-home nail ritual."
+        }
+      }
+    },
+    "flow": {
+      "eyebrow": "Friction removal"
+    },
+    "addons": {
+      "eyebrow": "Add-on services",
+      "title": "Customize your appointment",
+      "subtitle": "Limited same-day upgrade capacity. Add extras while slots are still available.",
+      "helper": "Easy upgrades you can add directly during booking.",
+      "items": {
+        "nailArt": "Nail art",
+        "repair": "Repair",
+        "chromeFinish": "Chrome finish",
+        "frenchUpgrade": "French upgrade"
+      }
+    },
+    "team": {
+      "eyebrow": "Personal specialist",
+      "subtitle": "Certified Nail Technician / Mustamäe Studio",
+      "authorityLine": "Specialization: natural luxury finishes and precision shaping.",
+      "exp": "5+ years experience",
+      "clients": "120+ loyal clients",
+      "rating": "4.9 rating",
+      "trustPrecision": "Precision-focused technique",
+      "trustPremium": "Premium product system",
+      "favoriteBadge": "Client favourite",
+      "imageAlt": "Sandra Samun at Nailify studio",
+      "trustPremiumProducts": "Premium product system",
+      "trustHygiene": "Medical hygiene protocol",
+      "story": "Sandra loves nail art because it blends precision with personal expression. Her goal is simple: every client leaves feeling polished, confident and genuinely cared for.",
+      "signature": "Signature style: clean almond shaping, soft blush tones and glossy long-wear finish.",
+      "point1": "Personalized consultations before every appointment",
+      "point2": "Medical-grade tool sterilization and strict hygiene protocol",
+      "point3": "Premium professional product system for long-lasting wear",
+      "cta": "Book with Sandra",
+      "ctaStrong": "Book with Sandra",
+      "weeklyAvailability": "Available slots this week",
+      "signatureLabel": "Signature style",
+      "resultsLabel": "Real work results",
+      "signatureTags": {
+        "1": "Nude luxury",
+        "2": "Gloss finish",
+        "3": "Minimal detail",
+        "4": "Strong structure"
+      },
+      "workCaptions": {
+        "1": "Gel manicure result",
+        "2": "Luxury spa result",
+        "3": "Minimal nude design"
+      },
+      "benefits": {
+        "designs": "Personalized designs",
+        "designsHint": "Tailored to your hand shape and style.",
+        "results": "Long-lasting result",
+        "resultsHint": "Durability that keeps shine for weeks.",
+        "consultation": "Consultation first",
+        "consultationHint": "Clear plan before your service starts."
+      }
+    },
+    "testimonials": {
+      "eyebrow": "Client feedback",
+      "title": "Real clients. Real confidence.",
+      "subtitle": "Real nail results with honest words from women who trust Sandra regularly.",
+      "heroMomentLabel": "Confidence you feel instantly",
+      "heroServiceRef": "Gel manicure + design"
+    },
+    "feedback": {
+      "featured": {
+        "name": "Liisa",
+        "quote": "My nails still looked flawless after three weeks. Sandra's precision is unmatched."
+      },
+      "c1": {
+        "name": "Kadi",
+        "quote": "Very gentle service and beautiful result. Booking was genuinely quick."
+      },
+      "c2": {
+        "name": "Merilin",
+        "quote": "Exactly the style I wanted. The studio feels calm and very clean."
+      },
+      "c3": {
+        "name": "Anett",
+        "quote": "Best place for long-lasting and elegant manicure results."
+      }
+    },
+    "location": {
+      "title": "Visit us in Mustamäe",
+      "subtitle": "A calm studio setting with easy access, parking nearby and direct public transport routes.",
+      "badge1": "Mustamäe tee 55, Tallinn",
+      "badge2": "5 min from center",
+      "badge3": "Parking nearby",
+      "badge4": "Calm private studio",
+      "previewEyebrow": "Studio preview",
+      "mapTitle": "Nailify Mustamäe map",
+      "previewText": "Private, calm beauty environment with premium hygiene setup."
+    },
+    "aftercare": {
+      "tip1": "• Gel manicure usually lasts around 3-4 weeks.",
+      "tip2": "• Plan maintenance once outgrowth becomes visible.",
+      "tip3": "• Use cuticle oil daily to prevent dryness.",
+      "eyebrow": "Aftercare essentials",
+      "title": "Protect your fresh set at home",
+      "subtitle": "Daily care tips and curated products to keep gloss, shape and strength between appointments.",
+      "cta": "View aftercare tips"
+    },
+    "giftcards": {
+      "helper": "Digital gift cards are ready quickly and can be used flexibly.",
+      "eyebrow": "Gift cards",
+      "title": "Give a premium nail experience",
+      "subtitle": "Perfect for birthdays and special moments with flexible value options.",
+      "cta": "Buy gift card"
+    },
+    "revenue": {
+      "offerA": "Add during the same visit",
+      "offerB": "Most selected upgrades",
+      "offerC": "Quick mini-upgrade"
+    },
+    "final": {
+      "limited": "Limited slots weekly",
+      "reassureLine": "Booking confirmation is quick and rescheduling stays flexible."
+    },
+    "footer": {
+      "contactLine1": "Nailify Mustamäe",
+      "contactLine2": "Mustamäe tee 55",
+      "contactLine3": "Tallinn, Estonia",
+      "hours1Label": "Mon - Sat",
+      "hours1Value": "9am - 7pm",
+      "hours2Label": "Sunday",
+      "hours2Value": "10am - 5pm"
+    }
   },
   "error": {
     "somethingWrong": "Something went wrong",

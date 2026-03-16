@@ -72,7 +72,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = (await request.json()) as Partial<{ id: string; status: string; contactNotes: string | null }>;
+    const payload = (await request.json()) as Partial<{
+      id: string;
+      status: string;
+      paymentStatus: string;
+      slotDate: string;
+      slotTime: string;
+      serviceId: string;
+      serviceName: string;
+      serviceDuration: number;
+      servicePrice: number;
+      totalPrice: number;
+      totalDuration: number;
+      contactNotes: string | null;
+    }>;
     if (!payload.id) {
       return NextResponse.json({ error: 'Booking id is required' }, { status: 400 });
     }
@@ -80,15 +93,40 @@ export async function PATCH(request: Request) {
       payload.status &&
       payload.status !== 'confirmed' &&
       payload.status !== 'cancelled' &&
-      payload.status !== 'pending_payment'
+      payload.status !== 'pending_payment' &&
+      payload.status !== 'completed'
     ) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+    if (
+      payload.paymentStatus &&
+      payload.paymentStatus !== 'unpaid' &&
+      payload.paymentStatus !== 'pending' &&
+      payload.paymentStatus !== 'paid' &&
+      payload.paymentStatus !== 'failed'
+    ) {
+      return NextResponse.json({ error: 'Invalid payment status' }, { status: 400 });
+    }
+    if (payload.slotDate && !/^\d{4}-\d{2}-\d{2}$/.test(payload.slotDate)) {
+      return NextResponse.json({ error: 'Invalid slot date' }, { status: 400 });
+    }
+    if (payload.slotTime && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(payload.slotTime)) {
+      return NextResponse.json({ error: 'Invalid slot time' }, { status: 400 });
     }
 
     await ensureBookingsTable();
     const updated = await updateBookingAdminFields({
       id: payload.id,
-      status: payload.status as 'confirmed' | 'cancelled' | 'pending_payment' | undefined,
+      status: payload.status as 'confirmed' | 'cancelled' | 'pending_payment' | 'completed' | undefined,
+      paymentStatus: payload.paymentStatus as 'unpaid' | 'pending' | 'paid' | 'failed' | undefined,
+      slotDate: typeof payload.slotDate === 'string' ? payload.slotDate : undefined,
+      slotTime: typeof payload.slotTime === 'string' ? payload.slotTime : undefined,
+      serviceId: typeof payload.serviceId === 'string' ? payload.serviceId : undefined,
+      serviceName: typeof payload.serviceName === 'string' ? payload.serviceName : undefined,
+      serviceDuration: typeof payload.serviceDuration === 'number' ? payload.serviceDuration : undefined,
+      servicePrice: typeof payload.servicePrice === 'number' ? payload.servicePrice : undefined,
+      totalPrice: typeof payload.totalPrice === 'number' ? payload.totalPrice : undefined,
+      totalDuration: typeof payload.totalDuration === 'number' ? payload.totalDuration : undefined,
       contactNotes:
         typeof payload.contactNotes === 'string' || payload.contactNotes === null
           ? payload.contactNotes
@@ -101,6 +139,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, booking: updated });
   } catch (error) {
     console.error('PATCH /api/bookings error:', error);
-    return NextResponse.json({ error: 'Failed to update booking status' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
   }
 }

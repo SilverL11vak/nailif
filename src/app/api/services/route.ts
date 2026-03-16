@@ -8,6 +8,7 @@ import {
   upsertService,
 } from '@/lib/catalog';
 import { getAdminFromCookies } from '@/lib/admin-auth';
+import { getLocaleFromPathname } from '@/lib/i18n/locale-path';
 
 function slugify(value: string) {
   return value
@@ -30,16 +31,26 @@ function isCategory(value: string): value is Service['category'] {
 export async function GET(request: Request) {
   try {
     await ensureCatalogTables();
-    const { searchParams } = new URL(request.url);
+    const { searchParams, pathname } = new URL(request.url);
     const admin = searchParams.get('admin') === '1';
+    const locale = searchParams.get('lang') ?? getLocaleFromPathname(pathname) ?? 'et';
     if (admin) {
       const adminUser = await getAdminFromCookies();
       if (!adminUser) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
-    const services = admin ? await listAdminServices() : await listServices();
-    return NextResponse.json({ ok: true, services });
+    const services = admin ? await listAdminServices(locale) : await listServices(locale);
+    return NextResponse.json(
+      { ok: true, services },
+      admin
+        ? undefined
+        : {
+            headers: {
+              'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=900',
+            },
+          }
+    );
   } catch (error) {
     console.error('GET /api/services error:', error);
     return NextResponse.json({ error: 'Failed to load services' }, { status: 500 });
@@ -56,8 +67,16 @@ export async function POST(request: Request) {
     await ensureCatalogTables();
     const payload = (await request.json()) as Partial<{
       id: string;
-      name: string;
-      description: string;
+      nameEt: string;
+      nameEn: string;
+      descriptionEt: string;
+      descriptionEn: string;
+      resultDescriptionEt: string;
+      resultDescriptionEn: string;
+      longevityDescriptionEt: string;
+      longevityDescriptionEn: string;
+      suitabilityNoteEt: string;
+      suitabilityNoteEn: string;
       duration: number;
       price: number;
       category: string;
@@ -66,20 +85,28 @@ export async function POST(request: Request) {
       active: boolean;
     }>;
 
-    const name = payload.name?.trim();
-    if (!name) {
+    const nameEt = payload.nameEt?.trim();
+    if (!nameEt) {
       return NextResponse.json({ error: 'Service name is required' }, { status: 400 });
     }
     if (!payload.category || !isCategory(payload.category)) {
       return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     }
 
-    const id = payload.id?.trim() || slugify(name);
+    const id = payload.id?.trim() || slugify(nameEt);
 
     await upsertService({
       id,
-      name,
-      description: payload.description ?? '',
+      nameEt,
+      nameEn: payload.nameEn ?? '',
+      descriptionEt: payload.descriptionEt ?? '',
+      descriptionEn: payload.descriptionEn ?? '',
+      resultDescriptionEt: payload.resultDescriptionEt ?? payload.descriptionEt ?? '',
+      resultDescriptionEn: payload.resultDescriptionEn ?? '',
+      longevityDescriptionEt: payload.longevityDescriptionEt ?? '',
+      longevityDescriptionEn: payload.longevityDescriptionEn ?? '',
+      suitabilityNoteEt: payload.suitabilityNoteEt ?? '',
+      suitabilityNoteEn: payload.suitabilityNoteEn ?? '',
       duration: Number(payload.duration ?? 45),
       price: Number(payload.price ?? 0),
       category: payload.category,

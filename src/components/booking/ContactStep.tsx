@@ -1,11 +1,33 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
+import { useBookingContent } from '@/hooks/use-booking-content';
+
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+type UploadKind = 'inspiration' | 'current';
+
+function parsePhone(rawPhone?: string) {
+  const value = (rawPhone ?? '').trim();
+  const match = value.match(/^(\+\d{1,4})\s*(.*)$/);
+  if (match) {
+    return { code: match[1], local: match[2] };
+  }
+  return { code: '', local: value };
+}
 
 export function ContactStep() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const { text } = useBookingContent();
   const contactInfo = useBookingStore((state) => state.contactInfo);
   const setContactInfo = useBookingStore((state) => state.setContactInfo);
   const nextStep = useBookingStore((state) => state.nextStep);
@@ -14,329 +36,385 @@ export function ContactStep() {
   const totalPrice = useBookingStore((state) => state.totalPrice);
   const totalDuration = useBookingStore((state) => state.totalDuration);
 
-  const [showEmail, setShowEmail] = useState(false);
+  const parsedPhone = parsePhone(contactInfo?.phone);
+  const [showEmail, setShowEmail] = useState(Boolean(contactInfo?.email));
+  const [dragOver, setDragOver] = useState<UploadKind | null>(null);
+  const [countryCode, setCountryCode] = useState(parsedPhone.code);
   const [formData, setFormData] = useState({
     firstName: contactInfo?.firstName || '',
     lastName: contactInfo?.lastName || '',
-    phone: contactInfo?.phone || '',
+    phone: parsedPhone.local,
     email: contactInfo?.email || '',
     notes: contactInfo?.notes || '',
+    inspirationNote: contactInfo?.inspirationNote || '',
   });
+  const [inspirationImage, setInspirationImage] = useState<string>(contactInfo?.inspirationImage || '');
+  const [currentNailImage, setCurrentNailImage] = useState<string>(contactInfo?.currentNailImage || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const continueButtonRef = useRef<HTMLDivElement>(null);
-  const firstNameRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus first name field on mount
+  const inspirationInputRef = useRef<HTMLInputElement>(null);
+  const currentInputRef = useRef<HTMLInputElement>(null);
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const countryOptions = [
+    { code: '+372', label: 'Estonia' },
+    { code: '+358', label: 'Finland' },
+    { code: '+371', label: 'Latvia' },
+    { code: '+370', label: 'Lithuania' },
+    { code: '+46', label: 'Sweden' },
+    { code: '+44', label: 'UK' },
+    { code: '+49', label: 'Germany' },
+  ];
+
   useEffect(() => {
     firstNameRef.current?.focus();
   }, []);
 
-  // Format phone number as user types (UK format)
+  useEffect(() => {
+    if (countryCode.trim()) return;
+    const locale = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : '';
+    const detected =
+      locale.startsWith('et') ? '+372' :
+      locale.startsWith('fi') ? '+358' :
+      locale.startsWith('lv') ? '+371' :
+      locale.startsWith('lt') ? '+370' :
+      locale.startsWith('sv') ? '+46' : '';
+    const fallbackCode = detected || text('phone_default_country_code', '+372').trim();
+    if (!fallbackCode) return;
+    setCountryCode(fallbackCode.startsWith('+') ? fallbackCode : `+${fallbackCode.replace(/[^\d]/g, '')}`);
+  }, [countryCode, text]);
+
   const formatPhoneNumber = (value: string): string => {
-    const digits = value.replace(/\D/g, '');
+    const digits = value.replace(/[^\d]/g, '');
     if (digits.length <= 4) return digits;
     if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
-    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 11)}`;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    // Format phone number
-    let processedValue = value;
-    if (name === 'phone') {
-      processedValue = formatPhoneNumber(value);
-    }
-    
+    const processedValue = name === 'phone' ? formatPhoneNumber(value) : value;
     setFormData((prev) => ({ ...prev, [name]: processedValue }));
-    // Clear error when user types
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-    // Mark as touched
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     setTouched((prev) => ({ ...prev, [name]: true }));
   };
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = t('contact.required');
+  const handleCountryCodeChange = (value: string) => {
+    const cleaned = value.replace(/[^\d+]/g, '');
+    const normalized = cleaned.startsWith('+') ? cleaned : `+${cleaned.replace(/[+]/g, '')}`;
+    setCountryCode(normalized === '+' ? '' : normalized);
+  };
+
+  const setImageByKind = (kind: UploadKind, value: string) => {
+    if (kind === 'inspiration') {
+      setInspirationImage(value);
+    } else {
+      setCurrentNailImage(value);
     }
+  };
+
+  const handleImageUpload = async (kind: UploadKind, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (file.size > 3 * 1024 * 1024) {
+      setErrors((prev) => ({
+        ...prev,
+        [kind]: text('upload_size_error', language === 'en' ? 'Image is too large (max 3 MB).' : 'Pilt on liiga suur (max 3 MB).'),
+      }));
+      return;
+    }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setImageByKind(kind, dataUrl);
+      setErrors((prev) => ({ ...prev, [kind]: '' }));
+    } catch {
+      setErrors((prev) => ({
+        ...prev,
+        [kind]: text('upload_failed_error', language === 'en' ? 'Image upload failed.' : 'Pildi lisamine ebaonnestus.'),
+      }));
+    } finally {
+      if (kind === 'inspiration' && inspirationInputRef.current) inspirationInputRef.current.value = '';
+      if (kind === 'current' && currentInputRef.current) currentInputRef.current.value = '';
+    }
+  };
+
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+    if (!formData.firstName.trim()) nextErrors.firstName = t('contact.required');
     if (!formData.phone.trim()) {
-      newErrors.phone = t('contact.required');
-    } else if (!/^\+?[\d\s-]{10,}$/.test(formData.phone)) {
-      newErrors.phone = t('contact.validPhone');
+      nextErrors.phone = t('contact.required');
+    } else if (!countryCode || !countryCode.startsWith('+')) {
+      nextErrors.phone = t('contact.validPhone');
+    } else if (!/^[\d\s-]{5,}$/.test(formData.phone)) {
+      nextErrors.phone = t('contact.validPhone');
     }
     if (showEmail && formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = t('contact.validEmail');
+      nextErrors.email = t('contact.validEmail');
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleSubmit = () => {
-    if (validate()) {
-      setContactInfo({
-        firstName: formData.firstName,
-        lastName: formData.lastName || undefined,
-        phone: formData.phone,
-        email: formData.email || undefined,
-        notes: formData.notes || undefined,
-      });
-      nextStep();
-      // Scroll next step into view
-      continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      // Mark all fields as touched to show errors
-      setTouched({
-        firstName: true,
-        lastName: true,
-        phone: true,
-        email: true
-      });
+    if (!validate()) {
+      setTouched({ firstName: true, phone: true, email: true });
+      return;
     }
+
+    const fullPhone = `${countryCode} ${formData.phone}`.trim();
+    setContactInfo({
+      firstName: formData.firstName,
+      lastName: formData.lastName || undefined,
+      phone: fullPhone,
+      email: formData.email || undefined,
+      notes: formData.notes || undefined,
+      inspirationImage: inspirationImage || undefined,
+      currentNailImage: currentNailImage || undefined,
+      inspirationNote: formData.inspirationNote || undefined,
+    });
+    nextStep();
   };
+
+  const prepTips = [
+    text('preparation_tip_1', language === 'en' ? 'Free rescheduling' : 'Tasuta umberbroneerimine'),
+    text('preparation_tip_2', language === 'en' ? 'Fast confirmation' : 'Kiire kinnitus'),
+    text('preparation_tip_3', language === 'en' ? 'Certified nail technician' : 'Sertifitseeritud kuunetehnik'),
+  ];
+
+  const uploadCard = (kind: UploadKind, title: string, imageValue: string, inputRef: React.RefObject<HTMLInputElement | null>) => (
+    <div className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8e7465]">{title}</p>
+      {!imageValue ? (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragOver(kind);
+          }}
+          onDragLeave={() => setDragOver((prev) => (prev === kind ? null : prev))}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragOver(null);
+            void handleImageUpload(kind, event.dataTransfer.files);
+          }}
+          className={`mt-2 w-full rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm font-medium transition ${
+            dragOver === kind ? 'border-[#ceb7a8] bg-[#f7f2ee] text-[#6f5d53]' : 'border-[#ddd1c8] bg-white text-[#6f5d53] hover:border-[#ceb7a8]'
+          }`}
+        >
+          {text('upload_cta', language === 'en' ? 'Upload photo from device' : 'Lisa foto seadmest')}
+        </button>
+      ) : (
+        <div className="mt-2 rounded-xl border border-[#e2d7cf] bg-white p-2">
+          <div className="relative mb-2 h-28 w-full overflow-hidden rounded-lg">
+            <Image src={imageValue} alt={language === 'en' ? 'Reference preview' : 'Eelvaade'} fill className="object-cover" unoptimized />
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => inputRef.current?.click()} className="rounded-xl border border-[#ddd1c8] px-3 py-2 text-xs font-medium text-[#6f5d53]">
+              {text('upload_replace', language === 'en' ? 'Replace photo' : 'Asenda foto')}
+            </button>
+            <button type="button" onClick={() => setImageByKind(kind, '')} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-600">
+              {text('upload_remove', language === 'en' ? 'Remove photo' : 'Eemalda foto')}
+            </button>
+          </div>
+        </div>
+      )}
+      {errors[kind] && <p className="mt-1 text-xs text-red-500">{errors[kind]}</p>}
+    </div>
+  );
 
   return (
     <div className="animate-fade-in">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          {t('contact.yourDetails')}
-        </h2>
-        <p className="text-gray-500">
-          {t('contact.sendConfirmation')}
+      <div className="mb-8 text-center">
+        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#9a7c6d]">Samm 3</p>
+        <h2 className="mb-2 text-2xl font-semibold text-[#2f2622]">{t('contact.yourDetails')}</h2>
+        <p className="text-[#6f655f]">{t('contact.sendConfirmation')}</p>
+        <p className="mt-2 text-sm text-[#7f7068]">
+          {text('contact_step_hint', language === 'en' ? 'You are one step away from confirmation.' : 'Oled vaid uhe sammu kaugusel kinnitamisest.')}
         </p>
       </div>
 
-      {/* Trust Microcontext */}
-      <div className="mb-6 p-3 bg-gray-50 rounded-xl flex items-center gap-3">
-        <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-        </svg>
-        <p className="text-xs text-gray-500">{t('contact.privateSecure')}</p>
-      </div>
-
-      {/* Booking Summary Card */}
-      <div className="bg-[#FFF9F5] rounded-2xl p-4 mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-medium text-gray-800">{selectedService?.name}</span>
-          <span className="text-[#D4A59A] font-semibold">€{totalPrice || selectedService?.price}</span>
+      <div className="mb-5 rounded-2xl border border-[#e7dfd7] bg-[#faf7f4] p-4">
+        <div className="mb-1 flex items-center justify-between text-sm">
+          <span className="font-medium text-[#3f332d]">{selectedService?.name}</span>
+          <span className="font-semibold text-[#9f7058]">EUR {totalPrice || selectedService?.price}</span>
         </div>
-        <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="flex items-center justify-between text-xs text-[#7b6f67]">
           <span>
-            {selectedSlot 
-              ? `${new Date(selectedSlot.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} {t('confirm.at')} ${selectedSlot.time}`
-              : t('contact.noTimeSelected')
-            }
+            {selectedSlot
+              ? `${new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'short', day: 'numeric', month: 'short' })} ${t('confirm.at')} ${selectedSlot.time}`
+              : t('contact.noTimeSelected')}
           </span>
-          <span>{totalDuration || selectedService?.duration} {t('contact.minutes') || 'min'}</span>
+          <span>{totalDuration || selectedService?.duration} min</span>
         </div>
       </div>
 
-      {/* Contact Form */}
-      <div className="space-y-5">
-        {/* First Name - Floating Label Style */}
-        <div className="relative">
+      <div className="mb-5 flex flex-wrap gap-2">
+        {prepTips.map((item) => (
+          <span key={item} className="rounded-full border border-[#e2d8d0] bg-white px-3 py-1.5 text-xs font-medium text-[#75655b]">
+            {item}
+          </span>
+        ))}
+      </div>
+
+      <section className="mb-5 rounded-2xl border border-[#e7dfd7] bg-white p-4">
+        <h3 className="text-sm font-semibold text-[#443630]">{text('preparation_title', language === 'en' ? 'Before your appointment' : 'Enne visiiti')}</h3>
+        <p className="mt-1 text-xs text-[#74675f]">
+          {text('preparation_helper', language === 'en' ? 'Clean nails and avoid strong oils on the same day.' : 'Puhasta kuuned ja vali samal paeval kergem hooldus.')}
+        </p>
+      </section>
+
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-[#443630]">
+          {t('contact.firstName')} *
           <input
             ref={firstNameRef}
             type="text"
-            id="firstName"
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
-            placeholder=" "
-            className={`
-              peer w-full px-4 pt-6 pb-2 bg-white border-2 rounded-xl 
-              focus:outline-none focus:ring-2 transition-all duration-200
-              ${errors.firstName && touched.firstName
-                ? 'border-red-300 focus:border-red-400 focus:ring-red-100' 
-                : 'border-gray-200 focus:border-[#D4A59A] focus:ring-[#D4A59A]/20'
-              }
-            `}
+            className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+              errors.firstName && touched.firstName ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+            }`}
           />
-          <label 
-            htmlFor="firstName" 
-            className={`
-              absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
-              ${formData.firstName 
-                ? 'top-1 text-xs text-gray-500' 
-                : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
-              }
-              ${errors.firstName && touched.firstName ? 'text-red-500' : ''}
-            `}
-          >
-            {t('contact.firstName')} *
-          </label>
-          {errors.firstName && touched.firstName && (
-            <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
-          )}
-        </div>
+          {errors.firstName && touched.firstName && <p className="mt-1 text-xs text-red-500">{errors.firstName}</p>}
+        </label>
 
-        {/* Last Name (Optional) */}
-        <div className="relative">
-          <input
-            type="text"
-            id="lastName"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            placeholder=" "
-            className="peer w-full px-4 pt-6 pb-2 bg-white border-2 border-gray-200 rounded-xl focus:border-[#D4A59A] focus:outline-none focus:ring-2 focus:ring-[#D4A59A]/20 transition-colors duration-200"
-          />
-          <label 
-            htmlFor="lastName" 
-            className={`
-              absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
-              ${formData.lastName 
-                ? 'top-1 text-xs text-gray-500' 
-                : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
-              }
-            `}
-          >
-            {t('contact.lastName')} <span className="text-gray-400">{t('contact.optional')}</span>
-          </label>
-        </div>
+        <label className="block text-sm font-medium text-[#443630]">
+          {t('contact.lastName')} ({t('contact.optional')})
+          <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="mt-1 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 outline-none transition focus:border-[#c79c84]" />
+        </label>
 
-        {/* Phone */}
-        <div className="relative">
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            placeholder=" "
-            className={`
-              peer w-full px-4 pt-6 pb-2 bg-white border-2 rounded-xl 
-              focus:outline-none focus:ring-2 transition-all duration-200
-              ${errors.phone && touched.phone
-                ? 'border-red-300 focus:border-red-400 focus:ring-red-100' 
-                : 'border-gray-200 focus:border-[#D4A59A] focus:ring-[#D4A59A]/20'
-              }
-            `}
-          />
-          <label 
-            htmlFor="phone" 
-            className={`
-              absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
-              ${formData.phone 
-                ? 'top-1 text-xs text-gray-500' 
-                : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
-              }
-              ${errors.phone && touched.phone ? 'text-red-500' : ''}
-            `}
-          >
-            {t('contact.phone')} *
-          </label>
-          {errors.phone && touched.phone && (
-            <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
-          )}
-        </div>
-
-        {/* Email (Collapsible) */}
-        <div>
-          {!showEmail ? (
-            <button
-              type="button"
-              onClick={() => setShowEmail(true)}
-              className="text-sm text-[#D4A59A] hover:text-[#C47D6D] font-medium"
+        <label className="block text-sm font-medium text-[#443630]">
+          {t('contact.phone')} *
+          <div className={`mt-1 grid gap-2 ${countryCode === '+' ? 'grid-cols-[132px_110px_1fr]' : 'grid-cols-[132px_1fr]'}`}>
+            <select
+              value={countryCode}
+              onChange={(event) => setCountryCode(event.target.value)}
+              className={`rounded-2xl border-2 bg-white px-3 py-3 outline-none transition ${
+                errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+              }`}
+              aria-label={language === 'en' ? 'Country code' : 'Riigikood'}
             >
-              {t('contact.addEmail')}
-            </button>
-          ) : (
-            <div className="relative">
+              {countryOptions.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.code} {option.label}
+                </option>
+              ))}
+              <option value="+">{language === 'en' ? 'Custom +' : 'Muu +'}</option>
+            </select>
+            {countryCode === '+' && (
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder=" "
-                className={`
-                  peer w-full px-4 pt-6 pb-2 bg-white border-2 rounded-xl 
-                  focus:outline-none focus:ring-2 transition-all duration-200
-                  ${errors.email && touched.email
-                    ? 'border-red-300 focus:border-red-400 focus:ring-red-100' 
-                    : 'border-gray-200 focus:border-[#D4A59A] focus:ring-[#D4A59A]/20'
-                  }
-                `}
+                type="tel"
+                value={countryCode}
+                onChange={(event) => handleCountryCodeChange(event.target.value)}
+                className={`rounded-2xl border-2 bg-white px-3 py-3 outline-none transition ${
+                  errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+                }`}
+                placeholder="+372"
+                aria-label={language === 'en' ? 'Custom country code' : 'Kohandatud riigikood'}
               />
-              <label 
-                htmlFor="email" 
-                className={`
-                  absolute left-4 top-4 text-sm transition-all duration-200 pointer-events-none
-                  ${formData.email 
-                    ? 'top-1 text-xs text-gray-500' 
-                    : 'text-gray-400 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-500'
-                  }
-                `}
-              >
-                {t('contact.email')} <span className="text-gray-400">{t('contact.optional')}</span>
-              </label>
-              {errors.email && touched.email && (
-                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEmail(false);
-                  setFormData((prev) => ({ ...prev, email: '' }));
-                }}
-                className="mt-2 text-sm text-gray-500 hover:text-gray-700"
-              >
-                {t('contact.removeEmail')}
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className={`rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+                errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+              }`}
+              placeholder="___ ___ ____"
+            />
+          </div>
+          <p className="mt-1 text-xs text-[#74675f]">
+            {text('phone_field_helper', language === 'en' ? 'Enter your phone with country code. You can change the prefix if needed.' : 'Sisesta number koos suunakoodiga. Vajadusel muuda riigikoodi.')}
+          </p>
+          {errors.phone && touched.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
+        </label>
 
-        <div className="relative">
-          <textarea
-            id="notes"
-            name="notes"
-            value={formData.notes}
-            onChange={(event) =>
-              setFormData((prev) => ({
-                ...prev,
-                notes: event.target.value,
-              }))
-            }
-            placeholder={t('contact.optional') ? `Notes (${t('contact.optional')})` : 'Notes (optional)'}
-            className="min-h-20 w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm outline-none transition-colors duration-200 focus:border-[#D4A59A] focus:ring-2 focus:ring-[#D4A59A]/20"
-          />
-        </div>
+        {!showEmail ? (
+          <button type="button" onClick={() => setShowEmail(true)} className="text-sm font-medium text-[#9f7058] transition hover:text-[#8b5f4a]">
+            {t('contact.addEmail')}
+          </button>
+        ) : (
+          <label className="block text-sm font-medium text-[#443630]">
+            {t('contact.email')} ({t('contact.optional')})
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+                errors.email && touched.email ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+              }`}
+            />
+            {errors.email && touched.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+          </label>
+        )}
+
+        <section className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#8e7465]">
+            {text('contact_optional_nails_title', language === 'en' ? 'Optional info about your nails' : 'Kiire info sinu kuunte kohta (valikuline)')}
+          </p>
+          <h3 className="text-sm font-semibold text-[#443630]">{text('upload_title', language === 'en' ? 'Inspiration or current nail photo' : 'Inspiratsioon voi praeguse kuune foto')}</h3>
+          <p className="mt-1 text-xs text-[#74675f]">
+            {text('upload_helper', language === 'en' ? 'Show us your inspiration. Upload your current nails for better consultation.' : 'Naita meile inspiratsiooni. Lisa praeguste kuunte pilt paremaks konsultatsiooniks.')}
+          </p>
+          <p className="mt-2 text-xs font-medium text-[#7b6558]">
+            {text(
+              'upload_optional_helper',
+              language === 'en'
+                ? 'You can add a photo if you want us to prepare your appointment better.'
+                : 'Soovi korral saad lisada pildi, et saaksime visiidi paremini ette valmistada.'
+            )}
+          </p>
+
+          <input ref={inspirationInputRef} type="file" accept="image/*" capture="environment" onChange={(event) => void handleImageUpload('inspiration', event.target.files)} className="hidden" />
+          <input ref={currentInputRef} type="file" accept="image/*" capture="environment" onChange={(event) => void handleImageUpload('current', event.target.files)} className="hidden" />
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {uploadCard(
+              'inspiration',
+              text('upload_inspiration_optional_label', language === 'en' ? 'Add inspiration photo (optional)' : 'Lisa inspiratsioonipilt (valikuline)'),
+              inspirationImage,
+              inspirationInputRef
+            )}
+            {uploadCard(
+              'current',
+              text('upload_current_optional_label', language === 'en' ? 'Add a photo of your current nails (optional)' : 'Lisa pilt oma praegustest kuuntest (valikuline)'),
+              currentNailImage,
+              currentInputRef
+            )}
+          </div>
+          <p className="mt-3 text-xs text-[#74675f]">
+            {text('upload_skip_reassurance', language === 'en' ? 'You can continue without uploading any photo.' : 'Voi jatkata ka ilma pildita.')}
+          </p>
+
+          <label className="mt-3 block text-xs font-medium text-[#5e4f48]">
+            {text('upload_note_label', language === 'en' ? 'Add note (optional)' : 'Lisa markus (valikuline)')}
+            <input
+              type="text"
+              name="inspirationNote"
+              value={formData.inspirationNote}
+              onChange={handleChange}
+              placeholder={language === 'en' ? 'Shape, length, tone...' : 'Kuju, pikkus, toon...'}
+              className="mt-1 w-full rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-sm outline-none focus:border-[#c79c84]"
+            />
+          </label>
+        </section>
+
+        <label className="block text-sm font-medium text-[#443630]">
+          {language === 'en' ? 'Client notes' : 'Kliendi markused'} ({t('contact.optional')})
+          <textarea name="notes" value={formData.notes} onChange={handleChange} className="mt-1 min-h-20 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#c79c84]" />
+        </label>
       </div>
 
-      {/* Helper Text - Privacy */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-xl flex items-center gap-2">
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-        <p className="text-xs text-gray-500">
-          {t('contact.contactForBooking')}
-        </p>
-      </div>
-
-      {/* Decision Safety Microcopy */}
-      <div className="flex items-center justify-center gap-4 text-xs text-gray-400 mb-4">
-        <span>✓ {t('contact.lessThanMinute')}</span>
-        <span>•</span>
-        <span>{t('contact.rescheduleAnytime')}</span>
-      </div>
-
-      {/* Continue Button - Large tap area */}
       <button
         onClick={handleSubmit}
-        className="w-full mt-2 py-5 bg-[#D4A59A] text-white font-semibold rounded-xl hover:bg-[#C47D6D] active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-xl"
+        className="cta-premium mt-5 w-full rounded-2xl bg-[#b88468] py-5 text-base font-semibold text-white shadow-[0_20px_32px_-24px_rgba(72,49,35,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#a67359]"
       >
-        {t('contact.confirmBooking')}
+        {language === 'en' ? 'Confirm details and continue' : 'Kinnita andmed ja liigu edasi'}
       </button>
-      
-      {/* Hidden ref for scroll */}
-      <div ref={continueButtonRef} />
     </div>
   );
 }

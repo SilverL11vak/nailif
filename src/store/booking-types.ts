@@ -3,9 +3,23 @@
 export interface Service {
   id: string;
   name: string;
+  nameEt?: string;
+  nameEn?: string;
   duration: number; // in minutes
   price: number;
   description?: string;
+  descriptionEt?: string;
+  descriptionEn?: string;
+  resultDescription?: string;
+  resultDescriptionEt?: string;
+  resultDescriptionEn?: string;
+  longevityDescription?: string;
+  longevityDescriptionEt?: string;
+  longevityDescriptionEn?: string;
+  suitabilityNote?: string;
+  suitabilityNoteEt?: string;
+  suitabilityNoteEn?: string;
+  imageUrl?: string | null;
   isPopular?: boolean;
   category: 'manicure' | 'pedicure' | 'extensions' | 'nail-art';
 }
@@ -22,6 +36,10 @@ export interface TimeSlot {
   isSos?: boolean;
   sosSurcharge?: number;
   sosLabel?: string | null;
+  smartScore?: number;
+  isRecommended?: boolean;
+  isLastMinuteBoost?: boolean;
+  smartReason?: string | null;
 }
 
 export interface ContactInfo {
@@ -30,6 +48,9 @@ export interface ContactInfo {
   phone: string;
   email?: string;
   notes?: string;
+  inspirationImage?: string;
+  currentNailImage?: string;
+  inspirationNote?: string;
 }
 
 export interface AddOn {

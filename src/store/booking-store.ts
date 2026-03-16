@@ -56,6 +56,7 @@ interface BookingState {
   setSelectedStyle: (style: NailStyle | null) => void;
   
   // Actions - Add-ons
+  setAddOns: (addOns: AddOn[]) => void;
   toggleAddOn: (addOn: AddOn) => void;
   clearAddOns: () => void;
   
@@ -77,42 +78,6 @@ interface BookingState {
   calculateTotals: () => void;
 }
 
-// Initial add-ons data (would come from API in production)
-const initialAddOns: AddOn[] = [
-  {
-    id: 'cuticle-care',
-    name: 'Cuticle Care',
-    duration: 10,
-    price: 8,
-    description: 'Keeps nails healthy between visits',
-    selected: false,
-  },
-  {
-    id: 'hand-massage',
-    name: 'Hand Massage',
-    duration: 15,
-    price: 12,
-    description: 'Relaxing massage for stressed hands',
-    selected: false,
-  },
-  {
-    id: 'nail-strengthener',
-    name: 'Nail Strengthening',
-    duration: 10,
-    price: 8,
-    description: 'Extra strength for weak nails',
-    selected: false,
-  },
-  {
-    id: 'aftercare-kit',
-    name: 'Aftercare Kit',
-    duration: 0,
-    price: 15,
-    description: 'Take home care products',
-    selected: false,
-  },
-];
-
 const initialState = {
   mode: 'guided' as BookingMode,
   selectedService: null,
@@ -120,7 +85,7 @@ const initialState = {
   selectedSlot: null,
   selectedStyle: null,
   contactInfo: null,
-  selectedAddOns: initialAddOns,
+  selectedAddOns: [] as AddOn[],
   currentStep: 1 as BookingStep,
   status: 'idle' as BookingStatus,
   error: null,
@@ -160,6 +125,16 @@ export const useBookingStore = create<BookingState>()(
           a.id === addOn.id ? { ...a, selected: !a.selected } : a
         );
         set({ selectedAddOns: updatedAddOns });
+        get().calculateTotals();
+      },
+
+      setAddOns: (addOns) => {
+        const selectedById = new Set(get().selectedAddOns.filter((item) => item.selected).map((item) => item.id));
+        const normalized = addOns.map((item) => ({
+          ...item,
+          selected: selectedById.has(item.id),
+        }));
+        set({ selectedAddOns: normalized });
         get().calculateTotals();
       },
 
@@ -218,7 +193,7 @@ export const useBookingStore = create<BookingState>()(
       reset: () => {
         set({
           ...initialState,
-          selectedAddOns: initialAddOns,
+          selectedAddOns: [],
         });
       },
 
@@ -263,10 +238,12 @@ export const useSelectedService = () => useBookingStore((state) => state.selecte
 export const useSelectedSlot = () => useBookingStore((state) => state.selectedSlot);
 export const useBookingStatus = () => useBookingStore((state) => state.status);
 export const useFastBooking = () => useBookingStore((state) => state.fastBooking);
-export const useTotals = () => useBookingStore((state) => ({
-  price: state.totalPrice,
-  duration: state.totalDuration,
-}));
-export const useSelectedAddOns = () => useBookingStore((state) => 
-  state.selectedAddOns.filter((a) => a.selected)
-);
+export const useTotals = () => {
+  const price = useBookingStore((state) => state.totalPrice);
+  const duration = useBookingStore((state) => state.totalDuration);
+  return { price, duration };
+};
+export const useSelectedAddOns = () => {
+  const addOns = useBookingStore((state) => state.selectedAddOns);
+  return addOns.filter((item) => item.selected);
+};

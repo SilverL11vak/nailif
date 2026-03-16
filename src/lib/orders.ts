@@ -27,7 +27,14 @@ interface CreateOrderInput {
   status?: 'pending' | 'paid' | 'cancelled' | 'failed';
 }
 
-export async function ensureOrdersTable() {
+declare global {
+  // eslint-disable-next-line no-var
+  var __nailify_orders_ensure__: Promise<void> | undefined;
+}
+
+let ordersEnsurePromise: Promise<void> | null = global.__nailify_orders_ensure__ ?? null;
+
+async function ensureOrdersTableInternal() {
   await sql`
     CREATE TABLE IF NOT EXISTS orders (
       id BIGSERIAL PRIMARY KEY,
@@ -45,6 +52,14 @@ export async function ensureOrdersTable() {
       paid_at TIMESTAMPTZ
     )
   `;
+}
+
+export async function ensureOrdersTable() {
+  if (!ordersEnsurePromise) {
+    ordersEnsurePromise = ensureOrdersTableInternal();
+    global.__nailify_orders_ensure__ = ordersEnsurePromise;
+  }
+  await ordersEnsurePromise;
 }
 
 export async function createOrder(input: CreateOrderInput) {
@@ -165,4 +180,3 @@ export async function listOrders(limit = 100): Promise<OrderRecord[]> {
     };
   });
 }
-

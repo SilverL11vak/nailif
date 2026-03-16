@@ -6,12 +6,15 @@ import { TimeSlot } from './TimeSlot';
 import { FastBookingSheet } from './FastBookingSheet';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
+import { useBookingContent } from '@/hooks/use-booking-content';
 import type { Service, TimeSlot as TimeSlotType } from '@/store/booking-types';
 
 export function HeroBookingWidget() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const { text } = useBookingContent();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<TimeSlotType[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(true);
 
   const {
     selectedService,
@@ -30,8 +33,9 @@ export function HeroBookingWidget() {
   useEffect(() => {
     let mounted = true;
     const loadSlots = async () => {
+      setSlotsLoading(true);
       try {
-        const response = await fetch('/api/slots?upcoming=1&limit=6', { cache: 'no-store' });
+        const response = await fetch('/api/slots?upcoming=1&limit=6');
         if (!response.ok) throw new Error('Failed to load slots');
         const data = (await response.json()) as { slots?: TimeSlotType[] };
         if (mounted) {
@@ -42,6 +46,8 @@ export function HeroBookingWidget() {
         if (mounted) {
           setAvailableSlots([]);
         }
+      } finally {
+        if (mounted) setSlotsLoading(false);
       }
     };
 
@@ -79,7 +85,7 @@ export function HeroBookingWidget() {
   };
 
   const getNextAvailableText = () => {
-    if (!nextSlot) return t('widget.noSlotsAvailable');
+    if (!nextSlot) return text('availability_no_slots', t('widget.noSlotsAvailable'));
     const now = new Date();
     const todayDate = now.toISOString().split('T')[0];
     const tomorrow = new Date();
@@ -92,7 +98,7 @@ export function HeroBookingWidget() {
     if (nextSlot.date === tomorrowDate) {
       return `${t('widget.tomorrowAt')} ${nextSlot.time}`;
     }
-    const formatted = new Date(`${nextSlot.date}T00:00:00`).toLocaleDateString('en-GB', {
+    const formatted = new Date(`${nextSlot.date}T00:00:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -102,7 +108,7 @@ export function HeroBookingWidget() {
 
   return (
     <div
-      id="hero-booking"
+      id="hero-booking-widget"
       className="relative overflow-hidden rounded-[30px] border border-[#f0dbe7] bg-[linear-gradient(180deg,#fffdfd_0%,#fff5fb_100%)] p-6 shadow-[0_34px_56px_-34px_rgba(109,69,97,0.48),0_16px_30px_-24px_rgba(109,69,97,0.32)] lg:p-8"
     >
       <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(215,157,192,0.28)_0%,rgba(215,157,192,0)_70%)]" />
@@ -114,20 +120,22 @@ export function HeroBookingWidget() {
             <div className="absolute inset-[3px] rounded-full bg-[radial-gradient(circle_at_30%_30%,#fff9fd,_#e7b8d4_70%,#cf86b2_100%)]" />
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#ba7ca2]">Premium Nail Care</p>
-            <p className="text-sm font-semibold text-[#3f2b3a]">Booking with Sandra</p>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#ba7ca2]">{t('widget.identityEyebrow')}</p>
+            <p className="text-sm font-semibold text-[#3f2b3a]">{t('widget.identityTitle')}</p>
           </div>
         </div>
         <span className="rounded-full border border-[#f0dfe9] bg-white/85 px-3 py-1 text-[11px] font-medium text-[#7f6275]">
-          Mustamae Studio
+          {t('widget.identityStudio')}
         </span>
       </div>
 
-      <p className="mb-4 text-center text-sm font-medium text-[#826878]">Designed for easy booking</p>
+      <p className="mb-4 text-center text-sm font-medium text-[#826878]">{t('widget.designedEasy')}</p>
 
       <div className="mb-6 flex items-center gap-2 rounded-full border border-[#eddce7] bg-white/80 px-3 py-2 text-sm text-[#7b6776]">
         <span className="h-2 w-2 rounded-full bg-[#c05f8f] animate-pulse" />
-        <span className="font-medium">{t('widget.nextAvailable')} {getNextAvailableText()}</span>
+        <span className="font-medium">
+          {text('availability_next_available', t('widget.nextAvailable'))} {getNextAvailableText()}
+        </span>
       </div>
 
       <div className="mb-6">
@@ -137,7 +145,11 @@ export function HeroBookingWidget() {
       <div className="mb-6">
         <p className="mb-3 text-sm font-medium text-[#634f60]">{t('widget.selectTime')}</p>
         <div className="flex flex-wrap gap-2">
-          {availableSlots.slice(0, 3).map((slot) => (
+          {slotsLoading &&
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={`slot-skeleton-${index}`} className="premium-skeleton-card h-12 w-24 rounded-xl" />
+            ))}
+          {!slotsLoading && availableSlots.slice(0, 3).map((slot) => (
             <TimeSlot
               key={slot.id}
               slot={slot}
@@ -146,8 +158,8 @@ export function HeroBookingWidget() {
               compact
             />
           ))}
-          {availableSlots.length === 0 && (
-            <p className="text-sm text-[#856f80]">{t('widget.noSlotsAvailable')}</p>
+          {!slotsLoading && availableSlots.length === 0 && (
+            <p className="text-sm text-[#856f80]">{text('availability_no_slots', t('widget.noSlotsAvailable'))}</p>
           )}
         </div>
       </div>
@@ -155,7 +167,7 @@ export function HeroBookingWidget() {
       <button
         onClick={handleSecureSlot}
         disabled={!selectedService}
-        className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-semibold transition-all duration-200
+        className={`cta-premium flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-semibold transition-all duration-200
           ${selectedService
             ? 'bg-[#c24d86] text-white shadow-[0_24px_34px_-24px_rgba(141,60,108,0.62)] hover:-translate-y-0.5 hover:bg-[#a93d71] hover:shadow-[0_28px_38px_-24px_rgba(141,60,108,0.68)] active:scale-[0.99]'
             : 'cursor-not-allowed bg-gray-200 text-gray-400'
@@ -168,13 +180,13 @@ export function HeroBookingWidget() {
       </button>
 
       <p className="mt-2 text-center text-xs text-[#856f80]">
-        Secure with a 10 EUR deposit. Remaining balance is paid in studio.
+        {t('widget.depositNotice')}
       </p>
 
       <div className="mt-6 flex items-center justify-center gap-3 border-t border-[#f1e3ec] pt-6 text-xs text-[#7f6275]">
         <span>{t('trust.rating')} ({t('trust.clients')})</span>
         <span>|</span>
-        <span>Medical-grade hygiene</span>
+        <span>{t('widget.hygiene')}</span>
       </div>
 
       {selectedService && selectedSlot && (

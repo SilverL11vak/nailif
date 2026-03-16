@@ -10,12 +10,121 @@ import {
   updateSlot,
   upsertSlot,
 } from '@/lib/slots';
+import { ensureBookingContentTables, listBookingContent } from '@/lib/booking-content';
+import { getLocaleFromPathname } from '@/lib/i18n/locale-path';
+import type { TimeSlot } from '@/store/booking-types';
 
 function toDateString(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function toMinutes(time: string) {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function parseToggle(value: string | undefined, fallback: boolean) {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
+function enrichSmartSlots(
+  slots: TimeSlot[],
+  options: {
+    urgencyBoost: boolean;
+    smartReorder: boolean;
+    gapSensitivity: number;
+    preferredDuration: number;
+  }
+) {
+  const now = Date.now();
+  const byDate = new Map<string, TimeSlot[]>();
+  for (const slot of slots) {
+    if (!byDate.has(slot.date)) byDate.set(slot.date, []);
+    byDate.get(slot.date)?.push(slot);
+  }
+  for (const [, daySlots] of byDate) {
+    daySlots.sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+  }
+
+  const dayAvailability = new Map<string, number>();
+  for (const [date, daySlots] of byDate) {
+    dayAvailability.set(
+      date,
+      daySlots.reduce((count, item) => count + (item.available ? 1 : 0), 0)
+    );
+  }
+
+  const enriched = slots.map((slot) => {
+    let score = 0;
+    if (slot.available) score += 12;
+    if (slot.isPopular || slot.isFastest) score += 10;
+    if (slot.isSos) score += 20;
+
+    const slotTs = new Date(`${slot.date}T${slot.time}:00`).getTime();
+    const diffHours = (slotTs - now) / (1000 * 60 * 60);
+    const isLastMinuteBoost =
+      options.urgencyBoost && slot.available && diffHours >= 0 && diffHours <= 48 && !slot.isSos;
+    if (isLastMinuteBoost) score += 18;
+
+    const daySlots = byDate.get(slot.date) ?? [];
+    const index = daySlots.findIndex((item) => item.id === slot.id);
+    if (index >= 0 && slot.available) {
+      const prev = daySlots[index - 1];
+      const next = daySlots[index + 1];
+      const prevUnavailable = prev ? !prev.available : false;
+      const nextUnavailable = next ? !next.available : false;
+      if (prevUnavailable && nextUnavailable) {
+        score += 8 + options.gapSensitivity * 4;
+      }
+    }
+
+    const dayFree = dayAvailability.get(slot.date) ?? 0;
+    if (dayFree > 0 && dayFree <= 3) {
+      score += 6;
+    }
+
+    if (options.preferredDuration >= 75) {
+      const minutes = toMinutes(slot.time);
+      if (minutes >= 10 * 60 && minutes <= 16 * 60) score += 4;
+    } else if (options.preferredDuration > 0) {
+      const minutes = toMinutes(slot.time);
+      if (minutes >= 12 * 60 && minutes <= 18 * 60) score += 3;
+    }
+
+    return {
+      ...slot,
+      smartScore: score,
+      isLastMinuteBoost,
+      smartReason: slot.isSos ? 'sos' : isLastMinuteBoost ? 'last-minute' : score >= 28 ? 'best-fit' : null,
+    };
+  });
+
+  const recommended = enriched
+    .filter((slot) => slot.available)
+    .sort((a, b) => (b.smartScore ?? 0) - (a.smartScore ?? 0))
+    .slice(0, 3)
+    .map((slot) => ({ ...slot, isRecommended: true }));
+
+  const recommendedIds = new Set(recommended.map((slot) => slot.id));
+  const merged = enriched.map((slot) => (recommendedIds.has(slot.id) ? { ...slot, isRecommended: true } : slot));
+
+  if (options.smartReorder) {
+    merged.sort((a, b) => {
+      if ((a.smartScore ?? 0) === (b.smartScore ?? 0)) return `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
+      return (b.smartScore ?? 0) - (a.smartScore ?? 0);
+    });
+  } else {
+    merged.sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+  }
+
+  return { slots: merged, recommended };
 }
 
 export async function GET(request: Request) {
@@ -31,33 +140,90 @@ export async function GET(request: Request) {
       }
     }
 
+    const locale = (searchParams.get('lang') as 'et' | 'en' | null) ?? getLocaleFromPathname(new URL(request.url).pathname) ?? 'et';
+    const smart = searchParams.get('smart') === '1';
     const upcoming = searchParams.get('upcoming') === '1';
+
+    let urgencyBoost = true;
+    let smartReorder = true;
+    let gapSensitivity = 2;
+    const preferredDuration = Number(searchParams.get('serviceDuration') ?? 0);
+    if (smart) {
+      await ensureBookingContentTables();
+      const content = await listBookingContent(locale);
+      urgencyBoost = parseToggle(content.smart_settings_urgency_boost, true);
+      smartReorder = parseToggle(content.smart_settings_reorder, true);
+      const sensitivity = Number(content.smart_settings_gap_sensitivity ?? '2');
+      gapSensitivity = Number.isFinite(sensitivity) ? Math.min(Math.max(Math.round(sensitivity), 1), 3) : 2;
+    }
     if (upcoming) {
       const limit = Number(searchParams.get('limit') ?? 8);
       const slots = await listUpcomingAvailableSlots(limit);
-      return NextResponse.json({
-        ok: true,
-        slots: slots.map(toBookingTimeSlot),
-      });
+      const mapped = slots.map(toBookingTimeSlot);
+      const smartPayload = smart
+        ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+        : null;
+      return NextResponse.json(
+        {
+          ok: true,
+          slots: smartPayload?.slots ?? mapped,
+          recommendedTimes: smartPayload?.recommended ?? [],
+        },
+        admin
+          ? undefined
+          : {
+              headers: {
+                'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+              },
+            }
+      );
     }
 
     const date = searchParams.get('date');
     if (date) {
-      const slots = await listSlotsForDate(date, admin);
-      return NextResponse.json({
-        ok: true,
-        slots: slots.map(toBookingTimeSlot),
-      });
+      const slots = await listSlotsForDate(date, admin || smart);
+      const mapped = slots.map(toBookingTimeSlot);
+      const smartPayload = smart
+        ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+        : null;
+      return NextResponse.json(
+        {
+          ok: true,
+          slots: smartPayload?.slots ?? mapped,
+          recommendedTimes: smartPayload?.recommended ?? [],
+        },
+        admin
+          ? undefined
+          : {
+              headers: {
+                'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+              },
+            }
+      );
     }
 
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     if (from && to) {
-      const slots = await listSlotsInRange({ from, to, includeUnavailable: admin });
-      return NextResponse.json({
-        ok: true,
-        slots: slots.map(toBookingTimeSlot),
-      });
+      const slots = await listSlotsInRange({ from, to, includeUnavailable: admin || smart });
+      const mapped = slots.map(toBookingTimeSlot);
+      const smartPayload = smart
+        ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+        : null;
+      return NextResponse.json(
+        {
+          ok: true,
+          slots: smartPayload?.slots ?? mapped,
+          recommendedTimes: smartPayload?.recommended ?? [],
+        },
+        admin
+          ? undefined
+          : {
+              headers: {
+                'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+              },
+            }
+      );
     }
 
     const days = Number(searchParams.get('days') ?? 7);
@@ -69,13 +235,27 @@ export async function GET(request: Request) {
     const slots = await listSlotsInRange({
       from: toDateString(start),
       to: toDateString(end),
-      includeUnavailable: admin,
+      includeUnavailable: admin || smart,
     });
+    const mapped = slots.map(toBookingTimeSlot);
+    const smartPayload = smart
+      ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+      : null;
 
-    return NextResponse.json({
-      ok: true,
-      slots: slots.map(toBookingTimeSlot),
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        slots: smartPayload?.slots ?? mapped,
+        recommendedTimes: smartPayload?.recommended ?? [],
+      },
+      admin
+        ? undefined
+        : {
+            headers: {
+              'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+            },
+          }
+    );
   } catch (error) {
     console.error('GET /api/slots error:', error);
     return NextResponse.json({ error: 'Failed to load slots' }, { status: 500 });

@@ -21,7 +21,16 @@ export async function GET(request: Request) {
     }
 
     const images = await listGalleryImages();
-    return NextResponse.json({ ok: true, images });
+    return NextResponse.json(
+      { ok: true, images },
+      admin
+        ? undefined
+        : {
+            headers: {
+              'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=900',
+            },
+          }
+    );
   } catch (error) {
     console.error('GET /api/gallery error:', error);
     return NextResponse.json({ error: 'Failed to load gallery' }, { status: 500 });

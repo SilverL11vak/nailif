@@ -4,11 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:3003": "node ./scripts/dev-with-prewarm.mjs",
+    "dev:turbo": "next dev --turbopack",
+    "dev:turbo:3003": "next dev --turbopack -p 3003",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ship": "powershell -ExecutionPolicy Bypass -File ./scripts/build-deploy-restart.ps1"
   },
   "dependencies": {
+    "gsap": "^3.14.2",
     "next": "^15.2.9",
     "postgres": "^3.4.8",
     "react": "^19.0.0",

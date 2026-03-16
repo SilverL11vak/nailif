@@ -127,18 +127,18 @@ export default function AdminAccountPage() {
   };
 
   return (
-    <main className="admin-shell min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff4fa_40%,_#f7ecf4_100%)] px-4 py-8 sm:px-6 lg:px-10">
+    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <header className="admin-header mb-6 rounded-3xl border border-[#e8e2dc] bg-white/90 p-6 shadow-[0_28px_42px_-34px_rgba(57,45,39,0.42)]">
+        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#b983a2]">Nailify Haldus</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#2f2230]">Konto ja turvalisus</h1>
-              <p className="mt-2 text-sm text-[#6f5d53]">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
+              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Konto ja turvalisus</h1>
+              <p className="mt-2 text-sm text-[#4b5563]">
                 {loading ? 'Laen kontot...' : `Sisse logitud: ${account?.email ?? '-'}`}
               </p>
             </div>
-            <Link className="rounded-full border border-[#ead8e2] bg-white px-4 py-2 text-sm text-[#6f5d53]" href="/admin">
+            <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563]" href="/admin">
               Halduspaneel
             </Link>
           </div>
@@ -159,32 +159,32 @@ export default function AdminAccountPage() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="admin-surface-soft rounded-3xl border border-[#e8e0d9] bg-[linear-gradient(165deg,#fff_0%,#fbf7f2_100%)] p-6 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.28)]">
+          <section className="admin-surface-soft rounded-3xl border border-[#e5e7eb] bg-[linear-gradient(165deg,#fff_0%,#fbf7f2_100%)] p-6 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.28)]">
             <h2 className="text-xl font-semibold text-[#2a211d]">Profiil</h2>
             <p className="mt-1 text-sm text-[#7a665c]">Seda nime näidatakse halduspaneeli tervituses.</p>
-            <label className="mt-4 block text-sm text-[#6f5d53]">
+            <label className="mt-4 block text-sm text-[#4b5563]">
               Kuva nimi
               <input
                 value={nameDraft}
                 onChange={(event) => setNameDraft(event.target.value)}
                 placeholder="Sandra"
-                className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none transition-colors focus:border-[#8a5e76]"
+                className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none transition-colors focus:border-[#9ca3af]"
               />
             </label>
             <button
               onClick={saveProfile}
               disabled={savingProfile}
-              className="mt-4 rounded-full bg-[#8a5e76] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#774f66] disabled:opacity-60"
+              className="mt-4 rounded-full bg-[#111827] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0b1220] disabled:opacity-60"
             >
               {savingProfile ? 'Salvestan...' : 'Salvesta profiil'}
             </button>
           </section>
 
-          <section className="admin-surface rounded-3xl border border-[#ece3db] bg-white/95 p-6 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.35)]">
+          <section className="admin-surface rounded-3xl border border-[#e5e7eb] bg-white/95 p-6 shadow-[0_24px_36px_-30px_rgba(61,45,37,0.35)]">
             <h2 className="text-xl font-semibold text-[#2a211d]">Muuda parooli</h2>
             <p className="mt-1 text-sm text-[#7a665c]">Kasuta turvalist parooli (vähemalt 8 tähemärki).</p>
 
-            <label className="mt-4 block text-sm text-[#6f5d53]">
+            <label className="mt-4 block text-sm text-[#4b5563]">
               Praegune parool
               <div className="mt-1 flex items-center rounded-xl border border-[#e7d9d1] bg-white px-3">
                 <input
@@ -196,14 +196,14 @@ export default function AdminAccountPage() {
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword((prev) => !prev)}
-                  className="text-xs font-medium text-[#8a7367]"
+                  className="text-xs font-medium text-[#6b7280]"
                 >
                   {showCurrentPassword ? 'Peida' : 'Näita'}
                 </button>
               </div>
             </label>
 
-            <label className="mt-3 block text-sm text-[#6f5d53]">
+            <label className="mt-3 block text-sm text-[#4b5563]">
               Uus parool
               <div className="mt-1 flex items-center rounded-xl border border-[#e7d9d1] bg-white px-3">
                 <input
@@ -215,14 +215,14 @@ export default function AdminAccountPage() {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword((prev) => !prev)}
-                  className="text-xs font-medium text-[#8a7367]"
+                  className="text-xs font-medium text-[#6b7280]"
                 >
                   {showNewPassword ? 'Peida' : 'Näita'}
                 </button>
               </div>
             </label>
 
-            <label className="mt-3 block text-sm text-[#6f5d53]">
+            <label className="mt-3 block text-sm text-[#4b5563]">
               Kinnita uus parool
               <div className="mt-1 flex items-center rounded-xl border border-[#e7d9d1] bg-white px-3">
                 <input
@@ -234,14 +234,14 @@ export default function AdminAccountPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="text-xs font-medium text-[#8a7367]"
+                  className="text-xs font-medium text-[#6b7280]"
                 >
                   {showConfirmPassword ? 'Peida' : 'Näita'}
                 </button>
               </div>
             </label>
 
-            <div className="mt-3 flex items-center justify-between text-xs text-[#8a7367]">
+            <div className="mt-3 flex items-center justify-between text-xs text-[#6b7280]">
               <span>Parooli tugevus: {passwordStrength}</span>
               <span>{passwordsMatch ? 'Paroolid kattuvad' : 'Paroolid ei kattu'}</span>
             </div>

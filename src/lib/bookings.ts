@@ -30,6 +30,9 @@ export interface BookingRecord {
   contactPhone: string;
   contactEmail: string | null;
   contactNotes: string | null;
+  inspirationImage: string | null;
+  currentNailImage: string | null;
+  inspirationNote: string | null;
   addOns: AddOn[];
   totalPrice: number;
   totalDuration: number;
@@ -39,7 +42,14 @@ export interface BookingRecord {
   createdAt: string;
 }
 
-export async function ensureBookingsTable() {
+declare global {
+  // eslint-disable-next-line no-var
+  var __nailify_bookings_ensure__: Promise<void> | undefined;
+}
+
+let bookingsEnsurePromise: Promise<void> | null = global.__nailify_bookings_ensure__ ?? null;
+
+async function ensureBookingsTableInternal() {
   await sql`
     CREATE TABLE IF NOT EXISTS bookings (
       id BIGSERIAL PRIMARY KEY,
@@ -57,6 +67,9 @@ export async function ensureBookingsTable() {
       contact_phone TEXT NOT NULL,
       contact_email TEXT,
       contact_notes TEXT,
+      inspiration_image TEXT,
+      current_nail_image TEXT,
+      inspiration_note TEXT,
       add_ons_json JSONB NOT NULL DEFAULT '[]'::jsonb,
       total_price INTEGER NOT NULL,
       total_duration INTEGER NOT NULL,
@@ -71,6 +84,17 @@ export async function ensureBookingsTable() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_amount INTEGER NOT NULL DEFAULT 0`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stripe_session_id TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS contact_notes TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_image TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS current_nail_image TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_note TEXT`;
+}
+
+export async function ensureBookingsTable() {
+  if (!bookingsEnsurePromise) {
+    bookingsEnsurePromise = ensureBookingsTableInternal();
+    global.__nailify_bookings_ensure__ = bookingsEnsurePromise;
+  }
+  await bookingsEnsurePromise;
 }
 
 export async function insertBooking(data: BookingInsert) {
@@ -90,6 +114,9 @@ export async function insertBooking(data: BookingInsert) {
       contact_phone,
       contact_email,
       contact_notes,
+      inspiration_image,
+      current_nail_image,
+      inspiration_note,
       add_ons_json,
       total_price,
       total_duration,
@@ -111,6 +138,9 @@ export async function insertBooking(data: BookingInsert) {
       ${data.contact.phone},
       ${data.contact.email ?? null},
       ${data.contact.notes ?? null},
+      ${data.contact.inspirationImage ?? null},
+      ${data.contact.currentNailImage ?? null},
+      ${data.contact.inspirationNote ?? null},
       ${JSON.stringify(data.addOns)},
       ${data.totalPrice},
       ${data.totalDuration},
@@ -145,6 +175,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
     contact_phone: string;
     contact_email: string | null;
     contact_notes: string | null;
+    inspiration_image: string | null;
+    current_nail_image: string | null;
+    inspiration_note: string | null;
     add_ons_json: AddOn[] | string;
     total_price: number;
     total_duration: number;
@@ -168,6 +201,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       contact_phone,
       contact_email,
       contact_notes,
+      inspiration_image,
+      current_nail_image,
+      inspiration_note,
       add_ons_json,
       total_price,
       total_duration,
@@ -207,6 +243,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       contactPhone: row.contact_phone,
       contactEmail: row.contact_email,
       contactNotes: row.contact_notes,
+      inspirationImage: row.inspiration_image,
+      currentNailImage: row.current_nail_image,
+      inspirationNote: row.inspiration_note,
       addOns,
       totalPrice: row.total_price,
       totalDuration: row.total_duration,
@@ -259,11 +298,35 @@ export async function updateBookingStatus(
 
 export async function updateBookingAdminFields(input: {
   id: string;
-  status?: 'confirmed' | 'cancelled' | 'pending_payment';
+  status?: 'confirmed' | 'cancelled' | 'pending_payment' | 'completed';
+  paymentStatus?: 'unpaid' | 'pending' | 'paid' | 'failed';
+  slotDate?: string;
+  slotTime?: string;
+  serviceId?: string;
+  serviceName?: string;
+  serviceDuration?: number;
+  servicePrice?: number;
+  totalPrice?: number;
+  totalDuration?: number;
   contactNotes?: string | null;
 }) {
-  const [existing] = await sql<[{ id: number; status: string; contact_notes: string | null }]>`
-    SELECT id, status, contact_notes
+  const [existing] = await sql<[
+    {
+      id: number;
+      status: string;
+      payment_status: string;
+      slot_date: string;
+      slot_time: string;
+      service_id: string;
+      service_name: string;
+      service_duration: number;
+      service_price: number;
+      total_price: number;
+      total_duration: number;
+      contact_notes: string | null;
+    },
+  ]>`
+    SELECT id, status, payment_status, slot_date::text, slot_time, service_id, service_name, service_duration, service_price, total_price, total_duration, contact_notes
     FROM bookings
     WHERE id = ${input.id}::bigint
     LIMIT 1
@@ -271,18 +334,53 @@ export async function updateBookingAdminFields(input: {
 
   if (!existing) return null;
 
-  const [row] = await sql<[{ id: number; status: string; contact_notes: string | null }]>`
+  const [row] = await sql<
+    [
+      {
+        id: number;
+        status: string;
+        payment_status: string;
+        slot_date: string;
+        slot_time: string;
+        service_id: string;
+        service_name: string;
+        service_duration: number;
+        service_price: number;
+        total_price: number;
+        total_duration: number;
+        contact_notes: string | null;
+      },
+    ]
+  >`
     UPDATE bookings
     SET
       status = ${input.status ?? existing.status},
+      payment_status = ${input.paymentStatus ?? existing.payment_status},
+      slot_date = ${input.slotDate ?? existing.slot_date},
+      slot_time = ${input.slotTime ?? existing.slot_time},
+      service_id = ${input.serviceId ?? existing.service_id},
+      service_name = ${input.serviceName ?? existing.service_name},
+      service_duration = ${input.serviceDuration ?? existing.service_duration},
+      service_price = ${input.servicePrice ?? existing.service_price},
+      total_price = ${input.totalPrice ?? existing.total_price},
+      total_duration = ${input.totalDuration ?? existing.total_duration},
       contact_notes = ${typeof input.contactNotes === 'string' ? input.contactNotes : input.contactNotes === null ? null : existing.contact_notes}
     WHERE id = ${input.id}::bigint
-    RETURNING id, status, contact_notes
+    RETURNING id, status, payment_status, slot_date::text, slot_time, service_id, service_name, service_duration, service_price, total_price, total_duration, contact_notes
   `;
 
   return {
     id: String(row.id),
     status: row.status,
+    paymentStatus: row.payment_status,
+    slotDate: row.slot_date,
+    slotTime: row.slot_time,
+    serviceId: row.service_id,
+    serviceName: row.service_name,
+    serviceDuration: row.service_duration,
+    servicePrice: row.service_price,
+    totalPrice: row.total_price,
+    totalDuration: row.total_duration,
     contactNotes: row.contact_notes,
   };
 }

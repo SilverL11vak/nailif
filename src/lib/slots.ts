@@ -16,6 +16,13 @@ export interface SlotRecord {
   updatedAt: string;
 }
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __nailify_slots_ensure__: Promise<void> | undefined;
+}
+
+let slotsEnsurePromise: Promise<void> | null = global.__nailify_slots_ensure__ ?? null;
+
 interface SlotInput {
   date: string;
   time: string;
@@ -106,7 +113,7 @@ export function toBookingTimeSlot(slot: SlotRecord): TimeSlot {
   };
 }
 
-export async function ensureSlotsTable() {
+async function ensureSlotsTableInternal() {
   await sql`
     CREATE TABLE IF NOT EXISTS time_slots (
       id BIGSERIAL PRIMARY KEY,
@@ -132,6 +139,8 @@ export async function ensureSlotsTable() {
   await sql`ALTER TABLE time_slots ADD COLUMN IF NOT EXISTS sos_surcharge INTEGER`;
   await sql`ALTER TABLE time_slots ADD COLUMN IF NOT EXISTS sos_label TEXT`;
   await sql`ALTER TABLE time_slots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_time_slots_date_time ON time_slots(slot_date, slot_time)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_time_slots_available_date_time ON time_slots(available, slot_date, slot_time)`;
 
   const [countRow] = await sql<[{ count: string }]>`SELECT COUNT(*)::text AS count FROM time_slots`;
   if (Number(countRow?.count ?? 0) > 0) {
@@ -168,6 +177,14 @@ export async function ensureSlotsTable() {
   }
 }
 
+export async function ensureSlotsTable() {
+  if (!slotsEnsurePromise) {
+    slotsEnsurePromise = ensureSlotsTableInternal();
+    global.__nailify_slots_ensure__ = slotsEnsurePromise;
+  }
+  await slotsEnsurePromise;
+}
+
 export async function listSlotsInRange(input: {
   from: string;
   to: string;
@@ -177,7 +194,7 @@ export async function listSlotsInRange(input: {
     throw new Error('Invalid date range');
   }
 
-  const rows = await sql<{
+  const rowType = sql<{
     id: number;
     slot_date: string;
     slot_time: string;
@@ -190,25 +207,47 @@ export async function listSlotsInRange(input: {
     sos_label: string | null;
     created_at: string;
     updated_at: string;
-  }[]>`
-    SELECT
-      id,
-      slot_date::text,
-      slot_time,
-      available,
-      capacity,
-      is_popular,
-      is_fastest,
-      is_sos,
-      sos_surcharge,
-      sos_label,
-      created_at::text,
-      updated_at::text
-    FROM time_slots
-    WHERE slot_date BETWEEN ${input.from}::date AND ${input.to}::date
-      AND (${input.includeUnavailable ?? false} OR available = TRUE)
-    ORDER BY slot_date ASC, slot_time ASC
-  `;
+  }[]>;
+
+  const rows =
+    input.includeUnavailable ?? false
+      ? await rowType`
+          SELECT
+            id,
+            slot_date::text,
+            slot_time,
+            available,
+            capacity,
+            is_popular,
+            is_fastest,
+            is_sos,
+            sos_surcharge,
+            sos_label,
+            created_at::text,
+            updated_at::text
+          FROM time_slots
+          WHERE slot_date BETWEEN ${input.from}::date AND ${input.to}::date
+          ORDER BY slot_date ASC, slot_time ASC
+        `
+      : await rowType`
+          SELECT
+            id,
+            slot_date::text,
+            slot_time,
+            available,
+            capacity,
+            is_popular,
+            is_fastest,
+            is_sos,
+            sos_surcharge,
+            sos_label,
+            created_at::text,
+            updated_at::text
+          FROM time_slots
+          WHERE slot_date BETWEEN ${input.from}::date AND ${input.to}::date
+            AND available = TRUE
+          ORDER BY slot_date ASC, slot_time ASC
+        `;
 
   return rows.map(mapRowToSlot);
 }
