@@ -8,12 +8,11 @@ import { StickyBookingCTA } from '@/components/layout/StickyBookingCTA';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
-import { mockServices } from '@/store/mock-data';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation, type Language } from '@/lib/i18n';
 import type { NailStyle } from '@/store/booking-types';
 import type { Product } from '@/lib/catalog';
-import { Globe, Heart, ShoppingBag, Menu } from 'lucide-react';
+import { Globe, Heart, ShoppingBag, Menu, ArrowRight } from 'lucide-react';
 interface ServiceCard {
   id: string;
   name: string;
@@ -45,85 +44,6 @@ const nailStyles: NailStyle[] = [
   { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: 'W' },
 ];
 
-const fallbackProductsBase: Array<{
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  imageKey: string;
-  category: string;
-  stock: number;
-  active: boolean;
-  isFeatured: boolean;
-}> = [
-  {
-    id: 'rose-cuticle-oil',
-    name: 'Rose Cuticle Oil',
-    description: 'Daily nourishment for hydrated cuticles and glossy nails.',
-    price: 19,
-    imageKey: 'product_fallback_1',
-    category: 'Aftercare',
-    stock: 40,
-    active: true,
-    isFeatured: true,
-  },
-  {
-    id: 'silk-hand-cream',
-    name: 'Silk Hand Cream',
-    description: 'Velvet hydration that keeps hands smooth between visits.',
-    price: 24,
-    imageKey: 'product_fallback_2',
-    category: 'Aftercare',
-    stock: 35,
-    active: true,
-    isFeatured: false,
-  },
-  {
-    id: 'nail-strength-serum',
-    name: 'Nail Strength Serum',
-    description: 'Targeted support for brittle nails after gel removal.',
-    price: 22,
-    imageKey: 'product_fallback_3',
-    category: 'Aftercare',
-    stock: 28,
-    active: true,
-    isFeatured: false,
-  },
-  {
-    id: 'keratin-repair-balm',
-    name: 'Keratin Repair Balm',
-    description: 'Repair-focused balm for dry cuticles and nail comfort.',
-    price: 27,
-    imageKey: 'product_fallback_4',
-    category: 'Repair',
-    stock: 24,
-    active: true,
-    isFeatured: false,
-  },
-  {
-    id: 'gloss-protect-topcoat',
-    name: 'Gloss Protect Topcoat',
-    description: 'Adds shine and helps salon finish last longer.',
-    price: 18,
-    imageKey: 'product_fallback_5',
-    category: 'Finish care',
-    stock: 30,
-    active: true,
-    isFeatured: false,
-  },
-  {
-    id: 'premium-care-kit',
-    name: 'Premium Care Kit',
-    description: 'Complete at-home set for stronger and healthier nails.',
-    price: 49,
-    imageKey: 'product_fallback_6',
-    category: 'Kit',
-    stock: 16,
-    active: true,
-    isFeatured: false,
-  },
-];
-
 const galleryFallbackKeys = [
   'gallery_fallback_1',
   'gallery_fallback_2',
@@ -132,13 +52,6 @@ const galleryFallbackKeys = [
   'gallery_fallback_5',
   'gallery_fallback_6',
 ];
-
-const serviceFallbackKeys: Record<string, string> = {
-  'gel-manicure': 'service_fallback_gel-manicure',
-  'acrylic-extensions': 'service_fallback_acrylic-extensions',
-  'luxury-spa-manicure': 'service_fallback_luxury-spa-manicure',
-  'gel-pedicure': 'service_fallback_gel-pedicure',
-};
 
 export default function Home() {
   const router = useRouter();
@@ -157,7 +70,7 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [homepageMedia, setHomepageMedia] = useState<Record<string, string>>({});
-  const [serviceCards, setServiceCards] = useState<ServiceCard[]>(mockServices as ServiceCard[]);
+  const [serviceCards, setServiceCards] = useState<ServiceCard[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryImageItem[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState<number | null>(null);
   const [activeSpecialistImageIndex, setActiveSpecialistImageIndex] = useState<number | null>(null);
@@ -171,22 +84,13 @@ export default function Home() {
   const mobileMenuPanelRef = useRef<HTMLDivElement | null>(null);
   const previousFocusedElementRef = useRef<HTMLElement | null>(null);
   const media = (key: string) => homepageMedia[key]?.trim() ?? '';
-  const fallbackProducts = fallbackProductsBase
-    .map((product) => ({
-      ...product,
-      imageUrl: media(product.imageKey),
-    }))
-    .filter((product) => Boolean(product.imageUrl));
-  const clientFeedback = [
-    { id: 'featured', rating: '5.0', imageUrl: media('testimonial_featured') || media('team_portrait') },
-    { id: 'c1', rating: '5.0', imageUrl: media('testimonial_1') || media('team_portrait') },
-    { id: 'c2', rating: '4.9', imageUrl: media('testimonial_2') || media('team_portrait') },
-    { id: 'c3', rating: '5.0', imageUrl: media('testimonial_3') || media('team_portrait') },
-  ];
-  const productSource = products.length > 0 ? products.slice(0, 8) : fallbackProducts;
+  const [feedbackItems, setFeedbackItems] = useState<Array<{ id: string; clientName: string; clientAvatarUrl: string | null; rating: number; feedbackText: string; sourceLabel: string | null }>>([]);
+  // Products: Only use API data - no hardcoded fallback
+  // If API returns empty, the section will show an empty state
+  const productSource = products;
   const featuredProduct = productSource.find((product) => product.isFeatured) ?? productSource[0];
-  const supportingProducts = productSource.filter((product) => product.id !== featuredProduct?.id).slice(0, 4);
-  const retailProducts = featuredProduct ? [featuredProduct, ...supportingProducts].slice(0, 5) : supportingProducts.slice(0, 5);
+  const supportingProducts = productSource.filter((product) => product.id !== featuredProduct?.id);
+  const retailProducts = productSource;
 
   useEffect(() => {
     showDiscountPillRef.current = showDiscountPill;
@@ -307,7 +211,7 @@ export default function Home() {
           setServiceCards(data.services);
         }
       } catch {
-        if (mounted) setServiceCards(mockServices as ServiceCard[]);
+        if (mounted) setServiceCards([]);
       }
     };
     void loadServices();
@@ -315,6 +219,26 @@ export default function Home() {
       mounted = false;
     };
   }, [language]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadFeedback = async () => {
+      try {
+        const response = await fetch('/api/feedback?visible=1');
+        if (!response.ok) return;
+        const data = (await response.json()) as { feedback?: Array<{ id: string; clientName: string; clientAvatarUrl: string | null; rating: number; feedbackText: string; sourceLabel: string | null }> };
+        if (mounted && Array.isArray(data.feedback)) {
+          setFeedbackItems(data.feedback);
+        }
+      } catch {
+        if (mounted) setFeedbackItems([]);
+      }
+    };
+    void loadFeedback();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -539,13 +463,16 @@ export default function Home() {
     return localized === key ? fallback : localized;
   };
 
-  const servicesSource = serviceCards.length > 0 ? serviceCards : (mockServices as ServiceCard[]);
+  // Services: Only use API data - no mockServices fallback
+  // If API returns empty, the section will show an empty state
+  const servicesSource = serviceCards.length > 0 ? serviceCards : [];
   const featuredService = servicesSource.find((service) => Boolean(service.isPopular)) ?? servicesSource[0];
   const services = [
     ...(featuredService ? [featuredService] : []),
     ...servicesSource.filter((service) => service.id !== featuredService?.id),
-  ].slice(0, 5);
-  const regularServices = services.filter((service) => service.id !== featuredService?.id).slice(0, 4);
+  ];
+  // Show all active services - no arbitrary slice limits
+  const regularServices = services.filter((service) => service.id !== featuredService?.id);
   const staggeredLeftService = regularServices[0];
   const staggeredStackServices = regularServices.slice(1, 3);
   const centeredWideService = regularServices[3];
@@ -611,7 +538,7 @@ export default function Home() {
     }
     router.push('/book');
   };
-  // Color tokens per correction pass
+  /* Design system: use globals.css tokens; colors kept for one-off inline use only */
   const colors = {
     primary: '#c24d86',
     primaryHover: '#a93d71',
@@ -625,13 +552,6 @@ export default function Home() {
     textMuted: '#877a87',
   };
 
-  const sectionTitleClass = 'type-h2 text-[#2d232d]';
-  const sectionLeadClass = 'type-body measure-copy mx-auto text-[#6f5d6d]';
-  const cardTitleClass = 'type-h4 text-[#2f2530]';
-  const unifiedCardClass =
-    'rounded-3xl border border-[#ecdfe7] bg-white shadow-[0_24px_38px_-30px_rgba(95,63,86,0.34)]';
-  const unifiedCardSoftClass =
-    'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
   const navLinkClass =
     'type-navbar-link group relative py-1 text-[#584a58] transition-colors duration-200 hover:text-[#2f2530]';
   const utilityIconClass =
@@ -1051,7 +971,7 @@ export default function Home() {
               <span>{t('trust.premiumProducts')}</span>
             </div>
           </div>
-          <div className={`mx-auto mt-7 max-w-4xl px-6 py-5 ${unifiedCardSoftClass}`}>
+          <div className={`mx-auto mt-7 max-w-4xl px-6 py-5 card-premium-soft`}>
             <p className="text-[11px] uppercase tracking-[0.2em] text-[#ad7898]">{t('homepage.localAuthority.eyebrow')}</p>
             <h3 className="mt-2 text-xl font-semibold text-[#2f2530]">{t('homepage.localAuthority.title')}</h3>
             <p className="mt-2 text-sm leading-6 text-[#6c596b]">{t('homepage.localAuthority.subtitle')}</p>
@@ -1098,9 +1018,9 @@ export default function Home() {
                     <div className="absolute left-5 top-5 z-20 rounded-full bg-white/92 px-3.5 py-1.5 text-[11px] font-semibold text-[#7f4f69] shadow-[0_10px_20px_-18px_rgba(98,56,84,0.75)] animate-[serviceBadgeFloat_3.6s_ease-in-out_infinite]">
                       {t('homepage.featuredService.badge')}
                     </div>
-            {(featuredService.imageUrl || media(serviceFallbackKeys[featuredService.id]) || '') ? (
+            {(featuredService.imageUrl || '') ? (
               <Image
-                src={featuredService.imageUrl || media(serviceFallbackKeys[featuredService.id]) || ''}
+                src={featuredService.imageUrl || ''}
                 alt={featuredService.name}
                         width={1080}
                         height={1400}
@@ -1154,7 +1074,7 @@ export default function Home() {
                 >
                   <div className="relative h-full min-h-[27rem]">
                     <Image
-                      src={staggeredLeftService.imageUrl || media(serviceFallbackKeys[staggeredLeftService.id]) || galleryUrls[0] || ''}
+                      src={staggeredLeftService.imageUrl || galleryUrls[0] || ''}
                       alt={staggeredLeftService.name}
                       width={900}
                       height={1200}
@@ -1195,7 +1115,7 @@ export default function Home() {
                   >
                     <div className="relative min-h-[12.75rem]">
                       <Image
-                        src={service.imageUrl || media(serviceFallbackKeys[service.id]) || galleryUrls[1] || galleryUrls[0] || ''}
+                        src={service.imageUrl || galleryUrls[1] || galleryUrls[0] || ''}
                         alt={service.name}
                         width={1200}
                         height={700}
@@ -1236,7 +1156,7 @@ export default function Home() {
                 >
                   <div className="relative min-h-[18rem]">
                     <Image
-                      src={centeredWideService.imageUrl || media(serviceFallbackKeys[centeredWideService.id]) || galleryUrls[2] || galleryUrls[0] || ''}
+                      src={centeredWideService.imageUrl || galleryUrls[2] || galleryUrls[0] || ''}
                       alt={centeredWideService.name}
                       width={1400}
                       height={780}
@@ -1281,7 +1201,7 @@ export default function Home() {
                   >
                     <div className="relative h-[21rem]">
                       <Image
-                        src={service.imageUrl || media(serviceFallbackKeys[service.id]) || galleryUrls[0] || ''}
+                        src={service.imageUrl || galleryUrls[0] || ''}
                         alt={service.name}
                         width={860}
                         height={1100}
@@ -1318,81 +1238,83 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="services" className="border-t border-[#f2e6ed] bg-[#fffbfd] py-20 lg:py-26">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12 lg:mb-14">
-            <h2 className={`mb-4 ${sectionTitleClass}`}>{t('services.title')}</h2>
-            {/* HELPER TEXT */}
-            <p className={sectionLeadClass}>{t('services.subtitle')}</p>
+      <section id="services" className="relative border-t border-[#efe0e8] py-24 lg:py-28" style={{ background: 'linear-gradient(180deg, #fef9fc 0%, #fdf3f8 35%, #fef9fc 100%)' }}>
+        <div className="absolute inset-0 pointer-events-none opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(200,140,170,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(220,160,190,0.06) 0%, transparent 45%)' }} />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14 lg:mb-16">
+            <h2 className={`mb-4 section-title`}>{t('services.title')}</h2>
+            <p className="section-lead measure-copy mx-auto">{t('services.subtitle')}</p>
           </div>
 
-          <div className="space-y-6 lg:space-y-7">
+          <div className="space-y-8 lg:space-y-10">
             {featuredService && (
               <article
                 onClick={() => router.push('/book')}
-                className={`${unifiedCardClass} group cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-[#d8aac2] hover:shadow-[0_34px_52px_-30px_rgba(122,69,106,0.48)]`}
+                className="group cursor-pointer overflow-hidden rounded-[2rem] border-2 border-[#e8dae2] bg-white shadow-[0_32px_64px_-24px_rgba(90,55,78,0.28),0_0_0_1px_rgba(255,255,255,0.8)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_48px_80px_-32px_rgba(100,60,85,0.35),0_0_0_1px_rgba(255,255,255,0.9)_inset]"
               >
                 <div className="grid lg:grid-cols-12">
-                  <div className="relative overflow-hidden bg-[#f8edf4] lg:col-span-5">
-                    <div className="absolute left-4 top-4 z-10 rounded-full border border-[#e7c3d6] bg-white/95 px-3 py-1 text-[11px] font-semibold tracking-[0.02em] text-[#764a64]">
+                  <div className="relative overflow-hidden lg:col-span-5">
+                    <div className="absolute left-6 top-6 z-10 rounded-full bg-white/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7a4d66] shadow-[0_8px_24px_-8px_rgba(100,55,80,0.35)] backdrop-blur-sm">
                       {t('homepage.featuredService.badge')}
                     </div>
-                        {featuredService.imageUrl || media(serviceFallbackKeys[featuredService.id]) || '' ? (
-                          <Image
-                            src={featuredService.imageUrl || media(serviceFallbackKeys[featuredService.id]) || ''}
+                    <div className="absolute inset-0 z-[1] rounded-l-[2rem] ring-1 ring-inset ring-black/5" />
+                    {featuredService.imageUrl || '' ? (
+                      <Image
+                        src={featuredService.imageUrl || ''}
                         alt={featuredService.name}
                         width={960}
                         height={680}
-                        className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03] lg:h-full lg:min-h-[320px]"
+                        className="h-80 w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.04] lg:h-full lg:min-h-[380px]"
                       />
                     ) : (
-                      <div className="flex h-64 items-center justify-center text-5xl text-[#9f7c91] lg:h-full lg:min-h-[320px]">MN</div>
+                      <div className="flex h-80 items-center justify-center bg-[#f5e8ef] text-5xl text-[#9f7c91] lg:h-full lg:min-h-[380px]">MN</div>
                     )}
                   </div>
-                  <div className="flex flex-col p-6 lg:col-span-7 lg:p-8">
-                    <h3 className="text-2xl font-semibold tracking-[-0.02em] text-[#2f2530]">{featuredService.name}</h3>
-                    <p className="mt-3 text-[0.98rem] leading-6 text-[#564553]">
-                      {featuredService.resultDescription || t(`homepage.serviceDecision.fallback.${featuredService.id}.result`)}
-                    </p>
-                    <p className="mt-2 text-sm text-[#675463]">
-                      <span className="font-medium text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
-                      {featuredService.suitabilityNote || t(`homepage.serviceDecision.fallback.${featuredService.id}.suitability`)}
-                    </p>
-                    <p className="mt-3 text-sm text-[#6e5a68]">{featuredService.description}</p>
+                  <div className="flex flex-col justify-between p-7 lg:col-span-7 lg:py-10 lg:pl-10 lg:pr-12">
+                    <div>
+                      <h3 className="font-brand text-3xl font-semibold tracking-[-0.02em] text-[#2f2530] lg:text-4xl">{featuredService.name}</h3>
+                      <p className="mt-5 text-[1.05rem] leading-[1.7] text-[#564553]">
+                        {featuredService.resultDescription || t(`homepage.serviceDecision.fallback.${featuredService.id}.result`)}
+                      </p>
+                      <p className="mt-4 text-sm text-[#675463]">
+                        <span className="font-semibold text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
+                        {featuredService.suitabilityNote || t(`homepage.serviceDecision.fallback.${featuredService.id}.suitability`)}
+                      </p>
+                      <p className="mt-3 text-sm leading-relaxed text-[#6e5a68]">{featuredService.description}</p>
 
-                    <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-[#5d4a59]">
-                      <span className="inline-flex items-center gap-1.5 font-medium">
-                        <svg className="h-4 w-4 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {featuredService.duration} {t('common.minutes')}
-                      </span>
-                      <span className="h-4 w-px bg-[#e7d1de]" />
-                      <span className="inline-flex items-center gap-1.5 font-medium">
-                        <svg className="h-4 w-4 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {featuredService.longevityDescription || t('homepage.featuredService.longevityFallback')}
-                      </span>
+                      <div className="mt-7 flex flex-wrap gap-3">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-4 py-2.5 text-sm font-medium text-[#5d4a59] shadow-sm">
+                          <svg className="h-4 w-4 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {featuredService.duration} {t('common.minutes')}
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-4 py-2.5 text-sm font-medium text-[#5d4a59] shadow-sm">
+                          <svg className="h-4 w-4 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {featuredService.longevityDescription || t('homepage.featuredService.longevityFallback')}
+                        </span>
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-medium text-[#765e71]">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3.5 py-2 border border-[#f5e2ed]">
+                          <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag1')}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3.5 py-2 border border-[#f5e2ed]">
+                          <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag2')}
+                        </span>
+                      </div>
+
+                      <div className="mt-5 rounded-2xl border border-[#f0dae6] bg-[#fff7fc] px-5 py-3.5 text-xs leading-relaxed text-[#6a5566]">
+                        {t('homepage.featuredService.priceTrust')}
+                      </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-[#765e71]">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff5fb] px-3 py-1">
-                        <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag1')}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff5fb] px-3 py-1">
-                        <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag2')}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 rounded-xl border border-[#f0dae6] bg-[#fff7fc] px-3 py-2 text-xs text-[#6a5566]">
-                      {t('homepage.featuredService.priceTrust')}
-                    </div>
-
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-                      <div>
-                        <p className="text-[11px] uppercase tracking-[0.12em] text-[#9d7a90]">{t('homepage.servicesUi.priceLabel')}</p>
-                        <p className="text-[1.75rem] font-semibold leading-none text-[#2f2530]">EUR {featuredService.price}</p>
+                    <div className="mt-10 flex flex-wrap items-end justify-between gap-6 border-t border-[#f0e2eb] pt-8">
+                      <div className="rounded-2xl bg-[#fdf6fa] px-5 py-3 ring-1 ring-[#f0dae6]">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[#9d7a90]">{t('homepage.servicesUi.priceLabel')}</p>
+                        <p className="mt-1 text-[2rem] lg:text-[2.25rem] font-semibold leading-none tracking-tight text-[#2f2530]">EUR {featuredService.price}</p>
                       </div>
                       <button
                         type="button"
@@ -1400,10 +1322,11 @@ export default function Home() {
                           event.stopPropagation();
                           goToBooking();
                         }}
-                        className="btn-primary btn-primary-md"
-                        style={{ backgroundColor: colors.primary }}
+                        className="inline-flex items-center gap-2 rounded-full px-8 py-4 text-base font-semibold text-white shadow-[0_12px_32px_-8px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-8px_rgba(194,77,134,0.55)] active:translate-y-0"
+                        style={{ background: 'linear-gradient(135deg, #d978a7 0%, #c24d86 50%, #ac3d72 100%)' }}
                       >
                         {t('homepage.featuredService.cta')}
+                        <ArrowRight className="h-5 w-5" strokeWidth={2.2} />
                       </button>
                     </div>
                   </div>
@@ -1411,72 +1334,77 @@ export default function Home() {
               </article>
             )}
 
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
               {regularServices.map((service) => (
                 <article
                   key={service.id}
                   onClick={() => router.push('/book')}
-                  className={`${unifiedCardClass} group flex h-full cursor-pointer flex-col overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-[#dfbfd1] hover:shadow-[0_28px_42px_-30px_rgba(108,71,96,0.5)]`}
+                  className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border-2 border-[#e8dce4] bg-white shadow-[0_28px_52px_-24px_rgba(90,55,78,0.3),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(100,60,85,0.38),0_0_0_1px_rgba(255,255,255,0.8)_inset]"
                 >
-                  <div className="relative overflow-hidden bg-[#f8edf4]">
-                              {service.imageUrl || media(serviceFallbackKeys[service.id]) || '' ? (
-                                <Image
-                                  src={service.imageUrl || media(serviceFallbackKeys[service.id]) || ''}
+                  <div className="relative aspect-[3/4] min-h-[220px] overflow-hidden rounded-t-2xl bg-[#f5e8ef]">
+                    <div className="absolute inset-0 z-[1] ring-1 ring-inset ring-black/5 rounded-t-2xl pointer-events-none" />
+                    {service.imageUrl || '' ? (
+                      <Image
+                        src={service.imageUrl || ''}
                         alt={service.name}
                         width={880}
                         height={620}
-                        className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        className="h-full w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06]"
                       />
                     ) : (
-                      <div className="flex h-52 items-center justify-center text-5xl text-[#9f7c91]">MN</div>
+                      <div className="flex h-full items-center justify-center text-5xl text-[#9f7c91]">MN</div>
                     )}
                   </div>
-                  <div className="flex flex-1 flex-col p-5">
-                    <h3 className={cardTitleClass}>{service.name}</h3>
-                    <p className="mt-2 text-[0.95rem] leading-6 text-[#5f4c59]">
+                  <div className="flex flex-1 flex-col p-6">
+                    <h3 className="font-brand text-xl font-semibold tracking-[-0.01em] text-[#2f2530] lg:text-2xl">{service.name}</h3>
+                    <p className="mt-3 line-clamp-2 text-[0.95rem] leading-[1.6] text-[#5f4c59]">
                       {service.resultDescription || t(`homepage.serviceDecision.fallback.${service.id}.result`)}
                     </p>
-                    <p className="mt-2 text-sm text-[#665465]">
-                      <span className="font-medium text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
+                    <p className="mt-2.5 text-sm text-[#665465]">
+                      <span className="font-semibold text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
                       {service.suitabilityNote || t(`homepage.serviceDecision.fallback.${service.id}.suitability`)}
                     </p>
 
-                    <div className="mt-4 space-y-2 text-sm text-[#5e4d5b]">
-                      <p className="inline-flex items-center gap-1.5 font-medium">
-                        <svg className="h-4 w-4 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ead6e2] bg-white px-3.5 py-2 text-xs font-medium text-[#5e4d5b] shadow-sm">
+                        <svg className="h-3.5 w-3.5 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         {service.duration} {t('common.minutes')}
-                      </p>
-                      <p className="inline-flex items-center gap-1.5 font-medium">
-                        <svg className="h-4 w-4 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ead6e2] bg-white px-3.5 py-2 text-xs font-medium text-[#5e4d5b] shadow-sm">
+                        <svg className="h-3.5 w-3.5 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" />
                         </svg>
                         {service.longevityDescription || t(`homepage.serviceDecision.fallback.${service.id}.longevity`)}
-                      </p>
+                      </span>
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-[#765e71]">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff5fb] px-3 py-1">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3 py-1.5 border border-[#f5e2ed]">
                         <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag1')}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#fff5fb] px-3 py-1">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3 py-1.5 border border-[#f5e2ed]">
                         <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag2')}
                       </span>
                     </div>
 
-                    <div className="mt-6 flex items-center justify-between gap-3">
-                      <p className="text-[1.48rem] font-semibold leading-none text-[#2f2530]">EUR {service.price}</p>
+                    <div className="mt-6 flex items-center justify-between gap-4 border-t border-[#f0e2eb] pt-5">
+                      <div className="rounded-xl bg-[#fdf6fa] px-4 py-2.5 ring-1 ring-[#f0dae6]">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-[#9d7a90]">{t('homepage.servicesUi.priceLabel')}</p>
+                        <p className="mt-0.5 text-[1.5rem] font-semibold leading-none tracking-tight text-[#2f2530]">EUR {service.price}</p>
+                      </div>
                       <button
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
                           goToBooking();
                         }}
-                        className="btn-primary btn-primary-sm"
-                        style={{ backgroundColor: colors.primary }}
+                        className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-6px_rgba(194,77,134,0.55)] active:translate-y-0"
+                        style={{ background: 'linear-gradient(135deg, #d978a7 0%, #c24d86 50%, #ac3d72 100%)' }}
                       >
                         {t('homepage.servicesUi.cardCta')}
+                        <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
                       </button>
                     </div>
                   </div>
@@ -1488,116 +1416,131 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
+      {/* 5. RESULTS GALLERY - OUR WORK / MEIE TÖÖ */}
       {/* ===================== */}
-      {/* 5. RESULTS GALLERY - EDITORIAL RHYTHM */}
-      {/* ===================== */}
-      <section id="gallery" className="relative border-t border-[#f2e6ed] bg-[#fff8fc] py-20 lg:py-26">
-        <div className="pointer-events-none absolute inset-x-0 mt-6 h-28 bg-[radial-gradient(ellipse_at_center,rgba(225,169,199,0.13)_0%,rgba(225,169,199,0)_72%)]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 text-center lg:mb-14">
-            <h2 className={`mb-4 ${sectionTitleClass}`}>{t('gallery.title')}</h2>
-            <p className={sectionLeadClass}>{t('homepage.gallery.subtitle')}</p>
+      <section id="gallery" className="relative border-t border-[#efe0e8] py-24 lg:py-28" style={{ background: 'linear-gradient(180deg, #fef9fc 0%, #fdf2f7 38%, #fef9fc 100%)' }}>
+        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(circle at 25% 20%, rgba(210,150,180,0.1) 0%, transparent 48%), radial-gradient(circle at 75% 80%, rgba(230,180,205,0.08) 0%, transparent 48%)' }} />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-14 text-center lg:mb-16">
+            <h2 className="font-brand text-3xl font-semibold tracking-[-0.02em] text-[#2d232d] lg:text-4xl">{t('gallery.title')}</h2>
+            <p className="mx-auto mt-4 max-w-[42ch] text-[1.02rem] leading-relaxed text-[#6f5d6d]">{t('homepage.gallery.subtitle')}</p>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-12 lg:gap-6">
+          <div className="grid gap-6 lg:grid-cols-12 lg:gap-7">
             {nailStyles[0] && (
               <article
                 data-motion="gallery-featured"
-                className="group relative overflow-hidden rounded-[2rem] border border-white/80 shadow-[0_34px_52px_-28px_rgba(101,65,90,0.48)] lg:col-span-8 lg:row-span-2"
+                className="group relative overflow-hidden rounded-[2rem] border-2 border-[#e8dae2] bg-white shadow-[0_36px_72px_-28px_rgba(88,52,75,0.32),0_0_0_1px_rgba(255,255,255,0.7)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_48px_88px_-28px_rgba(95,55,80,0.38),0_0_0_1px_rgba(255,255,255,0.85)_inset] lg:col-span-8 lg:row-span-2"
               >
                 <button className="absolute inset-0 z-10" onClick={() => openGallery(0)} aria-label={getStyleLabel(nailStyles[0])} />
+                <div className="absolute inset-0 z-[1] rounded-[2rem] ring-1 ring-inset ring-black/[0.06]" />
                 <Image
                   src={galleryCards[0]?.imageUrl || galleryUrls[0] || ''}
                   alt={getStyleLabel(nailStyles[0])}
                   width={1200}
                   height={900}
-                  className="h-[28rem] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03] lg:h-full lg:min-h-[36rem]"
+                  className="h-[30rem] w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.05] lg:h-full lg:min-h-[38rem]"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 z-20 p-6 text-white lg:p-8">
-                  <p className="text-xs uppercase tracking-[0.16em] text-white/80">{t('homepage.gallery.featuredLabel')}</p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.02em] lg:text-[2rem]">{getStyleLabel(nailStyles[0])}</h3>
-                  <p className="mt-2 max-w-[50ch] text-sm text-white/90">{getStyleCaption(nailStyles[0]) || t('homepage.gallery.featuredQuote')}</p>
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.25)_70%,rgba(0,0,0,0.55)_100%)]" />
+                <div className="absolute inset-x-0 bottom-0 z-20 p-7 text-white lg:p-10">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/85">{t('homepage.gallery.featuredLabel')}</p>
+                  <h3 className="mt-3 font-brand text-2xl font-semibold tracking-[-0.02em] lg:text-3xl">{getStyleLabel(nailStyles[0])}</h3>
+                  <p className="mt-2 max-w-[50ch] text-sm leading-relaxed text-white/95">{getStyleCaption(nailStyles[0]) || t('homepage.gallery.featuredQuote')}</p>
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
                       handleBookStyle(nailStyles[0]);
                     }}
-                    className="relative z-30 mt-4 inline-flex rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-[#4b3044] shadow-lg"
+                    className="relative z-30 mt-5 inline-flex items-center gap-2 rounded-full bg-white/98 px-5 py-2.5 text-sm font-semibold text-[#4b3044] shadow-[0_8px_24px_-8px_rgba(60,35,50,0.4)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(60,35,50,0.45)]"
                   >
                     {getI18nTextOrFallback('gallery.bookThisStyle', language === 'en' ? 'Book a similar style' : 'Broneeri sarnane stiil')}
+                    <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
                   </button>
                 </div>
               </article>
             )}
 
-            <div className="grid gap-5 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
+            <div className="grid gap-6 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1 lg:gap-7">
               {nailStyles.slice(1, 3).map((style, idx) => (
-                <article key={style.id} data-motion="gallery-support" className="group relative overflow-hidden rounded-[1.7rem] border border-white/80 shadow-[0_24px_36px_-28px_rgba(98,62,89,0.35)]">
+                <article
+                  key={style.id}
+                  data-motion="gallery-support"
+                  className="group relative overflow-hidden rounded-2xl border-2 border-[#e8dae2] bg-white shadow-[0_28px_56px_-24px_rgba(88,52,75,0.28),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(95,55,80,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset]"
+                >
                   <button className="absolute inset-0 z-10" onClick={() => openGallery(idx + 1)} aria-label={getStyleLabel(style)} />
+                  <div className="absolute inset-0 z-[1] rounded-2xl ring-1 ring-inset ring-black/[0.06]" />
                   <Image
                     src={galleryCards[idx + 1]?.imageUrl || galleryUrls[idx + 1] || galleryUrls[0] || ''}
                     alt={getStyleLabel(style)}
                     width={700}
                     height={860}
-                    className="h-[16.5rem] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03] lg:h-[17.5rem]"
+                    className="h-[18rem] w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06] lg:h-[19rem]"
                   />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                  <div className="absolute inset-x-0 bottom-0 z-20 p-4 text-white">
-                    <p className="text-base font-semibold">{getStyleLabel(style)}</p>
-                    <p className="mt-1 text-xs text-white/90">{galleryCards[idx + 1]?.caption || t('homepage.gallery.inspirationLook')}</p>
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.3)_70%,rgba(0,0,0,0.55)_100%)]" />
+                  <div className="absolute inset-x-0 bottom-0 z-20 p-5 text-white lg:p-6">
+                    <p className="font-brand text-lg font-semibold tracking-[-0.01em] lg:text-xl">{getStyleLabel(style)}</p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-white/90">{galleryCards[idx + 1]?.caption || t('homepage.gallery.inspirationLook')}</p>
                   </div>
                 </article>
               ))}
             </div>
 
             {nailStyles[3] && (
-              <article data-motion="gallery-support" className="group relative overflow-hidden rounded-[1.7rem] border border-white/80 shadow-[0_24px_36px_-28px_rgba(98,62,89,0.35)] lg:col-span-5">
+              <article
+                data-motion="gallery-support"
+                className="group relative overflow-hidden rounded-2xl border-2 border-[#e8dae2] bg-white shadow-[0_28px_56px_-24px_rgba(88,52,75,0.28),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(95,55,80,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset] lg:col-span-5"
+              >
                 <button className="absolute inset-0 z-10" onClick={() => openGallery(3)} aria-label={getStyleLabel(nailStyles[3])} />
+                <div className="absolute inset-0 z-[1] rounded-2xl ring-1 ring-inset ring-black/[0.06]" />
                 <Image
                   src={galleryCards[3]?.imageUrl || galleryUrls[3] || galleryUrls[0] || ''}
                   alt={getStyleLabel(nailStyles[3])}
                   width={980}
                   height={760}
-                  className="h-[19rem] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="h-[20rem] w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06] lg:h-[21rem]"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 z-20 p-5 text-white">
-                  <p className="text-lg font-semibold">{getStyleLabel(nailStyles[3])}</p>
-                  <p className="mt-1 text-sm text-white/90">{galleryCards[3]?.caption || t('homepage.gallery.inspirationLook')}</p>
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.3)_70%,rgba(0,0,0,0.55)_100%)]" />
+                <div className="absolute inset-x-0 bottom-0 z-20 p-6 text-white">
+                  <p className="font-brand text-xl font-semibold tracking-[-0.01em]">{getStyleLabel(nailStyles[3])}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-white/90">{galleryCards[3]?.caption || t('homepage.gallery.inspirationLook')}</p>
                 </div>
               </article>
             )}
 
             {nailStyles[4] && (
-              <article data-motion="gallery-support" className="group relative overflow-hidden rounded-[1.7rem] border border-white/80 shadow-[0_24px_36px_-28px_rgba(98,62,89,0.35)] lg:col-span-7">
+              <article
+                data-motion="gallery-support"
+                className="group relative overflow-hidden rounded-2xl border-2 border-[#e8dae2] bg-white shadow-[0_28px_56px_-24px_rgba(88,52,75,0.28),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(95,55,80,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset] lg:col-span-7"
+              >
                 <button className="absolute inset-0 z-10" onClick={() => openGallery(4)} aria-label={getStyleLabel(nailStyles[4])} />
+                <div className="absolute inset-0 z-[1] rounded-2xl ring-1 ring-inset ring-black/[0.06]" />
                 <Image
                   src={galleryCards[4]?.imageUrl || galleryUrls[4] || galleryUrls[0] || ''}
                   alt={getStyleLabel(nailStyles[4])}
                   width={1200}
                   height={760}
-                  className="h-[19rem] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  className="h-[20rem] w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06] lg:h-[21rem]"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 z-20 p-5 text-white">
-                  <p className="text-lg font-semibold">{getStyleLabel(nailStyles[4])}</p>
-                  <p className="mt-1 text-sm text-white/90">{galleryCards[4]?.caption || t('homepage.gallery.inspirationLook')}</p>
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.3)_70%,rgba(0,0,0,0.55)_100%)]" />
+                <div className="absolute inset-x-0 bottom-0 z-20 p-6 text-white">
+                  <p className="font-brand text-xl font-semibold tracking-[-0.01em]">{getStyleLabel(nailStyles[4])}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-white/90">{galleryCards[4]?.caption || t('homepage.gallery.inspirationLook')}</p>
                 </div>
               </article>
             )}
           </div>
 
-          <div className="mt-10 rounded-[1.6rem] border border-[#ecd9e5] bg-white/82 px-6 py-5 text-center shadow-[0_24px_36px_-30px_rgba(95,59,83,0.4)] backdrop-blur-sm">
-            <p className="text-sm text-[#6f5d6d]">
+          <div className="mt-14 rounded-2xl border-2 border-[#e8dae2] bg-white/95 px-8 py-7 text-center shadow-[0_28px_56px_-24px_rgba(88,52,75,0.2),0_0_0_1px_rgba(255,255,255,0.8)_inset] backdrop-blur-sm lg:px-10 lg:py-8">
+            <p className="text-[1.02rem] leading-relaxed text-[#6f5d6d]">
               {getI18nTextOrFallback('homepage.gallery.ctaLead', language === 'en' ? 'Find your next favorite design.' : 'Leia oma järgmine lemmik disain.')}
             </p>
             <button
               onClick={() => router.push('/book')}
-              className="mt-3 rounded-full px-7 py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(220,120,160,0.25)]"
-              style={{ background: 'linear-gradient(135deg,#d978a7 0%,#c24d86 65%,#ac3d72 100%)' }}
+              className="mt-4 inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-base font-semibold text-white shadow-[0_12px_32px_-8px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-8px_rgba(194,77,134,0.55)]"
+              style={{ background: 'linear-gradient(135deg, #d978a7 0%, #c24d86 50%, #ac3d72 100%)' }}
             >
               {t('gallery.bookYourLook')}
+              <ArrowRight className="h-5 w-5" strokeWidth={2.2} />
             </button>
           </div>
         </div>
@@ -1659,7 +1602,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-10 text-center lg:mb-12">
             <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b77f9f]">{t('homepage.addons.eyebrow')}</p>
-            <h2 className={sectionTitleClass}>{t('homepage.addons.title')}</h2>
+            <h2 className="section-title">{t('homepage.addons.title')}</h2>
             <p className="mt-3 text-[1.01rem] text-[#7b6778]">{t('homepage.addons.subtitle')}</p>
             <p className="mt-2 text-sm text-[#9a7891]">{t('homepage.addons.helper')}</p>
           </div>
@@ -1695,7 +1638,7 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 opacity-[0.045] [background-image:radial-gradient(#b57b9d_0.65px,transparent_0.65px)] [background-size:16px_16px]" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div data-motion="sandra-section" className={`relative mx-auto grid max-w-6xl gap-6 rounded-[30px] p-4 backdrop-blur-[2px] sm:p-6 lg:grid-cols-12 lg:items-center lg:gap-12 lg:rounded-[34px] lg:p-10 ${unifiedCardSoftClass}`}>
+          <div data-motion="sandra-section" className={`relative mx-auto grid max-w-6xl gap-6 rounded-[30px] p-4 backdrop-blur-[2px] sm:p-6 lg:grid-cols-12 lg:items-center lg:gap-12 lg:rounded-[34px] lg:p-10 card-premium-soft`}>
             <div className="relative lg:col-span-6">
               <div className="pointer-events-none absolute -left-8 -top-8 h-36 w-36 rounded-full bg-[#f4d7e8]/70 blur-3xl" />
               <div className="pointer-events-none absolute -bottom-8 -right-6 h-44 w-44 rounded-full bg-[#f7d9ea]/65 blur-3xl" />
@@ -1899,7 +1842,7 @@ export default function Home() {
           <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
             <div className="max-w-3xl">
               <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b57b9d]">{t('homepage.products.eyebrow')}</p>
-              <h2 className={sectionTitleClass}>
+              <h2 className="section-title">
                 {getI18nTextOrFallback('homepage.products.retailTitle', language === 'en' ? 'Keep your salon result beautiful for longer' : 'Hoia salongitulemus kauem kaunis')}
               </h2>
               <p className="mt-3 max-w-[54ch] text-[1.01rem] leading-7 text-[#6f5d6d]">
@@ -1919,7 +1862,7 @@ export default function Home() {
 
           {productsLoading ? (
             <div className="grid items-start gap-5 lg:grid-cols-12">
-              <article className={`overflow-hidden rounded-[32px] lg:col-span-8 ${unifiedCardClass}`}>
+              <article className={`overflow-hidden rounded-[32px] lg:col-span-8 card-premium`}>
                 <SkeletonBlock className="aspect-[16/10]" />
                 <div className="space-y-3 p-6">
                   <SkeletonBlock className="h-6 w-36 rounded-full" />
@@ -1929,7 +1872,7 @@ export default function Home() {
                   <SkeletonBlock className="h-10 w-40 rounded-full" />
                 </div>
               </article>
-              <aside className={`space-y-3 rounded-[28px] p-5 lg:col-span-4 ${unifiedCardClass}`}>
+              <aside className={`space-y-3 rounded-[28px] p-5 lg:col-span-4 card-premium`}>
                 <SkeletonBlock className="h-6 w-36 rounded-full" />
                 {Array.from({ length: 3 }).map((_, index) => (
                   <SkeletonBlock key={`product-rail-skeleton-${index}`} className="h-20 w-full rounded-2xl" />
@@ -1938,7 +1881,7 @@ export default function Home() {
               <div className="lg:col-span-12">
                 <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {Array.from({ length: 4 }).map((_, index) => (
-                    <article key={`product-mini-skeleton-${index}`} className={`min-w-[245px] overflow-hidden rounded-[24px] ${unifiedCardClass}`}>
+                    <article key={`product-mini-skeleton-${index}`} className={`min-w-[245px] overflow-hidden rounded-[24px] card-premium`}>
                       <SkeletonBlock className="aspect-[4/3]" />
                       <div className="space-y-2 p-4">
                         <SkeletonBlock className="h-5 w-3/4" />
@@ -1954,7 +1897,7 @@ export default function Home() {
             <div className="space-y-5">
               <div className="grid items-start gap-5 lg:grid-cols-12">
                 {featuredProduct && (
-                  <article className={`group overflow-hidden rounded-[32px] lg:col-span-8 ${unifiedCardClass}`}>
+                  <article className={`group overflow-hidden rounded-[32px] lg:col-span-8 card-premium`}>
                     <div className="grid lg:grid-cols-[1.08fr_1fr]">
                       <div className="relative min-h-[300px] overflow-hidden bg-[#f8edf3]">
                         {featuredProduct.imageUrl ? (
@@ -2026,7 +1969,7 @@ export default function Home() {
                   </article>
                 )}
 
-                <aside className={`rounded-[28px] p-4 sm:p-5 lg:col-span-4 ${unifiedCardClass}`}>
+                <aside className={`rounded-[28px] p-4 sm:p-5 lg:col-span-4 card-premium`}>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a06f8d]">
                     {getI18nTextOrFallback('homepage.products.quickPicksLabel', language === 'en' ? 'Quick picks' : 'Kiired valikud')}
                   </p>
@@ -2067,7 +2010,7 @@ export default function Home() {
 
               <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:pb-0">
                 {retailProducts.map((product) => (
-                  <article key={product.id} className={`${unifiedCardClass} group min-w-[245px] self-start overflow-hidden rounded-[26px] transition hover:-translate-y-0.5 hover:shadow-[0_24px_36px_-24px_rgba(118,75,102,0.45)] lg:min-w-0`}>
+                  <article key={product.id} className={`card-premium group min-w-[245px] self-start overflow-hidden rounded-[26px] transition hover:-translate-y-0.5 hover:shadow-[0_24px_36px_-24px_rgba(118,75,102,0.45)] lg:min-w-0`}>
                     <div
                       className="relative h-44 cursor-pointer overflow-hidden bg-[#f8edf3]"
                       onClick={() => goToProduct(product.id)}
@@ -2116,7 +2059,7 @@ export default function Home() {
               </div>
 
               {false && featuredProduct && (
-                <article className={`group self-start overflow-hidden rounded-[30px] ${unifiedCardClass}`}>
+                <article className={`group self-start overflow-hidden rounded-[30px] card-premium`}>
                   <div className="grid lg:grid-cols-[1.05fr_1fr]">
                     <div className="relative h-64 overflow-hidden bg-[#f8edf3] sm:h-80">
                     {featuredProduct.imageUrl ? (
@@ -2171,7 +2114,7 @@ export default function Home() {
                 <div className="hidden">
                 <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:pb-0">
                   {supportingProducts.map((product, index) => (
-                    <article key={product.id} className={`${unifiedCardClass} group min-w-[255px] self-start overflow-hidden rounded-3xl transition hover:-translate-y-0.5 hover:shadow-[0_24px_36px_-24px_rgba(118,75,102,0.45)] lg:min-w-0`}>
+                    <article key={product.id} className={`card-premium group min-w-[255px] self-start overflow-hidden rounded-3xl transition hover:-translate-y-0.5 hover:shadow-[0_24px_36px_-24px_rgba(118,75,102,0.45)] lg:min-w-0`}>
                     <div className="relative h-44 overflow-hidden bg-[#f8edf3]">
                       {product.imageUrl ? (
                         <Image src={product.imageUrl} alt={product.name} width={700} height={520} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
@@ -2208,76 +2151,79 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 10. CLIENT PHOTO FEEDBACK */}
+      {/* 10. CLIENT FEEDBACK (admin-managed) */}
       {/* ===================== */}
       <section id="testimonials" className="border-t border-[#f2e6ed] bg-[#fffbfd] py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center lg:mb-14">
             <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b77f9f]">{t('homepage.testimonials.eyebrow')}</p>
-            <h2 className={sectionTitleClass}>
-              {t('homepage.testimonials.title')}
-            </h2>
-            <p className={`mx-auto mt-3 ${sectionLeadClass}`}>
-              {t('homepage.testimonials.subtitle')}
-            </p>
+            <h2 className="section-title">{t('homepage.testimonials.title')}</h2>
+            <p className={`mx-auto mt-3 section-lead`}>{t('homepage.testimonials.subtitle')}</p>
           </div>
 
-          <article className={`mb-8 overflow-hidden rounded-[30px] bg-[linear-gradient(130deg,#fff8fc_0%,#fff2f8_52%,#ffe9f4_100%)] px-6 py-8 lg:px-8 lg:py-10 ${unifiedCardSoftClass}`}>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-[#b47f9e]">{t('homepage.testimonials.heroMomentLabel')}</p>
-            <blockquote className="mt-3 text-2xl font-medium leading-relaxed tracking-[-0.012em] text-[#3a2c37] lg:text-[2rem]">
-              &ldquo;{t('homepage.feedback.featured.quote')}&rdquo;
-            </blockquote>
-            <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
-              <span className="rounded-full bg-white/85 px-3 py-1 font-semibold text-[#66475b]">{t('homepage.feedback.featured.name')}</span>
-              <span className="rounded-full border border-[#ebd3e0] bg-white/80 px-3 py-1 text-[#7e6376]">{t('homepage.testimonials.heroServiceRef')}</span>
+          {feedbackItems.length === 0 ? (
+            <div className="rounded-2xl border border-[#f0e2eb] bg-[#fef9fc] px-6 py-12 text-center">
+              <p className="text-[#7e6376]">{t('homepage.testimonials.subtitle')}</p>
             </div>
-          </article>
-
-          <div className="grid gap-5 lg:grid-cols-12">
-            <article className={`group relative overflow-hidden rounded-[24px] lg:col-span-7 ${unifiedCardClass}`}>
-              <Image
-                src={clientFeedback[0].imageUrl}
-                alt={`${t('homepage.feedback.featured.name')} nail result`}
-                width={1200}
-                height={900}
-                className="h-[340px] w-full object-cover transition-transform duration-700 group-hover:scale-[1.03] lg:h-[420px]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-5 lg:p-6">
-                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-[#5f3e56]">
-                  <span className="text-[#c24d86]">&#9733;</span>
-                  {clientFeedback[0].rating}
-                </div>
-                <h3 className="text-xl font-semibold text-white">{t('homepage.feedback.featured.name')}</h3>
-                <p className="mt-1 max-w-[50ch] text-xs leading-5 text-white/90 lg:text-sm">
-                  &ldquo;{t('homepage.feedback.featured.quote')}&rdquo;
-                </p>
-              </div>
-            </article>
-
-            <div className="grid gap-5 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1">
-              {clientFeedback.slice(1).map((item) => (
-                <article key={item.id} className={`group relative overflow-hidden rounded-2xl ${unifiedCardClass}`}>
-                  <Image
-                    src={item.imageUrl}
-                    alt={`${t(`homepage.feedback.${item.id}.name`)} nail result`}
-                    width={900}
-                    height={700}
-                    className="h-[220px] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[10px] font-medium text-[#5f3e56]">
-                      <span className="text-[#c24d86]">&#9733;</span>
-                      {item.rating}
-                    </div>
-                    <h3 className="text-base font-semibold text-white">{t(`homepage.feedback.${item.id}.name`)}</h3>
-                    <p className="mt-1 text-[11px] leading-4 text-white/90">&ldquo;{t(`homepage.feedback.${item.id}.quote`)}&rdquo;</p>
+          ) : (
+            <>
+              {feedbackItems[0] && (
+                <article className={`mb-8 overflow-hidden rounded-[30px] bg-[linear-gradient(130deg,#fff8fc_0%,#fff2f8_52%,#ffe9f4_100%)] px-6 py-8 lg:px-8 lg:py-10 card-premium-soft`}>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#b47f9e]">{t('homepage.testimonials.heroMomentLabel')}</p>
+                  <blockquote className="mt-3 text-2xl font-medium leading-relaxed tracking-[-0.012em] text-[#3a2c37] lg:text-[2rem]">
+                    &ldquo;{feedbackItems[0].feedbackText}&rdquo;
+                  </blockquote>
+                  <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
+                    <span className="rounded-full bg-white/85 px-3 py-1 font-semibold text-[#66475b]">{feedbackItems[0].clientName}</span>
+                    {feedbackItems[0].sourceLabel && (
+                      <span className="rounded-full border border-[#ebd3e0] bg-white/80 px-3 py-1 text-[#7e6376]">{feedbackItems[0].sourceLabel}</span>
+                    )}
                   </div>
                 </article>
-              ))}
-            </div>
-          </div>
+              )}
+
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {feedbackItems.map((item) => (
+                  <article
+                    key={item.id}
+                    className="card-premium group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
+                  >
+                    <div className="flex flex-1 flex-col p-6">
+                      <div className="mb-4 flex items-center gap-3">
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-[#f0dae6] bg-[#f8edf4]">
+                          {item.clientAvatarUrl ? (
+                            <Image
+                              src={item.clientAvatarUrl}
+                              alt={item.clientName}
+                              width={56}
+                              height={56}
+                              className="h-full w-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#9b7590]">
+                              {item.clientName.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-[#2f2530]">{item.clientName}</h3>
+                          {item.sourceLabel && <p className="text-xs text-[#9d7a90]">{item.sourceLabel}</p>}
+                          <div className="mt-1 flex items-center gap-0.5 text-[#c24d86]">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span key={i} className="text-sm" aria-hidden>{i < item.rating ? '★' : '☆'}</span>
+                            ))}
+                            <span className="ml-1 text-xs text-[#6f5d6d]">{item.rating}/5</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[0.95rem] leading-relaxed text-[#5f4c59] line-clamp-4">&ldquo;{item.feedbackText}&rdquo;</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -2288,8 +2234,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
             <div>
-              <h2 className={`mb-5 ${sectionTitleClass}`}>{t('homepage.location.title')}</h2>
-              <p className={`mb-6 ${sectionLeadClass}`}>{t('homepage.location.subtitle')}</p>
+              <h2 className={`mb-5 section-title`}>{t('homepage.location.title')}</h2>
+              <p className={`mb-6 section-lead`}>{t('homepage.location.subtitle')}</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-[#efdde8] bg-white px-4 py-3 text-sm text-[#5d4b58]">{t('homepage.location.badge1')}</div>
                 <div className="rounded-2xl border border-[#efdde8] bg-white px-4 py-3 text-sm text-[#5d4b58]">{t('homepage.location.badge2')}</div>
@@ -2308,7 +2254,7 @@ export default function Home() {
             </div>
 
             <div className="grid gap-4">
-              <article className={`overflow-hidden ${unifiedCardClass}`}>
+              <article className={`overflow-hidden card-premium`}>
                 <Image
                 src={media('location_studio') || media('team_portrait') || media('hero_main')}
                   alt="Nailify studio interior"
@@ -2321,7 +2267,7 @@ export default function Home() {
                   <p className="mt-1 text-sm text-[#5d4b58]">{t('homepage.location.previewText')}</p>
                 </div>
               </article>
-              <article className={`overflow-hidden ${unifiedCardClass}`}>
+              <article className={`overflow-hidden card-premium`}>
                 <iframe
                   title={t('homepage.location.mapTitle')}
                   src="https://www.google.com/maps?q=Mustam%C3%A4e+tee+55+Tallinn&output=embed"
@@ -2346,7 +2292,7 @@ export default function Home() {
             <span className="rounded-full border border-[#e6cddd] bg-white/80 px-3 py-1">{t('homepage.revenue.offerC')}</span>
           </div>
           <div className="grid gap-8 lg:grid-cols-2">
-            <article className={`group overflow-hidden ${unifiedCardClass}`}>
+            <article className={`group overflow-hidden card-premium`}>
               <Image
                 src={media('aftercare_image') || media('product_fallback_1') || media('hero_main')}
                 alt="Aftercare products"
@@ -2374,7 +2320,7 @@ export default function Home() {
               </div>
             </article>
 
-            <article className={`group overflow-hidden ${unifiedCardClass}`}>
+            <article className={`group overflow-hidden card-premium`}>
               <Image
                 src={media('giftcard_image') || media('product_fallback_2') || media('hero_main')}
                 alt="Gift card"

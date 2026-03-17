@@ -79,6 +79,15 @@ export default function AdminHomepageMediaPage() {
   const [newHeroType, setNewHeroType] = useState<MediaType>('image');
   const fileInputsRef = useRef<Record<string, HTMLInputElement | null>>({});
 
+  const sectionTabs = [
+    { key: 'all', label: 'Kõik' },
+    { key: 'hero', label: 'Hero' },
+    { key: 'team', label: 'Meeskond' },
+    { key: 'testimonials', label: 'Kliendid' },
+    { key: 'location', label: 'Asukoht' },
+    { key: 'backgrounds', label: 'Taustad' },
+  ];
+
   const loadItems = async () => {
     setLoading(true);
     setError(null);
@@ -122,11 +131,6 @@ export default function AdminHomepageMediaPage() {
       return acc;
     }, {});
   }, [items, sectionFilter]);
-
-  const sectionOptions = useMemo(() => {
-    const unique = Array.from(new Set(items.map((item) => item.section)));
-    return unique.sort((a, b) => a.localeCompare(b));
-  }, [items]);
 
   const changedCount = items.reduce((sum, item) => {
     const draft = drafts[item.key];
@@ -315,32 +319,32 @@ export default function AdminHomepageMediaPage() {
         </section>
 
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
-              Sektsioon
-              <select
-                value={sectionFilter}
-                onChange={(event) => setSectionFilter(event.target.value)}
-                className="ml-2 rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-sm font-medium text-[#374151]"
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {sectionTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setSectionFilter(tab.key)}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition ${
+                  sectionFilter === tab.key
+                    ? 'bg-[#111827] text-white'
+                    : 'border border-[#d1d5db] bg-white text-[#4b5563] hover:bg-[#f9fafb]'
+                }`}
               >
-                <option value="all">Koik</option>
-                {sectionOptions.map((section) => (
-                  <option key={section} value={section}>
-                    {section}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
             <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#4b5563]">
               Muudetud: {changedCount}
             </span>
+            <button
+              onClick={() => void loadItems()}
+              className="rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-sm font-semibold text-[#4b5563]"
+            >
+              Värskenda
+            </button>
           </div>
-          <button
-            onClick={() => void loadItems()}
-            className="rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-sm font-semibold text-[#4b5563]"
-          >
-            Varskenda
-          </button>
         </div>
 
         {loading ? (

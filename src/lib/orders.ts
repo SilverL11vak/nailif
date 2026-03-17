@@ -50,7 +50,10 @@ async function ensureOrdersTableInternal() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       paid_at TIMESTAMPTZ,
       payment_method TEXT,
-      stripe_payment_intent_id TEXT
+      stripe_payment_intent_id TEXT,
+      manually_reconciled BOOLEAN DEFAULT false,
+      reconciled_at TIMESTAMPTZ,
+      reconciled_by TEXT
     )
   `;
 }
@@ -132,6 +135,89 @@ export async function markOrderPaidFromWebhook(
   `;
 
   return row ? String(row.id) : null;
+}
+
+/**
+ * Manual Stripe reconciliation for an order
+ * Returns: { success: true, alreadyPaid: false, orderId } | { success: true, alreadyPaid: true } | { success: false, reason }
+ */
+export async function reconcileOrderPayment(input: {
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  adminId: string;
+  adminName: string | null;
+}) {
+  const { stripeSessionId, stripePaymentIntentId, adminId, adminName } = input;
+
+  if (!stripeSessionId && !stripePaymentIntentId) {
+    return { success: false as const, reason: 'Either stripeSessionId or stripePaymentIntentId is required' };
+  }
+
+  // Check if already reconciled
+  let existing: {
+    id: number;
+    status: string;
+    manually_reconciled: boolean;
+    reconciled_at: string | null;
+    reconciled_by: string | null;
+  } | null = null;
+
+  if (stripeSessionId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM orders
+      WHERE stripe_session_id = ${stripeSessionId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  } else if (stripePaymentIntentId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM orders
+      WHERE stripe_payment_intent_id = ${stripePaymentIntentId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  }
+
+  if (!existing) {
+    return { success: false as const, reason: 'Order not found for given Stripe ID' };
+  }
+
+  // Already marked as paid manually
+  if (existing.manually_reconciled && existing.status === 'paid') {
+    return { success: true as const, alreadyPaid: true as const, orderId: String(existing.id) };
+  }
+
+  // Update with audit fields
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE orders
+    SET status = 'paid',
+        paid_at = NOW(),
+        manually_reconciled = true,
+        reconciled_at = NOW(),
+        reconciled_by = ${adminName ?? `admin_${adminId}`}
+    WHERE id = ${existing.id}
+    RETURNING id
+  `;
+
+  return { success: true as const, alreadyPaid: false as const, orderId: String(row.id) };
 }
 
 export async function listOrders(limit = 100): Promise<OrderRecord[]> {

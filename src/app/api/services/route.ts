@@ -82,6 +82,7 @@ export async function POST(request: Request) {
       category: string;
       imageUrl: string | null;
       isPopular: boolean;
+      sortOrder: number;
       active: boolean;
     }>;
 
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
       category: payload.category,
       imageUrl: payload.imageUrl ?? null,
       isPopular: Boolean(payload.isPopular),
+      sortOrder: Number(payload.sortOrder ?? 0),
       active: payload.active ?? true,
     });
 

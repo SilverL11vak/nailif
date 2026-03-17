@@ -22,10 +22,6 @@ const defaultHomepageMediaSeed: Array<{
 }> = [
   { key: 'hero_main', label: 'Hero põhifoto', section: 'hero', imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=1200&q=80', sortOrder: 1 },
   { key: 'hero_fallback', label: 'Hero fallback', section: 'hero', imageUrl: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=1200&q=80', sortOrder: 2 },
-  { key: 'service_fallback_gel-manicure', label: 'Teenus fallback: Gel Manicure', section: 'services', imageUrl: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=600&q=80', sortOrder: 10 },
-  { key: 'service_fallback_acrylic-extensions', label: 'Teenus fallback: Acrylic Extensions', section: 'services', imageUrl: 'https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80', sortOrder: 11 },
-  { key: 'service_fallback_luxury-spa-manicure', label: 'Teenus fallback: Luxury Spa Manicure', section: 'services', imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=600&q=80', sortOrder: 12 },
-  { key: 'service_fallback_gel-pedicure', label: 'Teenus fallback: Gel Pedicure', section: 'services', imageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600&q=80', sortOrder: 13 },
   { key: 'gallery_fallback_1', label: 'Galerii fallback 1', section: 'gallery', imageUrl: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?w=800&q=80', sortOrder: 20 },
   { key: 'gallery_fallback_2', label: 'Galerii fallback 2', section: 'gallery', imageUrl: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=800&q=80', sortOrder: 21 },
   { key: 'gallery_fallback_3', label: 'Galerii fallback 3', section: 'gallery', imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800&q=80', sortOrder: 22 },

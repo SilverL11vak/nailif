@@ -94,6 +94,11 @@ async function ensureBookingsTableInternal() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_method TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT`;
+
+  // Manual reconciliation audit columns
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS manually_reconciled BOOLEAN DEFAULT false`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reconciled_by TEXT`;
 }
 
 export async function ensureBookingsTable() {
@@ -316,6 +321,91 @@ export async function markBookingPaidFromWebhook(
   return row ? String(row.id) : null;
 }
 
+/**
+ * Manual Stripe reconciliation for a booking
+ * Returns: { success: true, alreadyPaid: false, bookingId } | { success: true, alreadyPaid: true } | { success: false, reason }
+ */
+export async function reconcileBookingPayment(input: {
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  adminId: string;
+  adminName: string | null;
+}) {
+  // Find booking by session ID or payment intent ID
+  const { stripeSessionId, stripePaymentIntentId, adminId, adminName } = input;
+
+  if (!stripeSessionId && !stripePaymentIntentId) {
+    return { success: false as const, reason: 'Either stripeSessionId or stripePaymentIntentId is required' };
+  }
+
+  // Check if already reconciled
+  let existing: {
+    id: number;
+    payment_status: string;
+    manually_reconciled: boolean;
+    reconciled_at: string | null;
+    reconciled_by: string | null;
+  } | null = null;
+
+  if (stripeSessionId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        payment_status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, payment_status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM bookings
+      WHERE stripe_session_id = ${stripeSessionId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  } else if (stripePaymentIntentId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        payment_status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, payment_status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM bookings
+      WHERE stripe_payment_intent_id = ${stripePaymentIntentId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  }
+
+  if (!existing) {
+    return { success: false as const, reason: 'Booking not found for given Stripe ID' };
+  }
+
+  // Already marked as paid manually
+  if (existing.manually_reconciled && existing.payment_status === 'paid') {
+    return { success: true as const, alreadyPaid: true as const, bookingId: String(existing.id) };
+  }
+
+  // Update with audit fields
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE bookings
+    SET payment_status = 'paid',
+        status = 'confirmed',
+        paid_at = NOW(),
+        manually_reconciled = true,
+        reconciled_at = NOW(),
+        reconciled_by = ${adminName ?? `admin_${adminId}`}
+    WHERE id = ${existing.id}
+    RETURNING id
+  `;
+
+  return { success: true as const, alreadyPaid: false as const, bookingId: String(row.id) };
+}
+
 export async function updateBookingStatus(
   bookingId: string,
   status: 'confirmed' | 'cancelled' | 'pending_payment'
@@ -422,4 +512,11 @@ export async function updateBookingAdminFields(input: {
     totalDuration: row.total_duration,
     contactNotes: row.contact_notes,
   };
+}
+
+export async function deleteBooking(id: string): Promise<boolean> {
+  const result = await sql`
+    DELETE FROM bookings WHERE id = ${id}::bigint
+  `;
+  return result.count !== null && result.count > 0;
 }

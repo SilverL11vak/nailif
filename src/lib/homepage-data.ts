@@ -6,16 +6,21 @@ import { listGalleryImages, type GalleryImage } from '@/lib/gallery';
 import { listServices, type ServiceRecord } from '@/lib/catalog';
 import { listHomepageMedia, type HomepageMediaItem } from '@/lib/homepage-media';
 import { listUpcomingAvailableSlots, type SlotRecord } from '@/lib/slots';
+import { cache } from 'react';
 
 export interface HomepageData {
   products: Product[];
   gallery: GalleryImage[];
   services: ServiceRecord[];
   homepageMedia: Record<string, HomepageMediaItem>;
-  nextSlot: { date: string } | null;
+  nextSlot: { date: string; time?: string } | null;
 }
 
-export async function getHomepageData(locale: string = 'et'): Promise<HomepageData> {
+/**
+ * Cached version of getHomepageData - use this in Server Components
+ * The cache ensures data is only fetched once per request
+ */
+export const getHomepageDataCached = cache(async (locale: string = 'et'): Promise<HomepageData> => {
   // Parallel fetching for performance
   const [products, gallery, services, homepageMedia, slots]: [
     Product[], 
@@ -38,7 +43,7 @@ export async function getHomepageData(locale: string = 'et'): Promise<HomepageDa
   }
 
   const nextSlot = slots && slots.length > 0 
-    ? { date: slots[0].date } 
+    ? { date: slots[0].date, time: slots[0].time } 
     : null;
 
   return {
@@ -48,4 +53,11 @@ export async function getHomepageData(locale: string = 'et'): Promise<HomepageDa
     homepageMedia: homepageMediaRecord,
     nextSlot,
   };
+});
+
+/**
+ * Legacy function - now just calls the cached version
+ */
+export async function getHomepageData(locale: string = 'et'): Promise<HomepageData> {
+  return getHomepageDataCached(locale);
 }

@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
+import { Globe, Heart, ShoppingBag, ArrowLeft, Package } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -13,16 +15,18 @@ interface Product {
   description: string;
   price: number;
   imageUrl: string | null;
+  category?: string;
 }
 
 export default function ShopPage() {
   const router = useRouter();
-  const { language, localizePath } = useTranslation();
+  const { language, setLanguage, localizePath } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaying, setIsPaying] = useState(false);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   const { favoritesCount, isFavorite, toggleFavorite } = useFavorites();
   const { items: cart, addToCart, setCartItems } = useCart();
 
@@ -44,28 +48,30 @@ export default function ShopPage() {
             redirecting: 'Redirecting...',
             checkoutError: 'Checkout failed. Please configure Stripe keys and try again.',
             fallbackBrand: 'Nailify',
-            stockPrefix: 'Stock',
             viewDetails: 'View details',
             favorites: 'Favourites',
+            backToHome: 'Back to home',
+            nav: { home: 'Home', services: 'Services', gallery: 'Gallery', shop: 'Shop', contact: 'Contact', book: 'Book now' },
           }
         : {
             eyebrow: 'Nailify pood',
             title: 'Premium hooldustooted',
-            subtitle: 'Hoolikalt valitud jarelhooldus salongitulemuse hoidmiseks kodus.',
+            subtitle: 'Hoolikalt valitud järelhooldus salongitulemuse hoidmiseks kodus.',
             loading: 'Laen tooteid...',
             addToCart: 'Lisa korvi',
             cart: 'Ostukorv',
             yourItems: 'Sinu tooted',
-            empty: 'Ostukorv on tuhi.',
+            empty: 'Ostukorv on tühi.',
             email: 'E-post (valikuline)',
             total: 'Kokku',
             checkout: 'Maksa Stripega',
             redirecting: 'Suunan maksmisse...',
             checkoutError: 'Maksmine ebaonnestus. Kontrolli Stripe seadeid ja proovi uuesti.',
             fallbackBrand: 'Nailify',
-            stockPrefix: 'Laos',
             viewDetails: 'Vaata detaile',
             favorites: 'Lemmikud',
+            backToHome: 'Tagasi avalehele',
+            nav: { home: 'Avaleht', services: 'Teenused', gallery: 'Galerii', shop: 'Pood', contact: 'Kontakt', book: 'Broneeri' },
           },
     [language],
   );
@@ -131,121 +137,247 @@ export default function ShopPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f6f0eb] px-4 py-10 sm:px-6 lg:px-10">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_340px]">
-        <section className="rounded-3xl border border-[#eadfd7] bg-white/90 p-6 shadow-[0_24px_40px_-32px_rgba(59,42,33,0.6)]">
-          <div className="mb-6">
-            <p className="type-overline text-[#b08979]">{copy.eyebrow}</p>
-            <h1 className="type-h2 mt-1 text-[#2a211d]">{copy.title}</h1>
-            <p className="type-small mt-2 measure-copy text-[#6f5d53]">{copy.subtitle}</p>
-            <button
-              onClick={() => router.push(localizePath('/favorites'))}
-              className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#e6d8cf] bg-white px-4 py-2 text-xs font-semibold text-[#6d5650]"
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+      {/* Store navigation bar */}
+      <header className="sticky top-0 z-50 border-b border-[#f1e1ea] bg-white/92 backdrop-blur-xl shadow-[0_18px_38px_-30px_rgba(97,48,85,0.12)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between gap-4">
+            <div className="flex items-center gap-6">
+              <Link
+                href={localizePath('/')}
+                className="font-brand text-2xl font-semibold leading-none tracking-tight text-[#c24d86] hover:text-[#a93d71] lg:text-3xl"
+              >
+                Nailify
+              </Link>
+              <nav className="hidden md:flex items-center gap-6">
+                <Link href={localizePath('/')} className="text-sm font-medium text-[#584a58] hover:text-[#2f2530] transition-colors">
+                  {copy.nav.home}
+                </Link>
+                <Link href={`${localizePath('/')}#services`} className="text-sm font-medium text-[#584a58] hover:text-[#2f2530] transition-colors">
+                  {copy.nav.services}
+                </Link>
+                <Link href={`${localizePath('/')}#gallery`} className="text-sm font-medium text-[#584a58] hover:text-[#2f2530] transition-colors">
+                  {copy.nav.gallery}
+                </Link>
+                <span className="text-sm font-semibold text-[#2f2530]">{copy.nav.shop}</span>
+                <Link href={`${localizePath('/')}#location`} className="text-sm font-medium text-[#584a58] hover:text-[#2f2530] transition-colors">
+                  {copy.nav.contact}
+                </Link>
+              </nav>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <button
+                  onClick={() => setLangMenuOpen((o) => !o)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#fdf8fb] hover:text-[#4b5563]"
+                  aria-label="Language"
+                >
+                  <Globe size={18} strokeWidth={1.8} />
+                </button>
+                {langMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} aria-hidden />
+                    <div className="absolute right-0 top-12 z-50 w-36 rounded-xl border border-[#ecdce6] bg-white p-1.5 shadow-lg">
+                      <button
+                        onClick={() => { setLanguage('et'); setLangMenuOpen(false); }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-sm ${language === 'et' ? 'bg-[#fff2f9] font-medium text-[#6a3b57]' : 'text-[#5f4f5f] hover:bg-[#fff7fc]'}`}
+                      >
+                        Eesti
+                      </button>
+                      <button
+                        onClick={() => { setLanguage('en'); setLangMenuOpen(false); }}
+                        className={`mt-0.5 w-full rounded-lg px-3 py-2 text-left text-sm ${language === 'en' ? 'bg-[#fff2f9] font-medium text-[#6a3b57]' : 'text-[#5f4f5f] hover:bg-[#fff7fc]'}`}
+                      >
+                        English
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <Link
+                href={localizePath('/favorites')}
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#fdf8fb] hover:text-[#4b5563]"
+                aria-label={copy.favorites}
+              >
+                <Heart size={18} strokeWidth={1.8} fill={favoritesCount > 0 ? 'currentColor' : 'none'} />
+                {favoritesCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[10px] font-semibold text-white">
+                    {favoritesCount > 9 ? '9+' : favoritesCount}
+                  </span>
+                )}
+              </Link>
+              <button
+                onClick={() => router.push(localizePath('/book'))}
+                className="btn-primary btn-primary-md"
+              >
+                {copy.nav.book}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="px-4 py-8 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          {/* Back to home + page title */}
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Link
+              href={localizePath('/')}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#e8dce4] bg-white px-4 py-2.5 text-sm font-medium text-[#4b5563] shadow-sm hover:bg-[#fdf8fb] hover:border-[#dfbfd1] transition-colors"
             >
-              <span>{copy.favorites}</span>
-              {favoritesCount > 0 && (
-                <span className="rounded-full bg-[#c24d86] px-1.5 text-[10px] font-semibold text-white">
-                  {favoritesCount > 9 ? '9+' : favoritesCount}
-                </span>
-              )}
-            </button>
+              <ArrowLeft className="h-4 w-4" />
+              {copy.backToHome}
+            </Link>
+            <div>
+              <p className="type-overline text-[var(--color-text-muted)]">{copy.eyebrow}</p>
+              <h1 className="section-title mt-1">{copy.title}</h1>
+              <p className="type-body mt-1 text-[var(--color-text-muted)]">{copy.subtitle}</p>
+            </div>
           </div>
 
-          {isLoading ? (
-            <p className="text-[#7d685d]">{copy.loading}</p>
-          ) : (
-            <div className="grid gap-5 sm:grid-cols-2">
-              {products.map((product) => (
-                <article key={product.id} className="group overflow-hidden rounded-2xl border border-[#efe4dc] bg-[#fffdfa] shadow-[0_20px_30px_-24px_rgba(59,42,33,0.45)]">
-                  <div className="relative aspect-[4/3] bg-[#f6ece6]">
-                    {product.imageUrl ? (
-                      <Image src={product.imageUrl} alt={product.name} width={700} height={525} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-[#8f776b]">{copy.fallbackBrand}</div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => toggleFavorite(product.id)}
-                      className={`absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/95 ${
-                        isFavorite(product.id) ? 'border-[#c24d86] text-[#c24d86]' : 'border-[#ead6e2] text-[#8f7086]'
-                      }`}
-                      aria-label={language === 'en' ? 'Toggle favourite' : 'Muuda lemmikut'}
+          <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+            {/* Product grid */}
+            <section className="card-premium p-6">
+              {isLoading ? (
+                <p className="py-12 text-center text-[#7d685d]">{copy.loading}</p>
+              ) : products.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Package className="h-14 w-14 text-[#d4b8c8]" />
+                  <p className="mt-4 text-[#6b7280]">{language === 'en' ? 'No products available yet.' : 'Tooteid pole veel saadaval.'}</p>
+                  <Link
+                    href={localizePath('/')}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#f0e2eb] px-4 py-2.5 text-sm font-medium text-[#6a3b57] hover:bg-[#e8d4df]"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    {copy.backToHome}
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {products.map((product) => (
+                    <article
+                      key={product.id}
+                      className="card-premium group overflow-hidden rounded-2xl transition-all duration-200 hover:shadow-[var(--shadow-card-hover)]"
                     >
-                      <svg className="h-4 w-4" fill={isFavorite(product.id) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21s-7.5-4.35-9.5-8.6C.9 9.05 2.15 5.5 5.9 5.5c2.1 0 3.4 1.1 4.1 2.15.7-1.05 2-2.15 4.1-2.15 3.75 0 5 3.55 3.4 6.9C19.5 16.65 12 21 12 21z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    <h2 className="text-lg font-semibold text-[#2f2520]">{product.name}</h2>
-                    <p className="mt-1 text-sm text-[#7e6a5f]">{product.description}</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-base font-semibold text-[#b58373]">EUR {product.price}</span>
-                      <div className="flex items-center gap-2">
+                      <div className="relative aspect-[4/3] overflow-hidden bg-[#f8edf4]">
+                        {product.imageUrl ? (
+                          <Image
+                            src={product.imageUrl}
+                            alt={product.name}
+                            width={700}
+                            height={525}
+                            unoptimized
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-[#9d7a90]">
+                            <Package className="h-12 w-12 opacity-50" />
+                          </div>
+                        )}
                         <button
-                          onClick={() => router.push(localizePath(`/shop/${product.id}`))}
-                          className="rounded-full border border-[#e6d8cf] px-3 py-2 text-xs font-semibold text-[#6f5d53]"
+                          type="button"
+                          onClick={() => toggleFavorite(product.id)}
+                          className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border bg-white/95 transition ${
+                            isFavorite(product.id) ? 'border-[#c24d86] text-[#c24d86]' : 'border-[#ead6e2] text-[#8f7086] hover:border-[#d8b3ca]'
+                          }`}
+                          aria-label={language === 'en' ? 'Toggle favourite' : 'Muuda lemmikut'}
                         >
-                          {copy.viewDetails}
-                        </button>
-                        <button onClick={() => addToCart(product.id)} className="rounded-full bg-[#b58373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#9f6d5c]">
-                          {copy.addToCart}
+                          <Heart size={16} strokeWidth={1.8} fill={isFavorite(product.id) ? 'currentColor' : 'none'} />
                         </button>
                       </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <aside className="sticky top-6 h-fit rounded-3xl border border-[#eadfd7] bg-white p-6 shadow-[0_24px_40px_-32px_rgba(59,42,33,0.6)]">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-[#b08979]">{copy.cart}</p>
-          <h2 className="mt-1 text-xl font-semibold text-[#2a211d]">{copy.yourItems}</h2>
-
-          <div className="mt-4 space-y-3">
-            {cart.length === 0 && <p className="text-sm text-[#8a7367]">{copy.empty}</p>}
-            {cart.map((item) => {
-              const product = productsById.get(item.productId);
-              if (!product) return null;
-              return (
-                <div key={item.productId} className="rounded-xl border border-[#f1e7e1] p-3">
-                  <p className="text-sm font-medium text-[#3b2f28]">{product.name}</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="h-7 w-7 rounded-full border border-[#e6d8cf] text-[#7d685d]">-</button>
-                      <span className="w-5 text-center text-sm text-[#5d4b43]">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="h-7 w-7 rounded-full border border-[#e6d8cf] text-[#7d685d]">+</button>
-                    </div>
-                    <span className="text-sm font-semibold text-[#2f2520]">EUR {product.price * item.quantity}</span>
-                  </div>
+                      <div className="p-5">
+                        <h2 className="text-lg font-semibold text-[#2f2530]">{product.name}</h2>
+                        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-[#6f5d6d]">{product.description}</p>
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                          <span className="text-xl font-semibold text-[#b04b80]">EUR {product.price}</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => router.push(localizePath(`/shop/${product.id}`))}
+                              className="rounded-xl border border-[#e5d8df] bg-white px-3.5 py-2 text-xs font-semibold text-[#5f4f5f] hover:bg-[#fdf8fb] transition-colors"
+                            >
+                              {copy.viewDetails}
+                            </button>
+                            <button
+                              onClick={() => addToCart(product.id)}
+                              className="rounded-xl bg-[#c24d86] px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_14px_-4px_rgba(194,77,134,0.45)] hover:bg-[#a93d71] transition-colors"
+                            >
+                              {copy.addToCart}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
                 </div>
-              );
-            })}
+              )}
+            </section>
+
+            {/* Cart sidebar */}
+            <aside className="sticky top-24 h-fit rounded-[24px] border border-[#ecdfe7] bg-white/95 p-6 shadow-[0_24px_48px_-32px_rgba(95,63,86,0.18)] backdrop-blur-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9d7a90]">{copy.cart}</p>
+              <h2 className="mt-1 text-xl font-semibold text-[#2f2530]">{copy.yourItems}</h2>
+
+              <div className="mt-4 space-y-3">
+                {cart.length === 0 && <p className="text-sm text-[#6b7280]">{copy.empty}</p>}
+                {cart.map((item) => {
+                  const product = productsById.get(item.productId);
+                  if (!product) return null;
+                  return (
+                    <div key={item.productId} className="rounded-xl border border-[#f0e2eb] bg-[#fef9fc] p-3">
+                      <p className="text-sm font-medium text-[#2f2530]">{product.name}</p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5d8df] text-[#6b7280] hover:bg-white"
+                          >
+                            −
+                          </button>
+                          <span className="w-6 text-center text-sm font-medium text-[#374151]">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5d8df] text-[#6b7280] hover:bg-white"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <span className="text-sm font-semibold text-[#2f2530]">EUR {product.price * item.quantity}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <label className="mt-5 block text-sm font-medium text-[#4b5563]">
+                {copy.email}
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="client@email.com"
+                  className="mt-1.5 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none focus:ring-1 focus:ring-[#c24d86]/20"
+                />
+              </label>
+
+              <div className="mt-5 flex items-center justify-between border-t border-[#f0e2eb] pt-4">
+                <span className="text-sm text-[#6b7280]">{copy.total}</span>
+                <span className="text-lg font-semibold text-[#2f2530]">EUR {cartTotal}</span>
+              </div>
+
+              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+              <button
+                onClick={handleCheckout}
+                disabled={cart.length === 0 || isPaying}
+                className="mt-4 w-full rounded-xl bg-[#c24d86] py-3.5 font-semibold text-white shadow-[0_8px_24px_-8px_rgba(194,77,134,0.5)] hover:bg-[#a93d71] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                {isPaying ? copy.redirecting : copy.checkout}
+              </button>
+            </aside>
           </div>
-
-          <label className="mt-5 block text-sm text-[#6f5d53]">
-            {copy.email}
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="client@email.com" className="mt-1 w-full rounded-xl border border-[#e9ddd5] px-3 py-2 outline-none focus:border-[#b58373]" />
-          </label>
-
-          <div className="mt-5 flex items-center justify-between border-t border-[#f1e7e1] pt-4">
-            <span className="text-sm text-[#7d685d]">{copy.total}</span>
-            <span className="text-lg font-semibold text-[#2f2520]">EUR {cartTotal}</span>
-          </div>
-
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-
-          <button
-            onClick={handleCheckout}
-            disabled={cart.length === 0 || isPaying}
-            className="mt-4 w-full rounded-xl bg-[#b58373] py-3 font-semibold text-white transition-colors hover:bg-[#9f6d5c] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isPaying ? copy.redirecting : copy.checkout}
-          </button>
-        </aside>
-      </div>
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }

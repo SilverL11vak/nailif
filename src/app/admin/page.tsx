@@ -1,28 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton';
-import { AdminQuickActions } from '@/components/admin/AdminQuickActions';
 import { AdminTodayTimeline } from '@/components/admin/AdminTodayTimeline';
+import { AdminSearch } from '@/components/admin/AdminSearch';
 import { getAdminFromCookies } from '@/lib/admin-auth';
 import { getAdminDashboardStats } from '@/lib/admin-dashboard';
-
-const businessCards = [
-  { title: 'Teenused', description: 'Hinnad, kestused, nahtavus', href: '/admin/services' },
-  { title: 'Tooted', description: 'Pood, laoseis, pildid', href: '/admin/products' },
-  { title: 'Galerii', description: 'Avalehe inspiratsioon', href: '/admin/gallery' },
-  { title: 'Avalehe pildid', description: 'Hero, team, testimonial, asukoht', href: '/admin/homepage-media' },
-  { title: 'Bookingu sisu', description: 'Mikrocopy ja sammud', href: '/admin/booking' },
-  { title: 'Tellimused', description: 'Maksed ja staatused', href: '/admin/orders' },
-  { title: 'Konto', description: 'Turvalisus ja profiil', href: '/admin/account' },
-];
-
-function statusLabel(status: string) {
-  if (status === 'confirmed') return 'Kinnitatud';
-  if (status === 'completed') return 'Lõpetatud';
-  if (status === 'cancelled') return 'Tühistatud';
-  if (status === 'pending_payment') return 'Makse ootel';
-  return status;
-}
+import { Calendar, ShoppingBag, CreditCard, LayoutGrid, Settings } from 'lucide-react';
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat('et-EE', {
@@ -39,190 +22,177 @@ export default async function AdminHomePage() {
   const stats = await getAdminDashboardStats();
   const displayName = admin.name?.trim() || 'Sandra';
   const todayLabel = formatDate(new Date());
-  const bookingTrendPrefix = stats.bookingChangeVsLastWeek >= 0 ? '+' : '';
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-[1400px]">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="type-overline text-[#6b7280]">Nailify Super Admin</p>
-              <h1 className="type-h2 mt-1 text-[#111827]">Command Deck</h1>
-              <p className="type-small measure-copy mt-2 text-[#4b5563]">
-                Tere {displayName}. Täna on {todayLabel}. Paneel on üles ehitatud päevase töö tempo järgi:
-                operatsioonid, ajakava ja äri.
-              </p>
+    <div className="admin-cockpit-bg min-h-screen">
+      {/* Sticky top bar: always visible, key metrics + search + logout */}
+      <header className="admin-sticky-bar">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <Link href="/admin" className="font-brand text-xl font-semibold tracking-tight text-[var(--color-text-body)] hover:text-[var(--color-primary)] sm:text-2xl">
+            Halduspaneel
+          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="admin-metric-chip flex items-center gap-1.5 px-3 py-1.5">
+                <span className="admin-muted text-xs">Täna</span>
+                <span className="admin-metric-value text-base">{stats.todayBookings.length}</span>
+                <span className="admin-muted text-xs">broneeringut</span>
+              </span>
+              <span className="admin-metric-chip hidden px-3 py-1.5 sm:inline-flex">
+                <span className="admin-muted text-xs">Käive</span>
+                <span className="ml-1.5 font-semibold text-[var(--color-text-body)]">€{stats.revenueToday}</span>
+              </span>
             </div>
+            <AdminSearch />
             <AdminLogoutButton />
           </div>
+        </div>
+      </header>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Broneeringud täna: {stats.todayBookings.length}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Vabad ajad täna: {stats.freeSlotsToday}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              SOS ajad: {stats.sosSlotsToday}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Käive täna: EUR {stats.revenueToday}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Trend: {bookingTrendPrefix}
-              {stats.bookingChangeVsLastWeek}
-            </span>
+      <main className="mx-auto max-w-6xl px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+        {/* Welcome */}
+        <p className="type-small admin-muted mb-6">
+          Tere, <span className="font-medium text-[var(--color-text-body)]">{displayName}</span>. {todayLabel}.
+        </p>
+
+        {/* Primary actions: the 3 most important things */}
+        <section className="mb-8">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Link
+              href="/admin/bookings"
+              className="admin-primary-card admin-primary-card-accent group flex flex-col p-5 sm:p-6"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                  <Calendar className="h-5 w-5" strokeWidth={1.8} />
+                </div>
+                <span className="admin-metric-value text-2xl sm:text-3xl">{stats.todayBookings.length}</span>
+              </div>
+              <h2 className="mt-3 font-semibold text-[var(--color-text-body)] group-hover:text-[var(--color-primary)]">
+                Broneeringud
+              </h2>
+              <p className="type-small admin-muted mt-1">Vaata ja halda kõiki broneeringuid</p>
+            </Link>
+            <Link
+              href="/admin/slots"
+              className="admin-primary-card admin-primary-card-accent group flex flex-col p-5 sm:p-6"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                  <Calendar className="h-5 w-5" strokeWidth={1.8} />
+                </div>
+                <span className="admin-metric-value text-2xl sm:text-3xl">{stats.freeSlotsToday}</span>
+              </div>
+              <h2 className="mt-3 font-semibold text-[var(--color-text-body)] group-hover:text-[var(--color-primary)]">
+                Vabad ajad
+              </h2>
+              <p className="type-small admin-muted mt-1">Lisa või muuda vabu aegu täna</p>
+            </Link>
+            <Link
+              href="/admin/orders"
+              className="admin-primary-card admin-primary-card-accent group flex flex-col p-5 sm:p-6"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                  <CreditCard className="h-5 w-5" strokeWidth={1.8} />
+                </div>
+                <span className="admin-metric-value text-2xl sm:text-3xl">{stats.orders}</span>
+              </div>
+              <h2 className="mt-3 font-semibold text-[var(--color-text-body)] group-hover:text-[var(--color-primary)]">
+                Tellimused
+              </h2>
+              <p className="type-small admin-muted mt-1">Maksed ja tellimuste staatused</p>
+            </Link>
           </div>
-        </header>
-
-        <AdminQuickActions />
-
-        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
-          <aside className="space-y-4">
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="type-overline text-[#6b7280]">Operatsioonid täna</p>
-              <div className="mt-3 space-y-2 text-sm">
-                <Link
-                  href="/admin/bookings?view=today"
-                  className="flex items-center justify-between rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-[#374151]"
-                >
-                  <span>Tänased broneeringud</span>
-                  <span className="font-semibold">{stats.todayBookings.length}</span>
-                </Link>
-                <Link
-                  href="/admin/slots"
-                  className="flex items-center justify-between rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-[#374151]"
-                >
-                  <span>Kalendri juhtimine</span>
-                  <span className="text-xs uppercase text-[#6b7280]">Ava</span>
-                </Link>
-                <Link
-                  href="/admin/orders"
-                  className="flex items-center justify-between rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-[#374151]"
-                >
-                  <span>Maksed</span>
-                  <span className="font-semibold">{stats.orders}</span>
-                </Link>
-              </div>
-            </article>
-
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="type-overline text-[#6b7280]">Kiired soovitused</p>
-              <div className="mt-3 space-y-2 text-sm text-[#374151]">
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="font-medium">Järgmine vaba aeg</p>
-                  <p className="text-xs text-[#6b7280]">
-                    {stats.nextFreeSlot?.slotDate || '-'} {stats.nextFreeSlot?.slotTime || ''}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="font-medium">Järgmine SOS aeg</p>
-                  <p className="text-xs text-[#6b7280]">
-                    {stats.nextSosSlot?.slotDate || '-'} {stats.nextSosSlot?.slotTime || ''}
-                  </p>
-                </div>
-                <Link
-                  href={
-                    stats.nextFreeSlot
-                      ? `/admin/slots?action=sos&date=${encodeURIComponent(stats.nextFreeSlot.slotDate)}&time=${encodeURIComponent(stats.nextFreeSlot.slotTime)}`
-                      : '/admin/slots?action=sos'
-                  }
-                  className="block rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-center font-semibold text-[#374151]"
-                >
-                  Märgi järgmine aeg SOS-iks
-                </Link>
-              </div>
-            </article>
-          </aside>
-
-          <div className="space-y-4">
-            <AdminTodayTimeline items={stats.todayBookings} />
-
-            <section className="admin-panel rounded-3xl p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="type-h4 text-[#111827]">Äri ja sisu moodulid</h2>
-                <p className="type-small text-[#6b7280]">Core haldus</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {businessCards.map((card) => (
-                  <Link key={card.href} href={card.href} className="admin-action-tile rounded-2xl p-4">
-                    <h3 className="text-base font-semibold text-[#111827]">{card.title}</h3>
-                    <p className="mt-1 text-sm text-[#4b5563]">{card.description}</p>
-                    <span className="mt-3 inline-block text-xs font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
-                      Ava vaade
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <aside className="space-y-4">
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="type-overline text-[#6b7280]">Järgmine klient</p>
-              {stats.nextBooking ? (
-                <div className="mt-3">
-                  <p className="text-base font-semibold text-[#111827]">{stats.nextBooking.clientName}</p>
-                  <p className="text-sm text-[#4b5563]">{stats.nextBooking.serviceName}</p>
-                  <p className="mt-1 text-sm text-[#374151]">
-                    {stats.nextBooking.slotDate} kell {stats.nextBooking.slotTime}
-                  </p>
-                  <span className="mt-2 inline-flex rounded-full border border-[#d1d5db] bg-white px-2 py-1 text-xs text-[#4b5563]">
-                    {statusLabel(stats.nextBooking.status)}
-                  </span>
-                </div>
-              ) : (
-                <p className="mt-2 text-sm text-[#6b7280]">Broneeringud puuduvad.</p>
-              )}
-            </article>
-
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Finantsplokk</p>
-              <div className="mt-3 grid gap-2">
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Käive täna</p>
-                  <p className="text-lg font-semibold text-[#111827]">EUR {stats.revenueToday}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Käive nädal</p>
-                  <p className="text-lg font-semibold text-[#111827]">EUR {stats.revenueThisWeek}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Broneeringute trend</p>
-                  <p className="text-lg font-semibold text-[#111827]">
-                    {bookingTrendPrefix}
-                    {stats.bookingChangeVsLastWeek}
-                  </p>
-                </div>
-              </div>
-            </article>
-
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Süsteemi maht</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Teenused</p>
-                  <p className="font-semibold text-[#111827]">{stats.services}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Tooted</p>
-                  <p className="font-semibold text-[#111827]">{stats.products}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Broneeringud</p>
-                  <p className="font-semibold text-[#111827]">{stats.bookings}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Vabad (7 p)</p>
-                  <p className="font-semibold text-[#111827]">{stats.availableSlotsNext7Days}</p>
-                </div>
-              </div>
-            </article>
-          </aside>
         </section>
-      </div>
-    </main>
+
+        {/* Two-column: Today's timeline (left) + Navigation (right) */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[minmax(0,1.2fr)_400px]">
+          {/* Today's bookings – always show for context */}
+          <section className="admin-panel p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="admin-section-overline">Täna</p>
+                <h2 className="type-h4 admin-heading mt-1">Broneeringute ajajoon</h2>
+              </div>
+              <Link
+                href="/admin/bookings?view=today"
+                className="btn-primary btn-primary-sm"
+              >
+                Kõik broneeringud
+              </Link>
+            </div>
+            {stats.todayBookings.length > 0 ? (
+              <AdminTodayTimeline items={stats.todayBookings} showHeader={false} />
+            ) : (
+              <div className="rounded-2xl border border-[var(--color-border-card-soft)] bg-[#fef8fb]/60 py-8 text-center">
+                <p className="admin-muted">Täna pole broneeringuid.</p>
+                <Link href="/admin/slots" className="btn-secondary btn-secondary-sm mt-3 inline-flex">
+                  Halda vabu aegu
+                </Link>
+              </div>
+            )}
+          </section>
+
+          {/* Right: Sisu + Broneerimine + Seaded in one card */}
+          <aside className="space-y-6">
+            <div className="admin-panel p-5">
+              <p className="admin-section-overline">Sisu</p>
+              <h2 className="type-h4 admin-heading mt-1 mb-4">Avalehe ja pood</h2>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Link href="/admin/services" className="admin-action-tile flex items-center gap-3 p-3">
+                  <LayoutGrid className="h-4 w-4 shrink-0 admin-muted" />
+                  <span className="font-medium admin-heading">Teenused</span>
+                </Link>
+                <Link href="/admin/products" className="admin-action-tile flex items-center gap-3 p-3">
+                  <ShoppingBag className="h-4 w-4 shrink-0 admin-muted" />
+                  <span className="font-medium admin-heading">Tooted</span>
+                </Link>
+                <Link href="/admin/gallery" className="admin-action-tile flex items-center gap-3 p-3">
+                  <LayoutGrid className="h-4 w-4 shrink-0 admin-muted" />
+                  <span className="font-medium admin-heading">Galerii</span>
+                </Link>
+                <Link href="/admin/feedback" className="admin-action-tile flex items-center gap-3 p-3">
+                  <LayoutGrid className="h-4 w-4 shrink-0 admin-muted" />
+                  <span className="font-medium admin-heading">Tagasiside</span>
+                </Link>
+                <Link href="/admin/homepage-media" className="admin-action-tile flex items-center gap-3 p-3">
+                  <LayoutGrid className="h-4 w-4 shrink-0 admin-muted" />
+                  <span className="font-medium admin-heading">Avalehe pildid</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="admin-panel p-5">
+              <p className="admin-section-overline">Broneerimine</p>
+              <h2 className="type-h4 admin-heading mt-1 mb-4">Tekstid ja seaded</h2>
+              <div className="grid gap-2">
+                <Link href="/admin/booking" className="admin-action-tile flex items-center gap-3 p-3">
+                  <LayoutGrid className="h-4 w-4 shrink-0 admin-muted" />
+                  <span className="font-medium admin-heading">Broneerimise tekstid ja lisateenused</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="admin-panel p-4">
+              <Link href="/admin/account" className="admin-action-tile flex items-center gap-3 p-3">
+                <Settings className="h-4 w-4 shrink-0 admin-muted" />
+                <span className="font-medium admin-heading">Konto ja seaded</span>
+              </Link>
+            </div>
+          </aside>
+        </div>
+
+        {/* Quick link to public site */}
+        <div className="mt-8 flex justify-center">
+          <Link
+            href="/"
+            className="type-small inline-flex items-center gap-2 rounded-full border border-[var(--color-border-card-soft)] bg-white px-4 py-2 admin-muted hover:border-[var(--color-border-card)] hover:bg-[#fff8fb]"
+          >
+            Vaata avalehte
+          </Link>
+        </div>
+      </main>
+    </div>
   );
 }

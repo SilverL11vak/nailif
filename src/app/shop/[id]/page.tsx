@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
+import { ShopNavBar } from '@/components/shop/ShopNavBar';
+import { Heart, ArrowLeft } from 'lucide-react';
 
 interface ProductItem {
   id: string;
@@ -20,8 +23,8 @@ interface ProductItem {
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { language, localizePath } = useTranslation();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { language, setLanguage, localizePath } = useTranslation();
+  const { favoritesCount, isFavorite, toggleFavorite } = useFavorites();
   const { addToCart } = useCart();
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +49,9 @@ export default function ProductDetailPage() {
           viewDetails: 'View details',
           notFound: 'Product not found',
           notFoundHint: 'This product may be unavailable right now.',
+          backToHome: 'Back to home',
+          backToShop: 'Back to products',
+          nav: { home: 'Home', services: 'Services', gallery: 'Gallery', shop: 'Shop', contact: 'Contact', book: 'Book now' },
         }
       : {
           back: 'Tagasi toodete juurde',
@@ -63,6 +69,9 @@ export default function ProductDetailPage() {
           viewDetails: 'Vaata detaile',
           notFound: 'Toodet ei leitud',
           notFoundHint: 'See toode võib hetkel olla ajutiselt mitte saadaval.',
+          backToHome: 'Tagasi avalehele',
+          backToShop: 'Tagasi toodete juurde',
+          nav: { home: 'Avaleht', services: 'Teenused', gallery: 'Galerii', shop: 'Pood', contact: 'Kontakt', book: 'Broneeri' },
         };
 
   useEffect(() => {
@@ -101,42 +110,63 @@ export default function ProductDetailPage() {
       .slice(0, 4);
   }, [products, product]);
 
+  const navCopy = language === 'en' ? { backToHome: 'Back to home' as const, nav: { home: 'Home', services: 'Services', gallery: 'Gallery', shop: 'Shop', contact: 'Contact', book: 'Book now' } } : { backToHome: 'Tagasi avalehele' as const, nav: { home: 'Avaleht', services: 'Teenused', gallery: 'Galerii', shop: 'Pood', contact: 'Kontakt', book: 'Broneeri' } };
+
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[#fff8fc] px-4 py-10 sm:px-6 lg:px-10">
-        <div className="mx-auto max-w-6xl rounded-[28px] border border-[#ecdce7] bg-white/90 p-8">
-          <p className="text-sm text-[#7b6979]">{language === 'en' ? 'Loading product...' : 'Laen toodet...'}</p>
-        </div>
-      </main>
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+        <ShopNavBar language={language} setLanguage={setLanguage} localizePath={localizePath} copy={navCopy} favoritesCount={favoritesCount} />
+        <main className="px-4 py-10 sm:px-6 lg:px-10">
+          <div className="mx-auto max-w-6xl rounded-[28px] border border-[#ecdce7] bg-white/90 p-8">
+            <p className="text-sm text-[#7b6979]">{language === 'en' ? 'Loading product...' : 'Laen toodet...'}</p>
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!product) {
     return (
-      <main className="min-h-screen bg-[#fff8fc] px-4 py-10 sm:px-6 lg:px-10">
-        <div className="mx-auto max-w-4xl rounded-[28px] border border-[#ecdce7] bg-white/90 p-8 text-center">
-          <h1 className="text-2xl font-semibold text-[#352b35]">{copy.notFound}</h1>
-          <p className="mt-2 text-sm text-[#7b6979]">{copy.notFoundHint}</p>
-          <button
-            onClick={() => router.push(localizePath('/shop'))}
-            className="mt-6 rounded-full bg-[linear-gradient(120deg,#d4669e_0%,#c24d86_52%,#a93d71_100%)] px-6 py-2.5 text-sm font-semibold text-white"
-          >
-            {copy.back}
-          </button>
-        </div>
-      </main>
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+        <ShopNavBar language={language} setLanguage={setLanguage} localizePath={localizePath} copy={copy} favoritesCount={favoritesCount} />
+        <main className="px-4 py-10 sm:px-6 lg:px-10">
+          <div className="mx-auto max-w-4xl rounded-[28px] border border-[#ecdce7] bg-white/90 p-8 text-center">
+            <h1 className="text-2xl font-semibold text-[#352b35]">{copy.notFound}</h1>
+            <p className="mt-2 text-sm text-[#7b6979]">{copy.notFoundHint}</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link href={localizePath('/')} className="inline-flex items-center gap-2 rounded-xl border border-[#e5c9d9] bg-white px-5 py-2.5 text-sm font-semibold text-[#6a4c64] hover:bg-[#fff2fa]">
+                <ArrowLeft className="h-4 w-4" /> {copy.backToHome}
+              </Link>
+              <button onClick={() => router.push(localizePath('/shop'))} className="rounded-xl bg-[#c24d86] px-5 py-2.5 text-sm font-semibold text-white">
+                {copy.backToShop}
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#fff8fc] px-4 py-10 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <button
-          onClick={() => router.push(localizePath('/shop'))}
-          className="rounded-full border border-[#e5c9d9] bg-white px-4 py-2 text-sm font-semibold text-[#6a4c64] transition hover:bg-[#fff2fa]"
-        >
-          {copy.back}
-        </button>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+      <ShopNavBar language={language} setLanguage={setLanguage} localizePath={localizePath} copy={copy} favoritesCount={favoritesCount} />
+      <main className="px-4 py-8 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={localizePath('/')}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#e8dce4] bg-white px-4 py-2.5 text-sm font-medium text-[#4b5563] shadow-sm hover:bg-[#fdf8fb]"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {copy.backToHome}
+            </Link>
+            <button
+              onClick={() => router.push(localizePath('/shop'))}
+              className="rounded-xl border border-[#e5c9d9] bg-white px-4 py-2.5 text-sm font-semibold text-[#6a4c64] hover:bg-[#fff2fa]"
+            >
+              {copy.backToShop}
+            </button>
+          </div>
 
         <section className="grid gap-6 rounded-[30px] border border-[#ecdce7] bg-white/92 p-5 shadow-[0_24px_42px_-30px_rgba(90,55,82,0.35)] lg:grid-cols-12 lg:p-8">
           <div className="space-y-3 lg:col-span-7">
@@ -271,8 +301,9 @@ export default function ProductDetailPage() {
             ))}
           </div>
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }
 

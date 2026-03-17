@@ -20,6 +20,7 @@ export interface Product {
   stock: number;
   active: boolean;
   isFeatured: boolean;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +40,8 @@ export interface ServiceRecord extends Service {
   suitabilityNoteEt: string;
   suitabilityNoteEn: string;
   imageUrl?: string | null;
+  isPopular: boolean;
+  sortOrder?: number;
   active: boolean;
 }
 
@@ -181,8 +184,9 @@ declare global {
 let catalogEnsurePromise: Promise<void> | null = global.__nailify_catalog_ensure__ ?? null;
 
 function sanitizePublicImage(imageUrl: string | null): string | null {
+  // Allow all image URLs including data URIs from admin uploads
+  // The data will be properly handled by the frontend
   if (!imageUrl) return null;
-  if (imageUrl.startsWith('data:')) return null;
   return imageUrl;
 }
 
@@ -209,6 +213,7 @@ async function ensureCatalogTablesInternal() {
       category TEXT NOT NULL,
       image_url TEXT,
       is_popular BOOLEAN NOT NULL DEFAULT FALSE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -233,6 +238,7 @@ async function ensureCatalogTablesInternal() {
       stock INTEGER NOT NULL DEFAULT 0,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
@@ -260,6 +266,8 @@ async function ensureCatalogTablesInternal() {
   await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS images JSONB NOT NULL DEFAULT '[]'::jsonb`;
   await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Üldine'`;
   await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`ALTER TABLE services ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`;
 
   await sql`
     UPDATE services
@@ -394,12 +402,13 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     category: Service['category'];
     image_url: string | null;
     is_popular: boolean;
+    sort_order: number;
     active: boolean;
   }[]>`
-    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, CASE WHEN image_url LIKE 'data:%' THEN NULL ELSE image_url END AS image_url, is_popular, active
+    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, COALESCE((SELECT sort_order FROM services s2 WHERE s2.id = services.id), 0) AS sort_order, active
     FROM services
     WHERE active = TRUE
-    ORDER BY price ASC, name ASC
+    ORDER BY sort_order ASC, price ASC, name ASC
   `;
 
   return rows.map((row) => ({
@@ -424,6 +433,7 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     category: row.category,
     imageUrl: sanitizePublicImage(row.image_url),
     isPopular: row.is_popular,
+    sortOrder: row.sort_order,
     active: row.active,
   }));
 }
@@ -449,11 +459,12 @@ export async function listAdminServices(locale?: string): Promise<ServiceRecord[
     category: Service['category'];
     image_url: string | null;
     is_popular: boolean;
+    sort_order: number;
     active: boolean;
   }[]>`
-    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, active
+    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, sort_order, active
     FROM services
-    ORDER BY created_at DESC
+    ORDER BY sort_order ASC, created_at DESC
   `;
 
   return rows.map((row) => ({
@@ -478,6 +489,7 @@ export async function listAdminServices(locale?: string): Promise<ServiceRecord[
     category: row.category,
     imageUrl: row.image_url,
     isPopular: row.is_popular,
+    sortOrder: row.sort_order,
     active: row.active,
   }));
 }
@@ -499,6 +511,7 @@ export interface UpsertServiceInput {
   category: Service['category'];
   imageUrl?: string | null;
   isPopular?: boolean;
+  sortOrder?: number;
   active?: boolean;
 }
 
@@ -513,10 +526,11 @@ export async function upsertService(input: UpsertServiceInput) {
   const longevityDescriptionEn = input.longevityDescriptionEn ?? '';
   const suitabilityNoteEt = input.suitabilityNoteEt ?? 'Sobivus: kohandatud';
   const suitabilityNoteEn = input.suitabilityNoteEn ?? '';
+  const sortOrder = input.sortOrder ?? 0;
 
   await sql`
     INSERT INTO services (
-      id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, longgevity_description_et, longgevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, active
+      id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, longgevity_description_et, longgevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, sort_order, active
     ) VALUES (
       ${input.id},
       ${nameEt},
@@ -538,6 +552,7 @@ export async function upsertService(input: UpsertServiceInput) {
       ${input.category},
       ${input.imageUrl ?? null},
       ${input.isPopular ?? false},
+      ${sortOrder},
       ${input.active ?? true}
     )
     ON CONFLICT (id) DO UPDATE SET
@@ -560,6 +575,7 @@ export async function upsertService(input: UpsertServiceInput) {
       category = EXCLUDED.category,
       image_url = EXCLUDED.image_url,
       is_popular = EXCLUDED.is_popular,
+      sort_order = EXCLUDED.sort_order,
       active = EXCLUDED.active,
       updated_at = NOW()
   `;
@@ -699,6 +715,7 @@ export interface UpsertProductInput {
   stock: number;
   active?: boolean;
   isFeatured?: boolean;
+  sortOrder?: number;
 }
 
 export async function upsertProduct(input: UpsertProductInput) {
@@ -707,10 +724,11 @@ export async function upsertProduct(input: UpsertProductInput) {
     : [];
   const primaryImage = input.imageUrl ?? normalizedImages[0] ?? null;
   const categoryEt = (input.categoryEt ?? 'Üldine').trim() || 'Üldine';
+  const sortOrder = input.sortOrder ?? 0;
 
   await sql`
     INSERT INTO products (
-      id, name, name_et, name_en, description, description_et, description_en, price, image_url, images, category, category_et, category_en, stock, active, is_featured
+      id, name, name_et, name_en, description, description_et, description_en, price, image_url, images, category, category_et, category_en, stock, active, is_featured, sort_order
     ) VALUES (
       ${input.id},
       ${input.nameEt},
@@ -727,7 +745,8 @@ export async function upsertProduct(input: UpsertProductInput) {
       ${input.categoryEn ?? ''},
       ${input.stock},
       ${input.active ?? true},
-      ${input.isFeatured ?? false}
+      ${input.isFeatured ?? false},
+      ${sortOrder}
     )
     ON CONFLICT (id) DO UPDATE SET
       name = EXCLUDED.name,
@@ -745,6 +764,7 @@ export async function upsertProduct(input: UpsertProductInput) {
       stock = EXCLUDED.stock,
       active = EXCLUDED.active,
       is_featured = EXCLUDED.is_featured,
+      sort_order = EXCLUDED.sort_order,
       updated_at = NOW()
   `;
 }

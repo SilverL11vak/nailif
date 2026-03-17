@@ -4,6 +4,7 @@ import {
   insertBooking,
   listBookings,
   updateBookingAdminFields,
+  deleteBooking,
   type BookingInsert,
 } from '@/lib/bookings';
 import { getAdminFromCookies } from '@/lib/admin-auth';
@@ -76,6 +77,7 @@ export async function PATCH(request: Request) {
       id: string;
       status: string;
       paymentStatus: string;
+      stripeSessionId: string;
       slotDate: string;
       slotTime: string;
       serviceId: string;
@@ -107,6 +109,40 @@ export async function PATCH(request: Request) {
     ) {
       return NextResponse.json({ error: 'Invalid payment status' }, { status: 400 });
     }
+
+    // Security: When setting paymentStatus to 'paid', require Stripe session verification
+    // This prevents admins from fraudulently marking payments as paid without actual Stripe payment
+    if (payload.paymentStatus === 'paid') {
+      // Check if already reconciled via the stripe/confirm endpoint
+      const { sql } = await import('@/lib/db');
+      const [existing] = await sql<[{ manually_reconciled: boolean; stripe_session_id: string | null }]>`
+        SELECT manually_reconciled, stripe_session_id FROM bookings WHERE id = ${payload.id}::bigint LIMIT 1
+      `;
+
+      if (!existing) {
+        return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+      }
+
+      // Allow if already manually reconciled (via stripe/confirm endpoint)
+      if (existing.manually_reconciled) {
+        // Already verified, allow status update
+      } else if (!payload.stripeSessionId && !existing.stripe_session_id) {
+        // No Stripe session - require manual reconciliation via /api/stripe/confirm instead
+        return NextResponse.json(
+          { error: 'Cannot mark as paid without Stripe verification. Use /api/stripe/confirm endpoint or provide stripeSessionId.' },
+          { status: 403 }
+        );
+      } else if (payload.stripeSessionId || existing.stripe_session_id) {
+        // Has Stripe session - for now we trust the session exists
+        // In production, could verify with Stripe API here
+        // The manual reconciliation endpoint is the preferred method
+        return NextResponse.json(
+          { error: 'Use /api/stripe/confirm endpoint to mark payments as paid. This ensures Stripe verification.' },
+          { status: 403 }
+        );
+      }
+    }
+
     if (payload.slotDate && !/^\d{4}-\d{2}-\d{2}$/.test(payload.slotDate)) {
       return NextResponse.json({ error: 'Invalid slot date' }, { status: 400 });
     }
@@ -140,5 +176,30 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error('PATCH /api/bookings error:', error);
     return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const adminUser = await getAdminFromCookies();
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Booking id is required' }, { status: 400 });
+    }
+
+    const deleted = await deleteBooking(id);
+    if (!deleted) {
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('DELETE /api/bookings error:', error);
+    return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 });
   }
 }

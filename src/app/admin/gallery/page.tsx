@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { AdminQuickActions } from '@/components/admin/AdminQuickActions';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface GalleryImage {
   id: string;
@@ -101,46 +101,39 @@ export default function AdminGalleryPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-7xl">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Galerii haldur</h1>
-              <p className="mt-2 text-sm text-[#4b5563]">Lae pilte ules, sorteeri ja margi esile tostetud foto.</p>
-            </div>
-            <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563]" href="/admin">
-              Halduspaneel
-            </Link>
-          </div>
-        </header>
+    <main className="admin-cockpit-bg min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        <AdminPageHeader
+          overline="Sisu"
+          title="Galerii (Meie töö)"
+          subtitle="Avalehe galerii pildid. Järjekord määrab kuvamise. Esiletõstetud pilt on esimene."
+          backHref="/admin"
+          backLabel="Halduspaneel"
+        />
 
-        <AdminQuickActions />
+        {error && <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-        {error && <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
-
-        <section className="admin-panel-soft mb-6 rounded-3xl p-5">
-          <h2 className="text-lg font-semibold text-[#111827]">Lisa uus pilt</h2>
-          <div className="mt-3 grid gap-3 lg:grid-cols-3">
+        <section className="admin-panel mb-6 p-5">
+          <p className="admin-section-overline mb-3">Lisa uus pilt</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <input
               value={imageUrl}
               onChange={(event) => setImageUrl(event.target.value)}
-              placeholder="Pildi URL voi base64"
-              className="rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 text-sm outline-none focus:border-[#9ca3af]"
+              placeholder="Pildi URL või base64"
+              className="input-premium"
             />
             <input
               value={caption}
               onChange={(event) => setCaption(event.target.value)}
-              placeholder="Kirjeldus"
-              className="rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 text-sm outline-none focus:border-[#9ca3af]"
+              placeholder="Kirjeldus (valikuline)"
+              className="input-premium"
             />
-            <label className="rounded-xl border border-dashed border-[#dcc3d5] bg-[#fff6fb] px-3 py-2 text-sm text-[#4b5563]">
-              Lae fail
+            <label className="flex flex-col">
+              <span className="type-small admin-muted mb-1">Või lae fail</span>
               <input
                 type="file"
                 accept="image/*"
-                className="mt-1 block w-full text-xs"
+                className="block w-full text-sm"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void uploadFromFile(file);
@@ -148,68 +141,60 @@ export default function AdminGalleryPage() {
               />
             </label>
           </div>
-          <div className="mt-3 flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm text-[#4b5563]">
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-2 type-small admin-heading">
               <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
-              Margi featured pildiks
+              Esiletõstetud (esimene avalehel)
             </label>
-            <button
-              onClick={saveImage}
-              disabled={isSaving}
-              className="rounded-xl bg-[#111827] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            >
+            <button onClick={saveImage} disabled={isSaving} className="btn-primary btn-primary-md disabled:opacity-60">
               {isSaving ? 'Salvestan...' : 'Salvesta pilt'}
             </button>
           </div>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {images.map((image, index) => (
-            <article key={image.id} className="admin-panel overflow-hidden rounded-3xl">
-              <Image
-                src={image.imageUrl}
-                alt={image.caption || 'Galerii pilt'}
-                width={720}
-                height={384}
-                unoptimized
-                className="h-48 w-full object-cover"
-              />
-              <div className="p-4">
-                <p className="text-sm font-medium text-[#111827]">{image.caption || 'Ilma kirjelduseta'}</p>
-                {image.isFeatured && (
-                  <span className="mt-2 inline-block rounded-full bg-[#f9e9f2] px-2.5 py-1 text-xs text-[#8a4f73]">
-                    Esile tostetud
-                  </span>
-                )}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => moveImage(index, -1)}
-                    className="rounded-lg border border-[#d1d5db] px-2 py-1 text-xs text-[#4b5563]"
-                  >
-                    Ules
-                  </button>
-                  <button
-                    onClick={() => moveImage(index, 1)}
-                    className="rounded-lg border border-[#d1d5db] px-2 py-1 text-xs text-[#4b5563]"
-                  >
-                    Alla
-                  </button>
-                  <button
-                    onClick={() => setFeatured(image.id)}
-                    className="rounded-lg border border-[#e8c9da] bg-[#fff5fb] px-2 py-1 text-xs text-[#8a4f73]"
-                  >
-                    Margi featured
-                  </button>
-                  <button
-                    onClick={() => void deleteImage(image.id, image.caption)}
-                    className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-700"
-                  >
-                    Kustuta
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
+        <section className="admin-panel p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="type-h4 admin-heading">Pildid</h2>
+            <p className="type-small admin-muted">{images.length} pilti</p>
+          </div>
+          {images.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="admin-muted">Galeriis pole pilte. Lisa esimene pilt ülal.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {images.map((image, index) => (
+                <article key={image.id} className="admin-action-tile overflow-hidden">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-[#fef8fb]">
+                    <Image
+                      src={image.imageUrl}
+                      alt={image.caption || 'Galerii pilt'}
+                      width={720}
+                      height={384}
+                      unoptimized
+                      className="h-full w-full object-cover"
+                    />
+                    {image.isFeatured && (
+                      <span className="absolute left-2 top-2 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[10px] font-semibold text-white">
+                        Esiletõstetud
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="type-small admin-heading line-clamp-2">{image.caption || 'Ilma kirjelduseta'}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button onClick={() => moveImage(index, -1)} className="btn-secondary btn-secondary-sm text-xs">↑</button>
+                      <button onClick={() => moveImage(index, 1)} className="btn-secondary btn-secondary-sm text-xs">↓</button>
+                      {!image.isFeatured && (
+                        <button onClick={() => setFeatured(image.id)} className="btn-secondary btn-secondary-sm text-xs">Esiletõstetud</button>
+                      )}
+                      <button onClick={() => void deleteImage(image.id, image.caption)} className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">Kustuta</button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>
