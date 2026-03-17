@@ -9,6 +9,10 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+#ai
+ai/temp
+ai/cache
+ai/output
 
 # testing
 /coverage

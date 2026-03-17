@@ -1,0 +1,8 @@
+TASK:
+Fix a specific UI issue.
+
+RULES:
+- Do not redesign
+- Do not refactor unrelated sections
+- Provide exact code change
+- Explain why issue happened

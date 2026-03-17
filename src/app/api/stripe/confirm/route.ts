@@ -2,9 +2,16 @@ import { NextResponse } from 'next/server';
 import { getStripeServer } from '@/lib/stripe';
 import { markBookingPaidBySession } from '@/lib/bookings';
 import { markOrderPaidBySession } from '@/lib/orders';
+import { getAdminFromCookies } from '@/lib/admin-auth';
 
 export async function POST(request: Request) {
   try {
+    // Require admin authentication
+    const admin = await getAdminFromCookies();
+    if (!admin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const payload = (await request.json()) as Partial<{
       sessionId: string;
       type: 'booking' | 'order';

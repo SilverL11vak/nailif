@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureCatalogTables, listServices } from '@/lib/catalog';
 import { ensureBookingContentTables, listBookingContent } from '@/lib/booking-content';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 type Locale = 'et' | 'en';
 
@@ -12,16 +13,6 @@ interface IncomingMessage {
 interface AssistantRequest {
   locale?: string;
   messages?: IncomingMessage[];
-}
-
-interface AssistantDebugInfo {
-  providerChain: string[];
-  finalProvider: string;
-  finalModel: string;
-  usedFallback: boolean;
-  stage: string;
-  hadReply: boolean;
-  intentHandled: boolean;
 }
 
 interface SimpleService {
@@ -336,21 +327,16 @@ function intentAnswer(
 }
 
 export async function POST(request: Request) {
-  const showDebug = process.env.NODE_ENV !== 'production';
-  let stage = 'start';
-  const debug: AssistantDebugInfo = {
-    providerChain: [],
-    finalProvider: 'none',
-    finalModel: 'none',
-    usedFallback: false,
-    stage: 'start',
-    hadReply: false,
-    intentHandled: false,
-  };
+  // Rate limit check - strict limit due to AI API costs
+  const rateLimit = checkRateLimit('ai', request.headers);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait a moment.' },
+      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter ?? 60) } }
+    );
+  }
 
   try {
-    stage = 'parse_body';
-    debug.stage = stage;
     const body = (await request.json()) as AssistantRequest;
     const locale = normalizeLocale(body.locale);
     const rawMessages = Array.isArray(body.messages) ? body.messages : [];
@@ -363,11 +349,9 @@ export async function POST(request: Request) {
 
     if (messages.length === 0) {
       const fallback = fallbackReply(locale);
-      return NextResponse.json(showDebug ? { ok: true, ...fallback, debug } : { ok: true, ...fallback });
+      return NextResponse.json({ ok: true, ...fallback });
     }
 
-    stage = 'catalog';
-    debug.stage = stage;
     await ensureCatalogTables();
     await ensureBookingContentTables();
     const services = await listServices(locale);
@@ -376,21 +360,15 @@ export async function POST(request: Request) {
 
     const direct = intentAnswer(locale, lastUserText, services, knowledge);
     if (direct) {
-      debug.intentHandled = true;
-      debug.finalProvider = 'intent';
-      debug.finalModel = 'rules';
-      debug.hadReply = true;
-      return NextResponse.json(showDebug ? { ok: true, ...direct, debug } : { ok: true, ...direct });
+      return NextResponse.json({ ok: true, ...direct });
     }
 
-    stage = 'env';
-    debug.stage = stage;
     const provider = (process.env.AI_PROVIDER || '').trim().toLowerCase();
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     const useOpenRouter = provider === 'openrouter' || (!provider && !!openRouterKey);
     if (!openRouterKey || !useOpenRouter) {
       const fallback = resilientFallbackReply(locale, lastUserText, services);
-      return NextResponse.json(showDebug ? { ok: true, ...fallback, debug } : { ok: true, ...fallback });
+      return NextResponse.json({ ok: true, ...fallback });
     }
 
     const serviceContext = services
@@ -442,9 +420,6 @@ REPLY: <assistendi vastus>`;
       process.env.OPENROUTER_FALLBACK_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
 
     async function callOpenRouter(modelName: string) {
-      debug.providerChain.push(`openrouter:${modelName}`);
-      stage = 'openrouter_request';
-      debug.stage = stage;
       const response = await fetch(
         process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions',
         {
@@ -472,8 +447,6 @@ REPLY: <assistendi vastus>`;
         return { text: '' };
       }
 
-      stage = 'openrouter_parse';
-      debug.stage = stage;
       const payload = (await response.json()) as unknown;
       const text = extractChatCompletionText(payload);
       if (!text.trim()) {
@@ -485,22 +458,15 @@ REPLY: <assistendi vastus>`;
       return { text };
     }
 
-    const finalProvider = 'openrouter';
-    let finalModel = openRouterModel;
     let text = (await callOpenRouter(openRouterModel)).text;
 
     if (!text.trim() && openRouterFallbackModel && openRouterFallbackModel !== openRouterModel) {
-      debug.usedFallback = true;
-      finalModel = openRouterFallbackModel;
       text = (await callOpenRouter(openRouterFallbackModel)).text;
     }
 
     if (!text.trim()) {
       const fallback = resilientFallbackReply(locale, lastUserText, services);
-      debug.finalProvider = finalProvider;
-      debug.finalModel = finalModel;
-      debug.hadReply = false;
-      return NextResponse.json(showDebug ? { ok: true, ...fallback, debug } : { ok: true, ...fallback });
+      return NextResponse.json({ ok: true, ...fallback });
     }
 
     const parsed = parseModelPayload(text);
@@ -513,22 +479,11 @@ REPLY: <assistendi vastus>`;
       ? resilientFallbackReply(locale, lastUserText, services).reply
       : parsed.reply;
 
-    debug.finalProvider = finalProvider;
-    debug.finalModel = finalModel;
-    debug.hadReply = true;
-    debug.stage = stage;
-
-    return NextResponse.json(
-      showDebug
-        ? { ok: true, reply: finalReply, handoffSuggested: parsed.handoffSuggested, debug }
-        : { ok: true, reply: finalReply, handoffSuggested: parsed.handoffSuggested }
-    );
+    return NextResponse.json({ ok: true, reply: finalReply, handoffSuggested: parsed.handoffSuggested });
   } catch (error) {
-    console.error(`POST /api/assistant-chat error at stage ${stage}:`, error);
+    console.error('POST /api/assistant-chat error:', error);
     const fallback = fallbackReply('et');
-    debug.stage = stage;
-    debug.hadReply = false;
-    return NextResponse.json(showDebug ? { ok: true, ...fallback, debug } : { ok: true, ...fallback });
+    return NextResponse.json({ ok: true, ...fallback });
   }
 }
 

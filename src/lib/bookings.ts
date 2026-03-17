@@ -39,6 +39,9 @@ export interface BookingRecord {
   paymentStatus: string;
   depositAmount: number;
   stripeSessionId: string | null;
+  paidAt: string | null;
+  paymentMethod: string | null;
+  stripePaymentIntentId: string | null;
   createdAt: string;
 }
 
@@ -86,6 +89,11 @@ async function ensureBookingsTableInternal() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_image TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS current_nail_image TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_note TEXT`;
+  
+  // Webhook-related columns
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_method TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT`;
 }
 
 export async function ensureBookingsTable() {
@@ -183,6 +191,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
     payment_status: string;
     deposit_amount: number;
     stripe_session_id: string | null;
+    paid_at: string | null;
+    payment_method: string | null;
+    stripe_payment_intent_id: string | null;
     created_at: string;
   }[]>`
     SELECT
@@ -209,6 +220,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       payment_status,
       deposit_amount,
       stripe_session_id,
+      paid_at::text,
+      payment_method,
+      stripe_payment_intent_id,
       created_at::text
     FROM bookings
     ORDER BY created_at DESC
@@ -251,6 +265,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       paymentStatus: row.payment_status,
       depositAmount: row.deposit_amount,
       stripeSessionId: row.stripe_session_id,
+      paidAt: row.paid_at,
+      paymentMethod: row.payment_method,
+      stripePaymentIntentId: row.stripe_payment_intent_id,
       createdAt: row.created_at,
     };
   });
@@ -269,6 +286,29 @@ export async function markBookingPaidBySession(sessionId: string) {
     UPDATE bookings
     SET payment_status = 'paid',
         status = 'confirmed'
+    WHERE stripe_session_id = ${sessionId}
+    RETURNING id
+  `;
+
+  return row ? String(row.id) : null;
+}
+
+/**
+ * Mark booking as paid from webhook event
+ * Includes additional metadata from Stripe
+ */
+export async function markBookingPaidFromWebhook(
+  sessionId: string,
+  paymentIntentId?: string,
+  paymentMethod?: string
+) {
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE bookings
+    SET payment_status = 'paid',
+        status = 'confirmed',
+        paid_at = NOW(),
+        stripe_payment_intent_id = ${paymentIntentId ?? null},
+        payment_method = ${paymentMethod ?? null}
     WHERE stripe_session_id = ${sessionId}
     RETURNING id
   `;

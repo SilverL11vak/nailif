@@ -48,7 +48,9 @@ async function ensureOrdersTableInternal() {
       booking_id BIGINT,
       items_json JSONB NOT NULL DEFAULT '[]'::jsonb,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      paid_at TIMESTAMPTZ
+      paid_at TIMESTAMPTZ,
+      payment_method TEXT,
+      stripe_payment_intent_id TEXT
     )
   `;
 }
@@ -103,6 +105,28 @@ export async function markOrderPaidBySession(sessionId: string) {
     UPDATE orders
     SET status = 'paid',
         paid_at = NOW()
+    WHERE stripe_session_id = ${sessionId}
+    RETURNING id
+  `;
+
+  return row ? String(row.id) : null;
+}
+
+/**
+ * Mark order as paid from webhook event
+ * Includes additional metadata from Stripe
+ */
+export async function markOrderPaidFromWebhook(
+  sessionId: string,
+  paymentIntentId?: string,
+  paymentMethod?: string
+) {
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE orders
+    SET status = 'paid',
+        paid_at = NOW(),
+        stripe_payment_intent_id = ${paymentIntentId ?? null},
+        payment_method = ${paymentMethod ?? null}
     WHERE stripe_session_id = ${sessionId}
     RETURNING id
   `;

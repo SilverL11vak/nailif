@@ -973,7 +973,7 @@ export default function Home() {
                   onClick={focusHeroBooking}
                   className="btn-primary btn-primary-lg mt-6 inline-flex gap-2"
                 >
-                  {getI18nTextOrFallback('homepage.hero.luxuryCta', language === 'en' ? 'Choose your time' : 'Vali oma aeg')}
+                  <span>{getI18nTextOrFallback('homepage.hero.luxuryCta', language === 'en' ? 'Choose your time' : 'Vali oma aeg')}</span>
                   <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
                     <path d="M4 10h11" />
                     <path d="M11.5 6.5L15 10l-3.5 3.5" />
@@ -1823,7 +1823,10 @@ export default function Home() {
                   className="cta-premium inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,#d9669e_0%,#c24d86_50%,#a93d71_100%)] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_26px_40px_-24px_rgba(146,55,104,0.62)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-[0_30px_44px_-22px_rgba(146,55,104,0.72)]"
                 >
                   {getI18nTextOrFallback('homepage.team.ctaStrong', language === 'en' ? 'Book with Sandra' : 'Broneeri aeg Sandraga')}
-                  <span aria-hidden>{'->'}</span>
+                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M4 10h11" />
+                    <path d="M11.5 6.5L15 10l-3.5 3.5" />
+                  </svg>
                 </button>
                 <p className="text-xs font-medium text-[#8a6b80]">
                   {getI18nTextOrFallback('homepage.team.weeklyAvailability', language === 'en' ? 'Available slots this week' : 'Vabu aegu sel nädalal')}
@@ -1838,7 +1841,10 @@ export default function Home() {
               className="mx-auto flex w-full max-w-sm items-center justify-center gap-2 rounded-full bg-[linear-gradient(120deg,#d9669e_0%,#c24d86_52%,#a93d71_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_24px_38px_-22px_rgba(142,56,105,0.62)]"
             >
               {getI18nTextOrFallback('homepage.team.ctaStrong', language === 'en' ? 'Book with Sandra' : 'Broneeri aeg Sandraga')}
-              <span aria-hidden>{'->'}</span>
+              <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M4 10h11" />
+                <path d="M11.5 6.5L15 10l-3.5 3.5" />
+              </svg>
             </button>
           </div>
         </div>
