@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Sparkles, Package, Calendar, ShoppingBag, Image, MessageCircle } from 'lucide-react';
+import { Search, X, Sparkles, Package, Calendar, ShoppingBag, Image as ImageIcon, MessageCircle } from 'lucide-react';
 
 interface SearchResult {
   id: string;
@@ -242,7 +242,7 @@ export function AdminSearch() {
               {results.gallery.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium uppercase tracking-wider text-[#6b7280]">
-                    <Image size={12} />
+                    <ImageIcon size={12} aria-hidden />
                     Galerii
                   </div>
                   {results.gallery.map((item) => (
@@ -251,7 +251,7 @@ export function AdminSearch() {
                       onClick={() => handleResultClick(item.href)}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f3f4f6]"
                     >
-                      <Image size={16} className="text-[#ec4899]" />
+                      <ImageIcon size={16} className="text-[#ec4899]" aria-hidden />
                       <span className="flex-1 text-sm text-[#111827] truncate">{item.caption || 'Pilt'}</span>
                     </button>
                   ))}

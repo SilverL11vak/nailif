@@ -837,6 +837,14 @@ export default function AdminBookingsPage() {
           </div>
         </div>
       )}
+
+      {fullscreenImage && (
+        <FullscreenImageModal
+          src={fullscreenImage.src}
+          alt={fullscreenImage.alt}
+          onClose={() => setFullscreenImage(null)}
+        />
+      )}
     </main>
   );
 }

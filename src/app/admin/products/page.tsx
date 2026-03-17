@@ -1,10 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { Search, Plus, ChevronDown, ChevronRight, Package, Sparkles } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Package, Sparkles } from 'lucide-react';
 
 interface Product {
   id: string;

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
-import { Globe, Heart, ShoppingBag, ArrowLeft, Package } from 'lucide-react';
+import { Globe, Heart, ArrowLeft, Package } from 'lucide-react';
 
 interface Product {
   id: string;

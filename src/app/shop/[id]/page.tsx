@@ -8,7 +8,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
 import { ShopNavBar } from '@/components/shop/ShopNavBar';
-import { Heart, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface ProductItem {
   id: string;
