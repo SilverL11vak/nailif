@@ -345,14 +345,6 @@ function SuccessPageContent() {
     !isOrderCheckoutFlow &&
     (flowType === 'booking' ||
       (flowType === null && (checkoutType === 'booking' || (!checkoutType && Boolean(selectedSlot)))));
-  const dateTimeLine = selectedSlot
-    ? `${new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })} · ${selectedSlot.time}`
-    : '';
 
   const serviceDisplayName = selectedService
     ? en

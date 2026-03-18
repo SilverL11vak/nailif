@@ -30,8 +30,9 @@ async function fetchServices(language: string): Promise<ApiService[]> {
     return data.services;
   } catch (err) {
     // AbortController timeouts are expected during route transitions; treat them as a soft fallback.
-    const name = (err as any)?.name;
-    const code = (err as any)?.code;
+    const errObj = err as { name?: string; code?: string };
+    const name = errObj?.name;
+    const code = errObj?.code;
     if (name === 'AbortError' || code === 'ABORT_ERR') return mockServices;
     return mockServices;
   } finally {
