@@ -505,7 +505,11 @@ function BookingContent() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1200px] px-5 pt-6 sm:px-6 md:pt-10 lg:px-8 lg:pt-[48px] xl:pt-20">
+      <main
+        className={`mx-auto w-full px-5 sm:px-6 lg:px-8 ${
+          currentStep === 2 ? 'max-w-[1040px] pt-8 pb-20' : 'max-w-[1200px] pt-6 md:pt-10 lg:pt-[48px] xl:pt-20'
+        }`}
+      >
         <div
           className={`grid items-start gap-8 xl:gap-10 ${currentStep === 2 ? '' : 'xl:grid-cols-[minmax(0,1fr)_300px]'}`}
         >

@@ -90,7 +90,6 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [summaryBump, setSummaryBump] = useState(0);
   const [summaryDesktopPulse, setSummaryDesktopPulse] = useState(false);
-  const [desktopCtaPulse, setDesktopCtaPulse] = useState(false);
   const [mobileStickyLift, setMobileStickyLift] = useState(false);
   const [slotAreaShake, setSlotAreaShake] = useState(false);
   const [lockExpiresAt, setLockExpiresAt] = useState<number | null>(null);
@@ -100,7 +99,6 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   const continueButtonRef = useRef<HTMLDivElement>(null);
   const dayScrollRef = useRef<HTMLDivElement>(null);
   const summaryDesktopInnerRef = useRef<HTMLDivElement>(null);
-  const desktopContinueRef = useRef<HTMLButtonElement>(null);
   const mobileScrollNudgeRef = useRef<HTMLDivElement>(null);
   const isUserScrollingRef = useRef(false);
   const programmaticScrollUntilRef = useRef(0);
@@ -297,10 +295,8 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
   const pulseDesktopSummary = useCallback(() => {
     setSummaryDesktopPulse(true);
-    setDesktopCtaPulse(true);
     window.setTimeout(() => {
       setSummaryDesktopPulse(false);
-      setDesktopCtaPulse(false);
     }, 720);
   }, []);
 
@@ -507,6 +503,15 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
     return `${micro} — ${String(mm).padStart(1, '0')}:${String(ss).padStart(2, '0')}`;
   }, [selectedSlot, lockRemainingMs, en, sortedAvailable]);
 
+  const lockUrgencyLine = useMemo(() => {
+    if (!selectedSlot || !lockRemainingMs || lockRemainingMs <= 0) return null;
+    const totalSec = Math.floor(lockRemainingMs / 1000);
+    const mm = Math.floor(totalSec / 60);
+    const ss = totalSec % 60;
+    const prefix = en ? 'Time locked for you' : 'Aeg lukus sinu jaoks';
+    return `${prefix} — ${mm}:${String(ss).padStart(2, '0')}`;
+  }, [selectedSlot, lockRemainingMs, en]);
+
   const availabilityContext = useMemo(() => {
     const av = currentSlots.filter((s) => s.available);
     const count = av.length;
@@ -655,6 +660,9 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a898a8]">
         {en ? 'Your selection' : 'Sinu valik'}
       </p>
+      <p className="mt-2 text-[13px] font-semibold text-[#6a3b57]">
+        {en ? 'Almost done — choose time' : 'Peaaegu valmis — vali aeg'}
+      </p>
       <div
         key={summaryBump}
         className="booking-time-summary-animate mt-4 space-y-3 border-t border-[#f2eaed] pt-4"
@@ -680,28 +688,21 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
           <span className="text-2xl font-semibold tabular-nums text-[#c24d86]">€{price}</span>
         </div>
       </div>
+
       <button
-        ref={desktopContinueRef}
         type="button"
-        onClick={handleContinue}
-        disabled={!selectedSlot}
-        className={`mt-5 hidden w-full rounded-full py-3.5 text-[15px] font-semibold transition-all duration-[160ms] lg:block ${
-          selectedSlot
-            ? `bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] text-white shadow-[0_12px_32px_-12px_rgba(194,77,134,0.5)] hover:shadow-[0_14px_36px_-10px_rgba(194,77,134,0.45)] active:scale-[0.99] ${desktopCtaPulse ? 'booking-desktop-cta-pulse !ring-4 !ring-[#c24d86]/35' : ''}`
-            : 'cursor-not-allowed bg-[#ece8ea] text-[#9a9094]'
-        }`}
+        onClick={() => document.getElementById('booking-datetime-slot-area')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-[#f0e6ec] bg-white/70 px-4 py-3 text-[14px] font-semibold text-[#c24d86] transition-all duration-[160ms] hover:bg-white active:scale-[0.99] lg:block"
       >
-        {selectedSlot
-          ? text('availability_continue', en ? 'Continue' : 'Jätka')
-          : text('availability_select_for_continue', en ? 'Select a time' : 'Vali aeg')}
+        {en ? 'Choose time' : 'Vali aeg'}
       </button>
     </div>
   );
 
   return (
-    <div className="animate-fade-in mx-auto max-w-[640px]">
+    <div className="animate-fade-in w-full">
       {/* Sticky progress + trust strip (Step 2) */}
-      <div className="sticky top-0 z-30 -mx-4 mb-5 border-b border-[#f0e8ec] bg-white/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:border-[#f0e8ec] lg:shadow-[0_10px_30px_-22px_rgba(57,33,52,0.18)]">
+      <div className="sticky top-0 z-30 -mx-4 mb-5 border-b border-[#f0e8ec] bg-white/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:mx-0 lg:static lg:rounded-2xl lg:border lg:border-[#f0e8ec] lg:shadow-[0_10px_30px_-22px_rgba(57,33,52,0.18)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">
           {en ? 'Step 2 of 3 — Choose Time' : 'Samm 2/3 — Vali aeg'}
         </p>
@@ -718,8 +719,8 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
           </span>
           {lockLine && (
             <>
-              <span className="h-1 w-1 rounded-full bg-[#d4c8cc]" aria-hidden />
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[11px] font-semibold text-[#6a3b57]">
+              <span className="h-1 w-1 rounded-full bg-[#d4c8cc] lg:hidden" aria-hidden />
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[11px] font-semibold text-[#6a3b57] lg:hidden">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c24d86] opacity-50" aria-hidden />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[#c24d86]" aria-hidden />
@@ -740,18 +741,30 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
         </div>
       )}
 
-      <div className="lg:grid lg:grid-cols-[minmax(260px,280px)_1fr] lg:items-start lg:gap-10">
-        <aside className="mb-8 hidden lg:sticky lg:top-[120px] lg:mb-0 lg:block">
+      <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-10">
+        <aside className="hidden lg:sticky lg:top-[120px] lg:block">
           <SummaryCard />
         </aside>
 
         <div className="min-w-0">
-          <div className="mb-6 text-center lg:mb-8 lg:text-left">
+          <div className="mb-6 text-center lg:text-left">
             <h2 className="font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2530] md:text-[1.85rem]">
               {t('datetime.choose')}
             </h2>
             <p className="mt-2 text-[15px] text-[#745f6e]">{t('datetime.pickTime')}</p>
           </div>
+
+          {lockUrgencyLine && (
+            <div className="booking-urgency-pulse lg:sticky lg:top-[120px] z-20 mb-4 w-full rounded-full border border-[#ead6e2]/90 bg-white/70 px-5 py-2.5 text-[13px] font-semibold text-[#6a3b57] backdrop-blur-xl shadow-[0_14px_34px_-22px_rgba(57,33,52,0.22)]">
+              <span className="inline-flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c24d86] opacity-50" aria-hidden />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#c24d86]" aria-hidden />
+                </span>
+                {lockUrgencyLine}
+              </span>
+            </div>
+          )}
 
           <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-[#f0e8ec] bg-white/80 px-3 py-2.5 backdrop-blur-sm sm:px-4">
             <span className="text-sm font-semibold text-[#5d4a59]">{monthLabel}</span>
@@ -844,7 +857,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             })}
           </div>
 
-          <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] text-[#9a8a94]">
+          <div className="mb-6 flex flex-wrap items-center gap-3 text-[10px] text-[#9a8a94]">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[#5cb88a]" />
               {en ? 'Many openings' : 'Palju vabu'}
@@ -866,9 +879,9 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             </div>
           )}
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5">
               {Array.from({ length: 12 }).map((_, i) => (
-                <SkeletonBlock key={i} className="h-[68px] rounded-2xl" />
+                <SkeletonBlock key={i} className="h-[68px] rounded-2xl lg:h-[72px]" />
               ))}
             </div>
           ) : emptyNoSlotsAtAll ? (
@@ -925,7 +938,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {currentSlots.map((slot) => {
                   const isSelected = selectedSlot?.id === slot.id;
                   const badge = slotBadges.get(slot.id) ?? null;
@@ -985,7 +998,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
                         }
                       }}
                       className={[
-                        'relative min-h-[68px] rounded-2xl border px-4 py-3 text-left transition-all duration-200 motion-reduce:transition-none',
+                        'relative min-h-[68px] lg:min-h-[72px] rounded-2xl border px-3 py-3 text-left transition-all duration-200 motion-reduce:transition-none',
                         isAvailable
                           ? 'bg-white shadow-[0_10px_26px_-18px_rgba(57,33,52,0.22)] hover:-translate-y-0.5 hover:shadow-[0_16px_34px_-22px_rgba(57,33,52,0.26)]'
                           : 'cursor-not-allowed border-[#eeeaeb] bg-[#faf9f9] text-[#b5a8ad] opacity-75',
@@ -998,7 +1011,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className={`text-[15px] font-semibold tabular-nums ${isSelected ? 'text-[#2f2530]' : 'text-[#2f2530]'}`}>
+                          <p className="text-[14px] font-semibold tabular-nums text-[#2f2530]">
                             {slot.time}
                           </p>
                           {label && (
@@ -1034,7 +1047,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               </div>
 
               {/* Optional subtle popularity signal */}
-              <p className="mt-4 text-center text-[12px] text-[#9a8a94]">
+              <p className="mt-4 text-center text-[12px] text-[#9a8a94] lg:hidden">
                 {sortedAvailable.length > 0
                   ? en
                     ? 'Some times book fastest — choose quickly to secure your preferred slot.'
@@ -1045,7 +1058,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               </p>
 
               {/* Safe reassurance */}
-              <div className="mt-4 rounded-2xl border border-[#f0e6ea] bg-white/90 p-5 shadow-[0_12px_32px_-30px_rgba(57,33,52,0.16)]">
+              <div className="mt-4 rounded-2xl border border-[#f0e6ea] bg-white/90 p-5 shadow-[0_12px_32px_-30px_rgba(57,33,52,0.16)] lg:hidden">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.2} />
                   <p className="text-sm font-semibold text-[#2f2530]">
@@ -1077,10 +1090,10 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
           {/* Desktop confirmation panel (sticky within flow) */}
           <div
             ref={confirmationPanelRef}
-            className="mt-7 hidden lg:block"
+            className="mt-4 hidden lg:block"
             aria-live="polite"
           >
-            <div className="sticky bottom-6 rounded-[26px] border border-white/70 bg-white/75 p-5 shadow-[0_26px_66px_-34px_rgba(57,33,52,0.28)] backdrop-blur-xl">
+            <div className="w-full rounded-[26px] border border-white/70 bg-white/80 p-5 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.18)] backdrop-blur-xl">
               <div className="flex items-start justify-between gap-6">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">
@@ -1220,9 +1233,25 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
         @media (prefers-reduced-motion: reduce) {
           .booking-desktop-summary-pulse,
           .booking-desktop-cta-pulse,
-          .booking-mobile-sticky-lift {
+          .booking-mobile-sticky-lift,
+          .booking-urgency-pulse {
             animation: none;
           }
+        }
+
+        @keyframes bookingUrgencyPulse {
+          0%,
+          100% {
+            box-shadow: 0 14px 34px -22px rgba(57, 33, 52, 0.22);
+          }
+          50% {
+            box-shadow:
+              0 20px 48px -24px rgba(194, 77, 134, 0.28),
+              0 0 0 2px rgba(194, 77, 134, 0.14);
+          }
+        }
+        .booking-urgency-pulse {
+          animation: bookingUrgencyPulse 1.8s ease-in-out 2;
         }
         @keyframes bookingSlotAreaShake {
           0%,
