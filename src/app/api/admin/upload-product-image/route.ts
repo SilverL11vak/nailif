@@ -31,10 +31,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const token = process.env.BLOB1_READ_WRITE_TOKEN;
     if (!token) {
       return NextResponse.json(
-        { error: 'Missing BLOB_READ_WRITE_TOKEN. Add it in Vercel Environment Variables.' },
+        { error: 'Missing BLOB1_READ_WRITE_TOKEN. Add it in Vercel Environment Variables.' },
         { status: 500 }
       );
     }
