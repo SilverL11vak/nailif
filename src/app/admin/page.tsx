@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton';
 import { AdminSearch } from '@/components/admin/AdminSearch';
+import { AdminDailyPerformanceStrip } from '@/components/admin/AdminDailyPerformanceStrip';
+import { AdminAnalyticsSummaryStrip } from '@/components/admin/AdminAnalyticsSummaryStrip';
 import { AdminSalonOverview } from '@/components/admin/AdminSalonOverview';
 import { getAdminFromCookies } from '@/lib/admin-auth';
 import { getAdminDashboardStats } from '@/lib/admin-dashboard';
@@ -96,6 +98,14 @@ export default async function AdminHomePage() {
             </Link>
           </div>
         </div>
+
+        <AdminDailyPerformanceStrip
+          todayBookingsCount={stats.todayBookings.length}
+          freeSlotsToday={stats.freeSlotsToday}
+          revenueSecuredToday={stats.revenueToday}
+        />
+
+        <AdminAnalyticsSummaryStrip />
 
         {/* KPI strip */}
         <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

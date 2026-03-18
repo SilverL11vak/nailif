@@ -1,13 +1,15 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  MoreHorizontal,
+  Phone,
   Filter,
   LayoutGrid,
   List,
@@ -16,6 +18,7 @@ import {
   Plus,
   Search,
   Settings2,
+  MessageSquare,
   X,
   XCircle,
 } from 'lucide-react';
@@ -79,6 +82,18 @@ function toMin(time: string) {
 
 function durMin(b: Booking) {
   return b.totalDuration ?? b.serviceDuration ?? 60;
+}
+
+function endTimeLabel(b: Booking) {
+  const duration = durMin(b);
+  const end = toMin(b.slotTime) + duration;
+  const hh = Math.floor(end / 60);
+  const mm = end % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function isPrimeTime(time: string) {
+  return toMin(time) >= 17 * 60;
 }
 
 function overlaps(a: Booking, b: Booking) {
@@ -218,6 +233,8 @@ export default function AdminBookingsPage() {
   const [newSlotContext, setNewSlotContext] = useState<{ date: string; hour: number } | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<{ src: string; alt: string } | null>(null);
   const [panelSaved, setPanelSaved] = useState(false);
+  const [quickMenuBookingId, setQuickMenuBookingId] = useState<string | null>(null);
+  const longPressRef = useRef<number | null>(null);
 
   const loadBookings = useCallback(async () => {
     setLoading(true);
@@ -284,6 +301,16 @@ export default function AdminBookingsPage() {
       return blob.includes(q);
     });
   }, [bookings, search, statusFilter, paidFilter, specialistFilter]);
+
+  const repeatByPhone = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of bookings) {
+      const phone = (b.contactPhone ?? '').trim();
+      if (!phone) continue;
+      map.set(phone, (map.get(phone) ?? 0) + 1);
+    }
+    return map;
+  }, [bookings]);
 
   const bookingsForViewDate = useMemo(
     () => filteredBookings.filter((b) => b.slotDate === viewDate).sort((a, b) => a.slotTime.localeCompare(b.slotTime)),
@@ -714,10 +741,13 @@ export default function AdminBookingsPage() {
                         const w = 100 / L.lanes;
                         const left = L.lane * w;
                         const dep = depositLabel(b);
+                        const repeat = (repeatByPhone.get((b.contactPhone ?? '').trim()) ?? 0) >= 2;
+                        const prime = isPrimeTime(b.slotTime);
+                        const showMenu = quickMenuBookingId === b.id;
                         return (
                           <div
                             key={b.id}
-                            className={`absolute z-10 cursor-pointer overflow-hidden rounded-xl border border-[#ebe4df] shadow-[0_4px_16px_-6px_rgba(42,36,40,0.12)] transition hover:shadow-lg hover:ring-2 hover:ring-[#c24d86]/25 ${statusAccent(b.status)}`}
+                            className={`group absolute z-10 cursor-pointer overflow-hidden rounded-xl border border-[#ebe4df] shadow-[0_4px_16px_-6px_rgba(42,36,40,0.12)] transition hover:shadow-lg hover:ring-2 hover:ring-[#c24d86]/25 ${statusAccent(b.status)}`}
                             style={{
                               top: `${top}%`,
                               height: `${Math.max(height, 4)}%`,
@@ -728,60 +758,99 @@ export default function AdminBookingsPage() {
                               e.stopPropagation();
                               openPanel(b);
                             }}
+                            onPointerDown={(e) => {
+                              // long press to open quick menu on touch
+                              if (e.pointerType !== 'touch') return;
+                              if (longPressRef.current) window.clearTimeout(longPressRef.current);
+                              longPressRef.current = window.setTimeout(() => {
+                                setQuickMenuBookingId(b.id);
+                              }, 420);
+                            }}
+                            onPointerUp={() => {
+                              if (longPressRef.current) window.clearTimeout(longPressRef.current);
+                              longPressRef.current = null;
+                            }}
                           >
-                            <div className="flex h-full flex-col p-2 text-left sm:p-2.5">
-                              <div className="flex items-start justify-between gap-1">
+                            <div className={`flex h-full flex-col p-2 text-left sm:p-2.5 ${prime ? 'bg-[linear-gradient(135deg,rgba(255,245,250,0.95)_0%,rgba(255,252,252,0.7)_55%,rgba(255,248,251,0.9)_100%)]' : ''}`}>
+                              <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-xs font-semibold text-[#2a2228]">
                                     {b.contactFirstName} {b.contactLastName ?? ''}
                                   </p>
                                   <p className="truncate text-[11px] text-[#6d6268]">{b.serviceName}</p>
-                                  <p className="mt-0.5 text-[10px] tabular-nums text-[#8a7c82]">
-                                    {b.slotTime.slice(0, 5)} –{' '}
-                                    {(() => {
-                                      const end = toMin(b.slotTime) + duration;
-                                      const hh = Math.floor(end / 60);
-                                      const mm = end % 60;
-                                      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-                                    })()}
-                                  </p>
-                                  <p className={`mt-0.5 text-[10px] font-medium ${dep.tone}`}>{dep.text}</p>
+                                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[#5f4f58]">
+                                      {b.slotTime.slice(0, 5)}–{endTimeLabel(b)}
+                                    </span>
+                                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[#2a2228]">
+                                      €{Math.round(Number(b.totalPrice) || 0)}
+                                    </span>
+                                    <span className={`rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold ${dep.tone}`}>
+                                      {b.paymentStatus === 'paid' ? 'Deposit paid' : 'Deposit due'}
+                                    </span>
+                                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#6d6268]">
+                                      {duration}m
+                                    </span>
+                                    {repeat && (
+                                      <span className="rounded-full bg-[#fce8f0] px-2 py-0.5 text-[10px] font-semibold text-[#9d4d6a]">
+                                        Repeat
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex shrink-0 flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
-                                  <button
-                                    type="button"
-                                    onClick={() => openPanel(b)}
-                                    className="rounded-lg p-1 text-[#7a6d72] hover:bg-white/80 hover:text-[#c24d86]"
-                                    title="Edit"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => openPanel(b)}
-                                    className="rounded-lg p-1 text-[#7a6d72] hover:bg-white/80 hover:text-[#c24d86]"
-                                    title="Move"
-                                  >
-                                    <Move className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void patchBooking(b.id, { status: 'cancelled' })}
-                                    disabled={savingId === b.id}
-                                    className="rounded-lg p-1 text-[#b85c6a] hover:bg-rose-50 disabled:opacity-50"
-                                    title="Cancel"
-                                  >
-                                    <XCircle className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void patchBooking(b.id, { status: 'completed' })}
-                                    disabled={savingId === b.id}
-                                    className="rounded-lg p-1 text-[#6b9b7a] hover:bg-emerald-50/80 disabled:opacity-50"
-                                    title="Complete"
-                                  >
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                  </button>
+                                <div className="relative flex shrink-0 flex-col items-end gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-1">
+                                    <a
+                                      href={`tel:${encodeURIComponent((b.contactPhone ?? '').trim())}`}
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/60 bg-white/70 text-[#6d6268] opacity-0 transition group-hover:opacity-100 hover:text-[#2a2228]"
+                                      title="Call"
+                                    >
+                                      <Phone className="h-3.5 w-3.5" />
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => setQuickMenuBookingId((prev) => (prev === b.id ? null : b.id))}
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/60 bg-white/70 text-[#6d6268] transition hover:text-[#2a2228]"
+                                      aria-label="Quick actions"
+                                      title="Quick actions"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </button>
+                                  </div>
+
+                                  {showMenu && (
+                                    <div className="absolute right-0 top-9 z-20 w-44 overflow-hidden rounded-2xl border border-[#ecdce6] bg-white shadow-[0_22px_34px_-24px_rgba(57,33,52,0.5)]">
+                                      <button
+                                        type="button"
+                                        onClick={() => { setQuickMenuBookingId(null); openPanel(b); }}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#2a2228] hover:bg-[#fff7fb]"
+                                      >
+                                        <Move className="h-4 w-4 text-[#b85c8a]" /> Reschedule
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => void patchBooking(b.id, { paymentStatus: 'paid' })}
+                                        disabled={savingId === b.id}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#2a2228] hover:bg-[#fff7fb] disabled:opacity-50"
+                                      >
+                                        <CheckCircle2 className="h-4 w-4 text-[#6b9b7a]" /> Mark paid
+                                      </button>
+                                      <a
+                                        href={`sms:${encodeURIComponent((b.contactPhone ?? '').trim())}`}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#2a2228] hover:bg-[#fff7fb]"
+                                      >
+                                        <MessageSquare className="h-4 w-4 text-[#b85c8a]" /> Message client
+                                      </a>
+                                      <button
+                                        type="button"
+                                        onClick={() => void patchBooking(b.id, { status: 'cancelled' })}
+                                        disabled={savingId === b.id}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#a33a3a] hover:bg-rose-50 disabled:opacity-50"
+                                      >
+                                        <XCircle className="h-4 w-4" /> Block / cancel
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -815,6 +884,7 @@ export default function AdminBookingsPage() {
                 <div className="space-y-2">
                   {bookingsForViewDate.map((b) => {
                     const dep = depositLabel(b);
+                    const repeat = (repeatByPhone.get((b.contactPhone ?? '').trim()) ?? 0) >= 2;
                     return (
                       <div
                         key={b.id}
@@ -826,10 +896,29 @@ export default function AdminBookingsPage() {
                           </p>
                           <p className="text-sm text-[#6d6268]">{b.serviceName}</p>
                           <p className="text-xs text-[#8a7c82]">
-                            {b.slotTime.slice(0, 5)} – {durMin(b)} min · <span className={dep.tone}>{dep.text}</span>
+                            {b.slotTime.slice(0, 5)}–{endTimeLabel(b)} · {durMin(b)} min ·{' '}
+                            <span className="font-semibold tabular-nums text-[#2a2228]">€{Math.round(Number(b.totalPrice) || 0)}</span>{' '}
+                            · <span className={dep.tone}>{dep.text}</span>
+                            {repeat && <span className="ml-2 rounded-full bg-[#fce8f0] px-2 py-0.5 text-[10px] font-semibold text-[#9d4d6a]">Repeat</span>}
                           </p>
                         </button>
                         <div className="flex gap-1">
+                          <a
+                            href={`tel:${encodeURIComponent((b.contactPhone ?? '').trim())}`}
+                            className="rounded-lg p-2 text-[#7a6d72] hover:bg-[#faf8f6]"
+                            aria-label="Call client"
+                            title="Call"
+                          >
+                            <Phone className="h-4 w-4" />
+                          </a>
+                          <a
+                            href={`sms:${encodeURIComponent((b.contactPhone ?? '').trim())}`}
+                            className="rounded-lg p-2 text-[#7a6d72] hover:bg-[#faf8f6]"
+                            aria-label="Message client"
+                            title="Message"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </a>
                           <button type="button" onClick={() => openPanel(b)} className="rounded-lg p-2 text-[#7a6d72] hover:bg-[#faf8f6]">
                             <Pencil className="h-4 w-4" />
                           </button>

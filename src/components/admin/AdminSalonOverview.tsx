@@ -5,11 +5,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Calendar,
+  Users,
   Image as ImageIcon,
   LayoutGrid,
   MessageSquare,
   Package,
   Sparkles,
+  BarChart3,
 } from 'lucide-react';
 
 type Stats = {
@@ -472,6 +474,8 @@ export function AdminSalonOverview({
             { href: '/admin/slots', label: 'Slots', desc: 'Availability', icon: LayoutGrid },
             { href: '/admin/services', label: 'Services', desc: 'Treatments & pricing', icon: Sparkles },
             { href: '/admin/products', label: 'Products', desc: 'Shop catalog', icon: Package },
+            { href: '/admin/customers', label: 'Customers', desc: 'CRM profiles', icon: Users },
+            { href: '/admin/analytics', label: 'Analytics', desc: 'Funnel & demand', icon: BarChart3 },
             { href: '/admin/gallery', label: 'Gallery', desc: 'Portfolio images', icon: ImageIcon },
             { href: '/admin/feedback', label: 'Feedback', desc: 'Client messages', icon: MessageSquare },
           ].map(({ href, label, desc, icon: Icon }) => (
