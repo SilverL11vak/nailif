@@ -1,5 +1,6 @@
 import { sql } from './db';
 import type { AddOn, ContactInfo, Service, TimeSlot } from '@/store/booking-types';
+// Customer linking happens only after verified payment success.
 
 export interface BookingInsert {
   service: Service;
@@ -99,6 +100,13 @@ async function ensureBookingsTableInternal() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS manually_reconciled BOOLEAN DEFAULT false`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMPTZ`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reconciled_by TEXT`;
+
+  // CRM linkage (nullable)
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_id TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS bookings_customer_id_idx ON bookings (customer_id)`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_name_snapshot TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_email_snapshot TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_phone_snapshot TEXT`;
 }
 
 export async function ensureBookingsTable() {
@@ -134,7 +142,11 @@ export async function insertBooking(data: BookingInsert) {
       total_duration,
       payment_status,
       deposit_amount,
-      stripe_session_id
+      stripe_session_id,
+      customer_id,
+      customer_name_snapshot,
+      customer_email_snapshot,
+      customer_phone_snapshot
     ) VALUES (
       ${data.source},
       ${data.status ?? 'confirmed'},
@@ -158,7 +170,11 @@ export async function insertBooking(data: BookingInsert) {
       ${data.totalDuration},
       ${data.paymentStatus ?? 'unpaid'},
       ${data.depositAmount ?? 0},
-      ${data.stripeSessionId ?? null}
+      ${data.stripeSessionId ?? null},
+      NULL,
+      ${`${data.contact.firstName} ${data.contact.lastName ?? ''}`.trim()},
+      ${data.contact.email ?? null},
+      ${data.contact.phone}
     )
     RETURNING id, created_at
   `;
@@ -318,7 +334,17 @@ export async function markBookingPaidFromWebhook(
     RETURNING id
   `;
 
-  return row ? String(row.id) : null;
+  if (!row) return null;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidBookingToCustomerBySession } = await import('./customer-service');
+    await linkPaidBookingToCustomerBySession(sessionId);
+  } catch (e) {
+    console.error('Customer link after booking webhook failed:', e);
+  }
+
+  return String(row.id);
 }
 
 /**
@@ -402,6 +428,15 @@ export async function reconcileBookingPayment(input: {
     WHERE id = ${existing.id}
     RETURNING id
   `;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidBookingToCustomerBySession, linkPaidBookingToCustomerByPaymentIntent } = await import('./customer-service');
+    if (stripeSessionId) await linkPaidBookingToCustomerBySession(stripeSessionId);
+    else if (stripePaymentIntentId) await linkPaidBookingToCustomerByPaymentIntent(stripePaymentIntentId);
+  } catch (e) {
+    console.error('Customer link after booking reconcile failed:', e);
+  }
 
   return { success: true as const, alreadyPaid: false as const, bookingId: String(row.id) };
 }

@@ -8,8 +8,8 @@
   },
   "hero": {
     "headline": "Obsessiivselt ilusad küüned. Broneeritud sekunditega.",
-    "subtext": "Pikaajalised tulemused, mis on loodud hoolika tähelepanu Detailidele. Broneerige oma kohtamine mõne hetkega ja lahkuge enesekindlalt.",
-    "cta": "Broneeri oma kohtamine",
+    "subtext": "Pikaajalised tulemused, loodud hoolika tähelepanuga detailidele. Broneeri aeg paari hetkega ja lahku enesekindlalt.",
+    "cta": "Broneeri aeg",
     "nextAvailable": "Järgmine vaba"
   },
   "trust": {
@@ -26,7 +26,7 @@
   },
   "services": {
     "title": "Meie teenused",
-    "subtitle": "Valige oma teenus ja broneerige vähem kui 30 sekundiga.",
+    "subtitle": "Vali teenus ja broneeri vähem kui 30 sekundiga.",
     "eyebrow": "Teenused",
     "nextTimeLabel": "Järgmine aeg",
     "veryPopular": "Väga populaarne",
@@ -43,7 +43,7 @@
     "title": "Kuidas see toimib",
     "subtitle": "Lihtne 3-sammuline broneerimisprotsess.",
     "step1Title": "Valige teenus",
-    "step1Desc": "Valige meie laia valiku Premium hoolduste seast",
+    "step1Desc": "Vali meie premium hoolduste seast",
     "step2Title": "Valige aeg",
     "step2Desc": "Valige teile sobiv aeg",
     "step3Title": "Kinnitage",
@@ -92,7 +92,7 @@
   "aftercare": {
     "title": "Hooldus",
     "cuticleOil": "Küüneõli",
-    "cuticleOilDesc": "Hoidke küüni niisutatud",
+    "cuticleOilDesc": "Hoia küüsi niisutatuna",
     "nailHardener": "Küüne tugevdaja",
     "nailHardenerDesc": "Säilitage tugevus",
     "protectionSpray": "Kaitse spray",
@@ -105,7 +105,7 @@
   },
   "finalCta": {
     "title": "Valmis ilusate küünte jaoks?",
-    "subtitle": "Kinnitage oma kohtamine ja kogeda Nailify erinevust.",
+    "subtitle": "Kinnita aeg ja koge Nailify erinevust.",
     "mostClients": "Enamik kliente naaseb 4 nädala jooksul",
     "freeReschedule": "Tasuta ümberbroneerimine",
     "secureSlot": "Kinnita oma koht",
@@ -126,7 +126,7 @@
     "discount": "−15%"
   },
   "widget": {
-    "bookInSeconds": "Broneerige alla 30 sekundi.",
+    "bookInSeconds": "Broneeri alla 30 sekundiga.",
     "noSlotsAvailable": "Vabu aegu pole",
     "todayAt": "Täna kell",
     "tomorrowAt": "Homme kell",
@@ -165,7 +165,7 @@
     "pickTime": "Valige sobiv aeg",
     "earliestAvailable": "Varaseim saadaval on esile tõstetud",
     "yourNailsWillThankYou": "Teie küüned tänavad teid",
-    "studioInfo": "Lõõgastuge meie Mustamäe stuudios. Iga kohtamine sisaldab konsultatsiooni.",
+    "studioInfo": "Lõõgastu meie Mustamäe stuudios. Iga külastus sisaldab konsultatsiooni.",
     "earliest": "Varaseim",
     "today": "Täna",
     "availableTimes": "Saadaval ajad",
@@ -220,7 +220,7 @@
   },
   "success": {
     "seeYouSoon": "Kohtume varsti! ✨",
-    "confirmed": "Kohtamine on kinnitatud",
+    "confirmed": "Broneering on kinnitatud",
     "ref": "Viide",
     "prepareVisit": "Valmistuge külastuseks",
     "arriveEarly": "Saage 5 min varem. Eemaldage vana lakk!",
@@ -322,7 +322,7 @@
       "title": "Nailify Mustamäe: lihtne tulla, lihtne tagasi tulla",
       "subtitle": "Meid külastavad enim Mustamäe ja Kesklinna kliendid, kes soovivad täpset tulemust ja kiiret broneerimist.",
       "item1": "Mustamäe tee 55",
-      "item2": "Parkimine lahedal",
+      "item2": "Parkimine lähedal",
       "item3": "Hea ühistranspordi ühendus"
     },
     "gallery": {
@@ -335,20 +335,20 @@
       "ctaLead": "Leia oma järgmine lemmik stiil.",
       "inspirationLook": "Inspiratsioonistiil",
       "styleNames": {
-        "glossy-pink-french": "Laikiv roosa French",
+        "glossy-pink-french": "Läikiv roosa French",
         "matte-nude": "Matt nude manikuur",
-        "chrome-silver": "Kroomitud hobe",
-        "ombre-sunset": "Pehme ombre",
-        "ruby-red": "Sugav rubiinpunane",
-        "pearl-white": "Parlvalge klassika"
+        "chrome-silver": "Kroomitud hõbe",
+        "ombre-sunset": "Pehme ombré",
+        "ruby-red": "Sügav rubiinpunane",
+        "pearl-white": "Pärlvalge klassika"
       },
       "styleCaptions": {
-        "glossy-pink-french": "French geeldisain pehme laikega",
-        "matte-nude": "Naturaalne nude viimistlus igapaevaks",
-        "chrome-silver": "Efektne kroomviimistlus eriliseks sundmuseks",
-        "ombre-sunset": "Orn varviuleminek modernse tulemusega",
-        "ruby-red": "Klassikaline geellakk sugava tooniga",
-        "pearl-white": "Puhas hele toon minimalistlikuks lookiks"
+        "glossy-pink-french": "French geeldisain pehme läikega",
+        "matte-nude": "Naturaalne nude viimistlus igapäevaks",
+        "chrome-silver": "Efektne kroomviimistlus eriliseks sündmuseks",
+        "ombre-sunset": "Õrn värviüleminek modernse tulemusega",
+        "ruby-red": "Klassikaline geellakk sügava tooniga",
+        "pearl-white": "Puhas hele toon minimalistlikuks look’iks"
       },
       "featuredLabel": "Nädala signatuur",
       "featuredQuote": "Pehme läige, puhas kuju ja kauapüsiv viimistlus."

@@ -1,4 +1,5 @@
 import { sql } from './db';
+// Customer linking happens only after verified payment success.
 
 export interface OrderRecord {
   id: string;
@@ -56,6 +57,13 @@ async function ensureOrdersTableInternal() {
       reconciled_by TEXT
     )
   `;
+
+  // CRM linkage (nullable)
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS orders_customer_id_idx ON orders (customer_id)`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name_snapshot TEXT`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email_snapshot TEXT`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone_snapshot TEXT`;
 }
 
 export async function ensureOrdersTable() {
@@ -76,6 +84,10 @@ export async function createOrder(input: CreateOrderInput) {
       customer_name,
       customer_email,
       customer_phone,
+      customer_id,
+      customer_name_snapshot,
+      customer_email_snapshot,
+      customer_phone_snapshot,
       booking_id,
       items_json
     ) VALUES (
@@ -83,6 +95,10 @@ export async function createOrder(input: CreateOrderInput) {
       ${input.status ?? 'pending'},
       ${input.amountTotal},
       ${input.currency ?? 'eur'},
+      ${input.customerName ?? null},
+      ${input.customerEmail ?? null},
+      ${input.customerPhone ?? null},
+      NULL,
       ${input.customerName ?? null},
       ${input.customerEmail ?? null},
       ${input.customerPhone ?? null},
@@ -134,7 +150,17 @@ export async function markOrderPaidFromWebhook(
     RETURNING id
   `;
 
-  return row ? String(row.id) : null;
+  if (!row) return null;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidOrderToCustomerBySession } = await import('./customer-service');
+    await linkPaidOrderToCustomerBySession(sessionId);
+  } catch (e) {
+    console.error('Customer link after order webhook failed:', e);
+  }
+
+  return String(row.id);
 }
 
 /**
@@ -216,6 +242,15 @@ export async function reconcileOrderPayment(input: {
     WHERE id = ${existing.id}
     RETURNING id
   `;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidOrderToCustomerBySession, linkPaidOrderToCustomerByPaymentIntent } = await import('./customer-service');
+    if (stripeSessionId) await linkPaidOrderToCustomerBySession(stripeSessionId);
+    else if (stripePaymentIntentId) await linkPaidOrderToCustomerByPaymentIntent(stripePaymentIntentId);
+  } catch (e) {
+    console.error('Customer link after order reconcile failed:', e);
+  }
 
   return { success: true as const, alreadyPaid: false as const, orderId: String(row.id) };
 }
