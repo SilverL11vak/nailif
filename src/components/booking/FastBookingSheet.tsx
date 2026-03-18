@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -23,10 +23,11 @@ export function FastBookingSheet({
 }: FastBookingSheetProps) {
   const { t, language } = useTranslation();
   const router = useRouter();
+  const phonePrefix = '+372';
   const [formData, setFormData] = useState<ContactInfo>({
     firstName: '',
     lastName: '',
-    phone: '',
+    phone: phonePrefix,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -40,6 +41,10 @@ export function FastBookingSheet({
       setIsSuccess(false);
       setError(null);
       setIsLoading(false);
+      setFormData((prev) => ({
+        ...prev,
+        phone: prev.phone?.trim() ? prev.phone : phonePrefix,
+      }));
       // Lock body scroll
       document.body.style.overflow = 'hidden';
     } else {
@@ -102,6 +107,26 @@ export function FastBookingSheet({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    if (name === 'phone') {
+      const trimmed = value.replace(/\s+/g, ' ').trimStart();
+      if (!trimmed) {
+        setFormData((prev) => ({ ...prev, phone: phonePrefix }));
+        return;
+      }
+      if (!trimmed.startsWith(phonePrefix)) {
+        const normalized = trimmed.startsWith('+') ? trimmed : `${phonePrefix} ${trimmed.replace(/^\+?/, '')}`;
+        setFormData((prev) => ({ ...prev, phone: normalized }));
+        return;
+      }
+      // Prevent deleting the prefix (keep at least "+372")
+      if (trimmed.length < phonePrefix.length) {
+        setFormData((prev) => ({ ...prev, phone: phonePrefix }));
+        return;
+      }
+      setFormData((prev) => ({ ...prev, phone: trimmed }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -227,7 +252,7 @@ export function FastBookingSheet({
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="+44 7700 900000"
+                  placeholder="+372 5xxxxxx"
                   className="w-full rounded-xl border-2 border-[#e9d7e4] bg-white px-4 py-3 transition-colors duration-200 focus:border-[#c24d86] focus:outline-none focus:ring-2 focus:ring-[#c24d86]/20"
                   required
                 />

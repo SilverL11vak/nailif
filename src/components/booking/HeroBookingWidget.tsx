@@ -109,7 +109,7 @@ export function HeroBookingWidget() {
   return (
     <div
       id="hero-booking-widget"
-      className="relative overflow-hidden rounded-3xl bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_50%,#fff5f9_100%)] p-6 lg:p-8"
+      className="relative overflow-hidden p-6 lg:p-8"
     >
       <div className="pointer-events-none absolute right-0 top-0 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(215,157,192,0.22)_0%,transparent_70%)]" aria-hidden />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-[radial-gradient(ellipse_80%_100%_at_50%_100%,rgba(207,124,172,0.15)_0%,transparent_70%)] blur-sm" aria-hidden />
