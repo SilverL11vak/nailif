@@ -648,30 +648,29 @@ export default function AdminProductsPage() {
                         setError(null);
                         setIsSaving(true);
                         try {
-                          const uploadedUrls: string[] = [];
-                          for (const file of Array.from(files)) {
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            const response = await fetch('/api/admin/upload-product-image', {
-                              method: 'POST',
-                              body: formData,
-                            });
-                            if (!response.ok) {
-                              let message = 'Pildi üleslaadimine ebaõnnestus';
-                              try {
-                                const data = (await response.json()) as { error?: string };
-                                if (data?.error) message = data.error;
-                              } catch {
-                                // ignore
-                              }
-                              if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
-                              throw new Error(message);
+                          const formData = new FormData();
+                          Array.from(files).forEach((file) => formData.append('files', file));
+                          const response = await fetch('/api/admin/upload-product-image', {
+                            method: 'POST',
+                            body: formData,
+                          });
+                          if (!response.ok) {
+                            let message = 'Pildi üleslaadimine ebaõnnestus';
+                            try {
+                              const data = (await response.json()) as { error?: string };
+                              if (data?.error) message = data.error;
+                            } catch {
+                              // ignore
                             }
-                            const data = (await response.json()) as { url?: string };
-                            const url = String(data.url ?? '').trim();
-                            if (!url) throw new Error('Pildi URL puudub');
-                            uploadedUrls.push(url);
+                            if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
+                            throw new Error(message);
                           }
+                          const data = (await response.json()) as { url?: string; urls?: string[] };
+                          const uploadedUrls = Array.isArray(data.urls) ? data.urls.map((v) => String(v).trim()).filter(Boolean) : [];
+                          const singleUrl = String(data.url ?? '').trim();
+                          if (singleUrl) uploadedUrls.push(singleUrl);
+                          if (uploadedUrls.length === 0) throw new Error('Pildi URL puudub');
+
                           setDraft((prev) => {
                             const current = (prev.images ?? []).filter(Boolean);
                             const merged = [...uploadedUrls, ...current.filter((img) => !uploadedUrls.includes(img))];
