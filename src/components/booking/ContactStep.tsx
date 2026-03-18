@@ -176,9 +176,9 @@ export function ContactStep() {
   };
 
   const prepTips = [
-    text('preparation_tip_1', language === 'en' ? 'Free rescheduling' : 'Tasuta umberbroneerimine'),
+    text('preparation_tip_1', language === 'en' ? 'Free rescheduling' : 'Tasuta ümberbroneerimine'),
     text('preparation_tip_2', language === 'en' ? 'Fast confirmation' : 'Kiire kinnitus'),
-    text('preparation_tip_3', language === 'en' ? 'Certified nail technician' : 'Sertifitseeritud kuunetehnik'),
+    text('preparation_tip_3', language === 'en' ? 'Certified nail technician' : 'Sertifitseeritud küünetehnik'),
   ];
 
   const uploadCard = (kind: UploadKind, title: string, imageValue: string, inputRef: React.RefObject<HTMLInputElement | null>) => (
@@ -258,7 +258,7 @@ export function ContactStep() {
       <section className="mb-5 rounded-2xl border border-[#eadce5] bg-white p-4">
         <h3 className="text-sm font-semibold text-[#4a3344]">{text('preparation_title', language === 'en' ? 'Before your appointment' : 'Enne visiiti')}</h3>
         <p className="mt-1 text-xs text-[#7d6275]">
-          {text('preparation_helper', language === 'en' ? 'Clean nails and avoid strong oils on the same day.' : 'Puhasta kuuned ja vali samal paeval kergem hooldus.')}
+          {text('preparation_helper', language === 'en' ? 'Clean nails and avoid strong oils on the same day.' : 'Puhasta küüned ja vali samal päeval kergem hooldus.')}
         </p>
       </section>
 
@@ -352,11 +352,11 @@ export function ContactStep() {
 
         <section className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#8e7465]">
-            {text('contact_optional_nails_title', language === 'en' ? 'Optional info about your nails' : 'Kiire info sinu kuunte kohta (valikuline)')}
+            {text('contact_optional_nails_title', language === 'en' ? 'Optional info about your nails' : 'Kiire info sinu küünte kohta (valikuline)')}
           </p>
-          <h3 className="text-sm font-semibold text-[#443630]">{text('upload_title', language === 'en' ? 'Inspiration or current nail photo' : 'Inspiratsioon voi praeguse kuune foto')}</h3>
+          <h3 className="text-sm font-semibold text-[#443630]">{text('upload_title', language === 'en' ? 'Inspiration or current nail photo' : 'Inspiratsioon või praeguse küüne foto')}</h3>
           <p className="mt-1 text-xs text-[#74675f]">
-            {text('upload_helper', language === 'en' ? 'Show us your inspiration. Upload your current nails for better consultation.' : 'Naita meile inspiratsiooni. Lisa praeguste kuunte pilt paremaks konsultatsiooniks.')}
+            {text('upload_helper', language === 'en' ? 'Show us your inspiration. Upload your current nails for better consultation.' : 'Näita meile inspiratsiooni. Lisa praeguste küünte pilt paremaks konsultatsiooniks.')}
           </p>
           <p className="mt-2 text-xs font-medium text-[#7b6558]">
             {text(
@@ -379,17 +379,17 @@ export function ContactStep() {
             )}
             {uploadCard(
               'current',
-              text('upload_current_optional_label', language === 'en' ? 'Add a photo of your current nails (optional)' : 'Lisa pilt oma praegustest kuuntest (valikuline)'),
+              text('upload_current_optional_label', language === 'en' ? 'Add a photo of your current nails (optional)' : 'Lisa pilt oma praegustest küüntest (valikuline)'),
               currentNailImage,
               currentInputRef
             )}
           </div>
           <p className="mt-3 text-xs text-[#74675f]">
-            {text('upload_skip_reassurance', language === 'en' ? 'You can continue without uploading any photo.' : 'Voi jatkata ka ilma pildita.')}
+            {text('upload_skip_reassurance', language === 'en' ? 'You can continue without uploading any photo.' : 'Võid jätkata ka ilma pildita.')}
           </p>
 
           <label className="mt-3 block text-xs font-medium text-[#5e4f48]">
-            {text('upload_note_label', language === 'en' ? 'Add note (optional)' : 'Lisa markus (valikuline)')}
+            {text('upload_note_label', language === 'en' ? 'Add note (optional)' : 'Lisa märkus (valikuline)')}
             <input
               type="text"
               name="inspirationNote"

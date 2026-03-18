@@ -87,10 +87,10 @@ const defaultProducts: Omit<Product, 'createdAt'>[] = [
   {
     id: 'nail-strength-serum',
     name: 'Nail Strength Serum',
-    nameEt: 'Kuunte tugevdav seerum',
+    nameEt: 'Küüsi tugevdav seerum',
     nameEn: 'Nail Strength Serum',
     description: 'Targeted support for brittle nails between appointments.',
-    descriptionEt: 'Sihtotstarbeline toetus ornadele kuuntele hoolduste vahel.',
+    descriptionEt: 'Sihtotstarbeline toetus õrnadele küüntele hoolduste vahel.',
     descriptionEn: 'Targeted support for brittle nails between appointments.',
     price: 22,
     imageUrl: 'https://images.unsplash.com/photo-1625772452859-1c03d5bf1137?w=600&q=80',
@@ -109,7 +109,7 @@ const defaultProducts: Omit<Product, 'createdAt'>[] = [
     nameEt: 'Keratiin taastav palsam',
     nameEn: 'Keratin Repair Balm',
     description: 'Deep conditioning balm for dry cuticles and plate protection.',
-    descriptionEt: 'Suvaniisutav palsam kuivadele kuunenahkadele ja kuuneplaadi kaitseks.',
+    descriptionEt: 'Sügavniisutav palsam kuivadele küünenahkadele ja küüneplaadi kaitseks.',
     descriptionEn: 'Deep conditioning balm for dry cuticles and plate protection.',
     price: 27,
     imageUrl: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=600&q=80',
@@ -590,7 +590,7 @@ export async function listProducts(activeOnly = true, locale?: string): Promise<
   const selectImageUrl = activeOnly
     ? sql`CASE WHEN image_url LIKE 'data:%' THEN NULL ELSE image_url END AS image_url`
     : sql`image_url`;
-  const selectImages = activeOnly ? sql`'[]'::jsonb AS images` : sql`images`;
+  const selectImages = sql`images`;
   const rows = await sql<{
     id: string;
     name: string;
@@ -617,6 +617,22 @@ export async function listProducts(activeOnly = true, locale?: string): Promise<
     ORDER BY is_featured DESC, created_at DESC
   `;
 
+  const normalizeImages = (raw: unknown) => {
+    const parsed =
+      typeof raw === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(raw) as unknown;
+            } catch {
+              return undefined;
+            }
+          })()
+        : raw;
+    return Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')
+      ? (parsed as string[]).filter(Boolean)
+      : [];
+  };
+
   return rows.map((row) => ({
     id: row.id,
     name: localizedValue(lang, row.name_et, row.name_en, row.name),
@@ -628,11 +644,14 @@ export async function listProducts(activeOnly = true, locale?: string): Promise<
     price: row.price,
     imageUrl: sanitizePublicImage(row.image_url),
     images:
-      Array.isArray(row.images) && row.images.every((value) => typeof value === 'string')
-        ? (row.images as string[]).filter((value) => !value.startsWith('data:')).slice(0, 3)
+      (normalizeImages(row.images).length
+        ? normalizeImages(row.images)
         : row.image_url
           ? [sanitizePublicImage(row.image_url)].filter((value): value is string => Boolean(value))
-          : [],
+          : []
+      )
+        .filter((value) => !value.startsWith('data:'))
+        .slice(0, 12),
     category: localizedValue(lang, row.category_et, row.category_en, row.category),
     categoryEt: row.category_et ?? row.category,
     categoryEn: row.category_en ?? '',
@@ -674,6 +693,22 @@ export async function getProductsByIds(ids: string[], locale?: string): Promise<
       AND active = TRUE
   `;
 
+  const normalizeImages = (raw: unknown) => {
+    const parsed =
+      typeof raw === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(raw) as unknown;
+            } catch {
+              return undefined;
+            }
+          })()
+        : raw;
+    return Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')
+      ? (parsed as string[]).filter(Boolean)
+      : [];
+  };
+
   return rows.map((row) => ({
     id: row.id,
     name: localizedValue(lang, row.name_et, row.name_en, row.name),
@@ -685,11 +720,14 @@ export async function getProductsByIds(ids: string[], locale?: string): Promise<
     price: row.price,
     imageUrl: sanitizePublicImage(row.image_url),
     images:
-      Array.isArray(row.images) && row.images.every((value) => typeof value === 'string')
-        ? (row.images as string[]).filter((value) => !value.startsWith('data:')).slice(0, 3)
+      (normalizeImages(row.images).length
+        ? normalizeImages(row.images)
         : row.image_url
           ? [sanitizePublicImage(row.image_url)].filter((value): value is string => Boolean(value))
-          : [],
+          : []
+      )
+        .filter((value) => !value.startsWith('data:'))
+        .slice(0, 12),
     category: localizedValue(lang, row.category_et, row.category_en, row.category),
     categoryEt: row.category_et ?? row.category,
     categoryEn: row.category_en ?? '',
@@ -723,6 +761,10 @@ export async function upsertProduct(input: UpsertProductInput) {
     ? input.images.filter((value): value is string => typeof value === 'string' && value.length > 0)
     : [];
   const primaryImage = input.imageUrl ?? normalizedImages[0] ?? null;
+  const orderedImages = [
+    ...(primaryImage ? [primaryImage] : []),
+    ...normalizedImages.filter((value) => value !== primaryImage),
+  ];
   const categoryEt = (input.categoryEt ?? 'Üldine').trim() || 'Üldine';
   const sortOrder = input.sortOrder ?? 0;
 
@@ -739,7 +781,7 @@ export async function upsertProduct(input: UpsertProductInput) {
       ${input.descriptionEn ?? ''},
       ${input.price},
       ${primaryImage},
-      ${JSON.stringify(normalizedImages)}::jsonb,
+      ${JSON.stringify(orderedImages)}::jsonb,
       ${categoryEt},
       ${categoryEt},
       ${input.categoryEn ?? ''},

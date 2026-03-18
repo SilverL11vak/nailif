@@ -224,11 +224,17 @@ export const useBookingStore = create<BookingState>()(
     }),
     {
       name: 'nailify-booking',
-      partialize: (state) => ({
-        // Only persist contact info for returning users
-        contactInfo: state.contactInfo,
-        selectedService: state.selectedService,
-      }),
+      partialize: (state) =>
+        ({
+          contactInfo: state.contactInfo
+            ? {
+                ...state.contactInfo,
+                inspirationImage: undefined,
+                currentNailImage: undefined,
+              }
+            : null,
+          selectedService: state.selectedService,
+        }) as BookingState,
     }
   )
 );

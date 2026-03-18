@@ -61,6 +61,8 @@ const emptyDraft: ProductDraft = {
 };
 
 function toDraft(product: Product): ProductDraft {
+  const images = Array.isArray(product.images) ? product.images.filter(Boolean) : [];
+  const mainImage = (product.imageUrl ?? images[0] ?? '').trim();
   return {
     id: product.id,
     nameEt: product.nameEt ?? product.name ?? '',
@@ -68,8 +70,8 @@ function toDraft(product: Product): ProductDraft {
     descriptionEt: product.descriptionEt ?? product.description ?? '',
     descriptionEn: product.descriptionEn ?? '',
     price: product.price,
-    imageUrl: product.imageUrl ?? '',
-    images: product.images?.length ? product.images : product.imageUrl ? [product.imageUrl] : [],
+    imageUrl: mainImage,
+    images: mainImage ? [mainImage, ...images.filter((value) => value !== mainImage)] : images,
     categoryEt: product.categoryEt ?? product.category ?? 'Hooldus',
     categoryEn: product.categoryEn ?? '',
     stock: product.stock,
@@ -158,6 +160,29 @@ export default function AdminProductsPage() {
     setIsSaving(true);
     setError(null);
     try {
+      const normalizedImages = (draft.images ?? [])
+        .map((value) => value.trim())
+        .filter((value) => Boolean(value));
+      const normalizedImageUrl = (draft.imageUrl ?? '').trim();
+
+      // Important: base64 `data:` images are not persisted to the public shop (they're sanitized out).
+      // Require a hosted URL so the image actually shows on the homepage/shop.
+      const hasDataUrl =
+        normalizedImageUrl.startsWith('data:') || normalizedImages.some((value) => value.startsWith('data:'));
+      if (hasDataUrl) {
+        setError('Pildi üleslaadimine (data URL) ei salvestu. Palun kasuta pildi URL-i (https://...).');
+        setIsSaving(false);
+        return;
+      }
+
+      const safeImages = normalizedImages.filter((value) => !value.startsWith('data:'));
+      const safeImageUrl =
+        (normalizedImageUrl && !normalizedImageUrl.startsWith('data:') ? normalizedImageUrl : safeImages[0]) ?? null;
+      const orderedImages = [
+        ...(safeImageUrl ? [safeImageUrl] : []),
+        ...safeImages.filter((value) => value !== safeImageUrl),
+      ];
+
       const response = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,8 +193,8 @@ export default function AdminProductsPage() {
           descriptionEt: draft.descriptionEt,
           descriptionEn: draft.descriptionEn,
           price: draft.price,
-          imageUrl: draft.images[0] ?? draft.imageUrl ?? null,
-          images: draft.images,
+          imageUrl: safeImageUrl,
+          images: orderedImages,
           categoryEt: draft.categoryEt,
           categoryEn: draft.categoryEn,
           stock: draft.stock,
@@ -178,13 +203,23 @@ export default function AdminProductsPage() {
           sortOrder: draft.sortOrder,
         }),
       });
-      if (!response.ok) throw new Error('Salvestamine ebaonnestus');
+      if (!response.ok) {
+        let message = 'Salvestamine ebaonnestus';
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore JSON parse errors
+        }
+        if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
+        throw new Error(message);
+      }
       await loadProducts();
       setIsDrawerOpen(false);
       setDraft(emptyDraft);
       setToast('Toode salvestatud');
-    } catch {
-      setError('Toote salvestamine ebaonnestus.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Toote salvestamine ebaonnestus.');
     } finally {
       setIsSaving(false);
     }
@@ -414,6 +449,11 @@ export default function AdminProductsPage() {
 
             <div className="space-y-6 p-6">
               <p className="text-xs text-[#6b7280]">Eesti keel (/et) · English (/en)</p>
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800">
+                  {error}
+                </div>
+              )}
 
               {/* Basic info */}
               <fieldset className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
@@ -552,25 +592,99 @@ export default function AdminProductsPage() {
                       className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
                     />
                   </label>
+                  {Array.isArray(draft.images) && draft.images.length > 0 && (
+                    <div className="rounded-xl border border-[#efe4eb] bg-[#faf8f9] p-3">
+                      <p className="text-xs font-medium text-[#6b7280]">Toote pildid (vali peapilt)</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {draft.images.map((url, index) => {
+                          const isMain = (draft.imageUrl ?? '').trim() === url.trim() || (index === 0 && !draft.imageUrl.trim());
+                          return (
+                            <div key={`${url}-${index}`} className="group relative">
+                              <button
+                                type="button"
+                                onClick={() => setDraft((prev) => ({ ...prev, imageUrl: url }))}
+                                className={`relative h-16 w-16 overflow-hidden rounded-xl border bg-white ${
+                                  isMain ? 'border-[#c24d86] ring-2 ring-[#c24d86]/15' : 'border-[#e5e0e3]'
+                                }`}
+                                aria-label="Set as main image"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={url} alt="Product image" className="h-full w-full object-cover" />
+                              </button>
+                              <div className="mt-1 flex items-center justify-between">
+                                <span className={`text-[10px] font-medium ${isMain ? 'text-[#b03f75]' : 'text-[#7b7280]'}`}>
+                                  {isMain ? 'Peapilt' : 'Lisa'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDraft((prev) => {
+                                      const next = (prev.images ?? []).filter((value) => value !== url);
+                                      const nextMain = prev.imageUrl === url ? (next[0] ?? '') : prev.imageUrl;
+                                      return { ...prev, images: next, imageUrl: nextMain };
+                                    })
+                                  }
+                                  className="text-[10px] font-semibold text-[#a33a3a] hover:text-[#7f2a2a]"
+                                >
+                                  Eemalda
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <input
                       ref={fileInputRef}
                       type="file"
+                      multiple
                       accept="image/*"
                       className="hidden"
                       onChange={async (event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          const image = String(reader.result ?? '');
-                          setDraft((prev) => ({
-                            ...prev,
-                            imageUrl: image,
-                            images: [image, ...prev.images.filter((img) => img !== image)],
-                          }));
-                        };
-                        reader.readAsDataURL(file);
+                        const files = event.target.files;
+                        if (!files || files.length === 0) return;
+                        setError(null);
+                        setIsSaving(true);
+                        try {
+                          const uploadedUrls: string[] = [];
+                          for (const file of Array.from(files)) {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            const response = await fetch('/api/admin/upload-product-image', {
+                              method: 'POST',
+                              body: formData,
+                            });
+                            if (!response.ok) {
+                              let message = 'Pildi üleslaadimine ebaõnnestus';
+                              try {
+                                const data = (await response.json()) as { error?: string };
+                                if (data?.error) message = data.error;
+                              } catch {
+                                // ignore
+                              }
+                              if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
+                              throw new Error(message);
+                            }
+                            const data = (await response.json()) as { url?: string };
+                            const url = String(data.url ?? '').trim();
+                            if (!url) throw new Error('Pildi URL puudub');
+                            uploadedUrls.push(url);
+                          }
+                          setDraft((prev) => {
+                            const current = (prev.images ?? []).filter(Boolean);
+                            const merged = [...uploadedUrls, ...current.filter((img) => !uploadedUrls.includes(img))];
+                            const main = prev.imageUrl?.trim() ? prev.imageUrl : merged[0] ?? '';
+                            return { ...prev, images: merged, imageUrl: main };
+                          });
+                          setToast(uploadedUrls.length > 1 ? 'Pildid üles laaditud' : 'Pilt üles laaditud');
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Pildi üleslaadimine ebaõnnestus.');
+                        } finally {
+                          setIsSaving(false);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }
                       }}
                     />
                     <button
@@ -578,7 +692,7 @@ export default function AdminProductsPage() {
                       onClick={() => fileInputRef.current?.click()}
                       className="rounded-xl border border-[#e5e0e3] bg-white px-4 py-2 text-sm font-medium text-[#4b5563] hover:bg-[#fdf8fb]"
                     >
-                      Laadi pilt üles
+                      Laadi pilt üles (mitu)
                     </button>
                   </div>
                 </div>

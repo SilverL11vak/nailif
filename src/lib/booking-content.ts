@@ -221,11 +221,11 @@ const defaultContent: DefaultContentItem[] = [
   { key: 'success_primary_cta', et: 'Tagasi avalehele', en: 'Back to homepage' },
   { key: 'success_secondary_cta', et: 'Vaata teenuseid', en: 'View services' },
   { key: 'ai_knowledge_specialist_name', et: 'Sandra Samun', en: 'Sandra Samun' },
-  { key: 'ai_knowledge_specialist_role', et: 'Sertifitseeritud kuunetehnik', en: 'Certified nail technician' },
+  { key: 'ai_knowledge_specialist_role', et: 'Sertifitseeritud küünetehnik', en: 'Certified nail technician' },
   { key: 'ai_knowledge_owner_name', et: 'Sandra Samun', en: 'Sandra Samun' },
-  { key: 'ai_knowledge_brand_about', et: 'Nailify on premium kuunehoolduse stuudio, mis keskendub personaalsetele tulemustele, puhtale tookeskkonnale ja rahulikule kliendikogemusele.', en: 'Nailify is a premium nail care studio focused on personalized results, clean standards and a calm client experience.' },
-  { key: 'ai_knowledge_location', et: 'Mustamae stuudio, Tallinn', en: 'Mustamae studio, Tallinn' },
-  { key: 'ai_knowledge_guideline', et: 'Kui kusimus vajab loplikku kinnitust, suuna klient otse kuunetehnikule.', en: 'If final confirmation is needed, direct the client to the technician.' },
+  { key: 'ai_knowledge_brand_about', et: 'Nailify on premium küünehoolduse stuudio, mis keskendub personaalsetele tulemustele, puhtale töökeskkonnale ja rahulikule kliendikogemusele.', en: 'Nailify is a premium nail care studio focused on personalized results, clean standards and a calm client experience.' },
+  { key: 'ai_knowledge_location', et: 'Mustamäe stuudio, Tallinn', en: 'Mustamäe studio, Tallinn' },
+  { key: 'ai_knowledge_guideline', et: 'Kui küsimus vajab lõplikku kinnitust, suuna klient otse küünetehnikule.', en: 'If final confirmation is needed, direct the client to the technician.' },
   { key: 'success_contact_cta', et: 'Võta salongiga ühendust', en: 'Contact the salon' },
 ];
 

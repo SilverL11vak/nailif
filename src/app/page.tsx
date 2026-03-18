@@ -89,8 +89,6 @@ export default function Home() {
   const [servicesInView, setServicesInView] = useState(false);
   const [galleryInView, setGalleryInView] = useState(false);
   const gallerySectionRef = useRef<HTMLElement | null>(null);
-  const galleryScrollRef = useRef<HTMLDivElement | null>(null);
-  const [galleryScrollIndex, setGalleryScrollIndex] = useState(0);
   const scrollTickingRef = useRef(false);
   const showDiscountPillRef = useRef(showDiscountPill);
   const discountDismissedRef = useRef(discountPillDismissed);
@@ -104,7 +102,17 @@ export default function Home() {
   const mobileMenuPanelRef = useRef<HTMLDivElement | null>(null);
   const previousFocusedElementRef = useRef<HTMLElement | null>(null);
   const media = (key: string) => homepageMedia[key]?.trim() ?? '';
-  const [feedbackItems, setFeedbackItems] = useState<Array<{ id: string; clientName: string; clientAvatarUrl: string | null; rating: number; feedbackText: string; sourceLabel: string | null }>>([]);
+  const [feedbackItems, setFeedbackItems] = useState<
+    Array<{
+      id: string;
+      clientName: string;
+      clientAvatarUrl: string | null;
+      rating: number;
+      feedbackText: string;
+      sourceLabel: string | null;
+      serviceId?: string | null;
+    }>
+  >([]);
   const [homepageAddOns, setHomepageAddOns] = useState<Array<{ id: string; name: string; duration: number; price: number }>>([]);
   // Products: Only use API data - no hardcoded fallback
   // If API returns empty, the section will show an empty state
@@ -224,7 +232,7 @@ export default function Home() {
     let mounted = true;
     const loadServices = async () => {
       try {
-        const response = await fetch(`/api/services?lang=${language}`);
+        const response = await fetch(`/api/services?lang=${language}`, { cache: 'no-store' });
         if (!response.ok) return;
         const data = (await response.json()) as { services?: ServiceCard[] };
         if (mounted && Array.isArray(data.services) && data.services.length > 0) {
@@ -246,7 +254,17 @@ export default function Home() {
       try {
         const response = await fetch('/api/feedback?visible=1');
         if (!response.ok) return;
-        const data = (await response.json()) as { feedback?: Array<{ id: string; clientName: string; clientAvatarUrl: string | null; rating: number; feedbackText: string; sourceLabel: string | null }> };
+        const data = (await response.json()) as {
+          feedback?: Array<{
+            id: string;
+            clientName: string;
+            clientAvatarUrl: string | null;
+            rating: number;
+            feedbackText: string;
+            sourceLabel: string | null;
+            serviceId?: string | null;
+          }>;
+        };
         if (mounted && Array.isArray(data.feedback)) {
           setFeedbackItems(data.feedback);
         }
@@ -520,18 +538,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const el = galleryScrollRef.current;
-    if (!el) return;
-    const cardWidth = 280 + 16;
-    const onScroll = () => {
-      const index = Math.round(el.scrollLeft / cardWidth);
-      setGalleryScrollIndex(Math.min(Math.max(0, index), 4));
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
     const cardEl = heroBookingCardRef.current;
     if (!cardEl) return;
     const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -769,7 +775,7 @@ export default function Home() {
   const navLinkClass =
     'type-navbar-link group relative py-1 text-[#584a58] transition-colors duration-200 hover:text-[#2f2530]';
   const utilityIconClass =
-    'type-navbar-icon-btn relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center';
+    'type-navbar-icon-btn relative inline-flex min-h-[48px] min-w-[48px] items-center justify-center';
 
   /* Premium layout: max 1280px, normalized section spacing */
   const sectionClass = 'py-16 md:py-20 lg:py-24';
@@ -792,7 +798,8 @@ export default function Home() {
       >
         <div className={contentMax}>
           <div className={`flex items-center justify-between transition-all duration-300 ${
-            isScrolled ? 'h-16' : 'h-20'
+            // Mobile always 64px; desktop can breathe when not scrolled
+            isScrolled ? 'h-16' : 'h-16 lg:h-20'
           }`}>
             {/* Logo — breathing room on mobile */}
             <div className="flex min-w-0 flex-shrink items-center gap-2 pr-2 sm:pr-0">
@@ -850,7 +857,7 @@ export default function Home() {
                 >
                   <FavoriteHeartIcon active={favoritesCount > 0} size={20} />
                   {favoritesCount > 0 && (
-                    <span className="absolute right-0.5 top-0.5 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold text-white">
+                    <span className="absolute right-0 top-0 inline-flex min-h-[18px] min-w-[18px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold leading-none text-white shadow-[0_10px_18px_-12px_rgba(194,77,134,0.85)]">
                       {favoritesCount > 9 ? '9+' : favoritesCount}
                     </span>
                   )}
@@ -863,7 +870,7 @@ export default function Home() {
                 >
                   <ShoppingBag size={20} strokeWidth={1.8} />
                   {cartCount > 0 && (
-                    <span className="absolute right-0.5 top-0.5 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold text-white">
+                    <span className="absolute right-0 top-0 inline-flex min-h-[18px] min-w-[18px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold leading-none text-white shadow-[0_10px_18px_-12px_rgba(194,77,134,0.85)]">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
                   )}
@@ -948,7 +955,7 @@ export default function Home() {
                     key={item.label}
                     type="button"
                     onClick={item.fn}
-                    className="mobile-menu-anim-item flex min-h-[52px] w-full items-center rounded-xl px-1 py-1 text-left text-[1.125rem] font-medium tracking-tight text-[#2f2530] transition-colors active:bg-[#faf5f8] [animation:mobileMenuItemIn_220ms_ease-out_both]"
+                    className="mobile-menu-anim-item flex min-h-[56px] w-full items-center rounded-xl px-1 py-1 text-left text-[1.125rem] font-medium tracking-tight text-[#2f2530] transition-colors active:bg-[#faf5f8] [animation:mobileMenuItemIn_220ms_ease-out_both]"
                     style={{ animationDelay: `${60 + i * 28}ms` }}
                   >
                     {item.label}
@@ -1004,14 +1011,7 @@ export default function Home() {
                     English
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => goToPage(localizePath('/book'))}
-                  className="btn-primary mobile-menu-anim-item min-h-[52px] w-full rounded-2xl text-base font-semibold text-white shadow-[0_14px_28px_-12px_rgba(194,77,134,0.45)] [animation:mobileMenuItemIn_220ms_ease-out_both]"
-                  style={{ animationDelay: '180ms' }}
-                >
-                  {t('nav.bookNow')}
-                </button>
+                {/* Booking CTA intentionally removed from mobile menu (booking via hero + sticky CTA) */}
               </div>
             </div>
           </aside>
@@ -1197,7 +1197,7 @@ export default function Home() {
       {/* 3. Trust strip + Local Trust / Mustamäe — premium 3-column, editorial continuation of hero */}
       <section className="border-y border-slate-200/70 bg-white/90 py-6 backdrop-blur-sm">
         <div className={contentMax}>
-          <div className="flex flex-wrap items-center justify-center gap-8 lg:gap-16">
+          <div className="flex flex-nowrap items-center justify-start gap-8 overflow-x-auto overscroll-x-contain py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:justify-center lg:gap-16">
             <div className="flex items-center gap-2 text-gray-500 text-sm">
               <span className="font-medium text-gray-700">4.9</span>
               <span>{t('trust.googleRating')}</span>
@@ -1627,21 +1627,23 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile: single-row horizontal gallery, scroll-snap, no wrap */}
-          <div
-            className="-mx-4 flex flex-nowrap gap-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory px-4 pb-4 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
-            ref={galleryScrollRef}
-          >
+          {/* Mobile: 2-column grid (no horizontal scroll) */}
+          <div className="grid grid-cols-2 gap-2 lg:hidden">
             {galleryCards.map((card, index) => (
               <article
                 key={card.style.id}
-                className={`relative flex w-[280px] max-w-[85vw] shrink-0 snap-center snap-always flex-col overflow-hidden rounded-2xl bg-[#f5e8ef] shadow-[0_8px_24px_-12px_rgba(60,40,55,0.1)] transition-all duration-500 ${
-                  galleryInView ? 'opacity-100' : 'opacity-0'
+                className={`group relative overflow-hidden rounded-2xl bg-[#f0e2eb] shadow-[0_8px_22px_-14px_rgba(60,40,55,0.14)] transition ${
+                  galleryInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
                 }`}
-                style={{ transitionDelay: `${index * 60}ms` }}
+                style={{ transitionDelay: `${Math.min(index * 40, 240)}ms` }}
               >
-                <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(index)} aria-label={getStyleLabel(card.style)} />
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#f0e2eb]">
+                <button
+                  type="button"
+                  className="absolute inset-0 z-10"
+                  onClick={() => openGallery(index)}
+                  aria-label={getStyleLabel(card.style)}
+                />
+                <div className="relative aspect-[4/5] w-full">
                   {isDataImageUrl(card.imageUrl) ? (
                     <img
                       src={card.imageUrl}
@@ -1655,43 +1657,12 @@ export default function Home() {
                       src={card.imageUrl}
                       alt={getStyleLabel(card.style)}
                       fill
-                      sizes="(max-width: 430px) 85vw, 280px"
+                      sizes="(max-width: 640px) 50vw, 320px"
                       className="object-cover"
                     />
                   )}
                 </div>
-                <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/75 via-black/30 to-transparent p-5 pt-12 text-white">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/85">
-                    {index === 0 ? getI18nTextOrFallback('homepage.gallery.signatureLook', 'Signature look') : ''}
-                  </p>
-                  <p className="mt-1 font-brand text-lg font-semibold">{getStyleLabel(card.style)}</p>
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs text-white/90">
-                    {getI18nTextOrFallback('homepage.gallery.bookStyleCta', 'Broneeri see stiil')} →
-                  </span>
-                </div>
               </article>
-            ))}
-          </div>
-
-          {/* Scroll indicator dots — mobile only */}
-          <div className="mt-4 flex justify-center gap-2 lg:hidden">
-            {galleryCards.map((_, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => {
-                  const el = galleryScrollRef.current;
-                  if (el) {
-                    const card = el.children[index] as HTMLElement | undefined;
-                    if (card) card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                  }
-                  setGalleryScrollIndex(index);
-                }}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  galleryScrollIndex === index ? 'w-6 bg-[#c24d86]' : 'w-2 bg-[#d4c4ce]'
-                }`}
-                aria-label={language === 'en' ? `Go to slide ${index + 1}` : `Vaata slaid ${index + 1}`}
-              />
             ))}
           </div>
 
@@ -2110,9 +2081,9 @@ export default function Home() {
                       <div className="relative flex flex-col pb-0">
                         {/* Hero image: aspect-ratio for responsive fill, no fixed height */}
                         <div className="relative aspect-[4/3] min-h-[200px] overflow-hidden rounded-t-2xl bg-[#f8edf3] sm:aspect-[3/2] lg:aspect-[8/5]">
-                          {featuredProduct.imageUrl ? (
+                          {featuredProduct.imageUrl || featuredProduct.images?.[0] ? (
                             <Image
-                              src={featuredProduct.imageUrl}
+                              src={featuredProduct.imageUrl || featuredProduct.images?.[0] || ''}
                               alt={featuredProduct.name}
                               width={1200}
                               height={900}
@@ -2206,8 +2177,8 @@ export default function Home() {
                             className="group flex w-[min(100%,280px)] shrink-0 items-center gap-2.5 rounded-xl bg-white/60 p-2.5 transition-colors hover:bg-[#fdf6fa]/80 lg:w-auto lg:min-w-0 lg:rounded-lg lg:bg-transparent lg:py-2.5 lg:hover:bg-[#fdf6fa]/70"
                           >
                             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#f8edf3]">
-                              {product.imageUrl ? (
-                                <Image src={product.imageUrl} alt={product.name} width={180} height={180} unoptimized className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+                              {product.imageUrl || product.images?.[0] ? (
+                                <Image src={product.imageUrl || product.images?.[0] || ''} alt={product.name} width={180} height={180} unoptimized className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center text-[9px] text-[#7f6679]">{product.name}</div>
                               )}
@@ -2248,9 +2219,9 @@ export default function Home() {
                           className={`relative cursor-pointer overflow-hidden rounded-t-[24px] bg-[#f8edf3] ${aspectClass}`}
                           onClick={() => goToProduct(product.id)}
                         >
-                          {product.imageUrl ? (
+                          {product.imageUrl || product.images?.[0] ? (
                             <Image
-                              src={product.imageUrl}
+                              src={product.imageUrl || product.images?.[0] || ''}
                               alt={product.name}
                               width={760}
                               height={580}
@@ -2332,54 +2303,107 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {/* Featured testimonial — editorial hero card, layered depth + inner highlight */}
+              {/* Featured reel testimonial */}
               {feedbackItems[0] && (() => {
                 const featured = feedbackItems[0];
                 const firstName = featured.clientName.trim().split(/\s+/)[0] || featured.clientName;
-                const quoteShort = featured.feedbackText.length > 160 ? `${featured.feedbackText.slice(0, 157)}…` : featured.feedbackText;
+                const quoteShort = featured.feedbackText.length > 120 ? `${featured.feedbackText.slice(0, 117)}…` : featured.feedbackText;
+                const caption =
+                  featured.feedbackText.length > 34
+                    ? `${featured.feedbackText.slice(0, 31).trim()}…`
+                    : featured.feedbackText.trim() || (language === 'en' ? 'Loved my natural set' : 'Armastan oma naturaalset tulemust');
+                const serviceLabel = (featured.serviceId || '')
+                  .toString()
+                  .trim()
+                  .replace(/[-_]+/g, ' ')
+                  .replace(/\b\w/g, (m) => m.toUpperCase());
                 return (
                   <article
-                    className="group mb-6 overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.08)] transition-all duration-400 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.12)] hover:scale-[1.01] lg:mb-8"
+                    className="group mb-6 overflow-hidden rounded-[28px] border border-[#ebe0e6]/80 bg-white shadow-[0_18px_48px_-34px_rgba(60,40,52,0.28)] transition-all duration-400 hover:-translate-y-1 hover:shadow-[0_26px_70px_-44px_rgba(60,40,52,0.32)] lg:mb-8"
                   >
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.36fr)_1fr] min-h-[240px] lg:min-h-[280px]">
-                      {/* Left — client avatar / blurred visual anchor (existing data only) */}
-                      <div className="relative h-40 overflow-hidden bg-[#f5e8ef] lg:h-auto">
-                        {featured.clientAvatarUrl ? (
-                          <Image
-                            src={featured.clientAvatarUrl}
-                            alt=""
-                            width={560}
-                            height={560}
-                            unoptimized
-                            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_75%_at_50%_50%,#f0dce6_0%,#ead4e0_45%,#e5ccda_100%)]" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/92 lg:to-white/95" />
+                    <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,0.44fr)_1fr]">
+                      {/* Left: vertical reel visual */}
+                      <div className="relative overflow-hidden bg-[#f5e8ef]">
+                        <div className="relative aspect-[3/4] w-full">
+                          {featured.clientAvatarUrl ? (
+                            <Image
+                              src={featured.clientAvatarUrl}
+                              alt=""
+                              fill
+                              unoptimized
+                              sizes="(max-width: 1024px) 100vw, 440px"
+                              className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_75%_at_50%_50%,#f0dce6_0%,#ead4e0_45%,#e5ccda_100%)]" />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#120c12]/60 via-[#120c12]/10 to-transparent" />
+
+                          {/* Reel indicator */}
+                          <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md">
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/15">
+                              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-white/95" aria-hidden="true">
+                                <path d="M9 7.5v9l8-4.5-8-4.5Z" />
+                              </svg>
+                            </span>
+                            {language === 'en' ? 'Featured reel' : 'Esile tõstetud'}
+                          </div>
+
+                          {/* Floating caption */}
+                          <div className="absolute bottom-4 left-4 right-4">
+                            <p className="inline-flex max-w-full items-center rounded-2xl bg-white/14 px-3.5 py-2 text-[12px] font-medium leading-snug text-white backdrop-blur-md">
+                              “{caption}”
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      {/* Right — editorial quote, rating near quote, name + platform */}
-                      <div className="relative flex flex-col justify-center px-4 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-7">
-                        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#a87a94]">
-                          {t('homepage.testimonials.heroMomentLabel')}
+
+                      {/* Right: quote + meta + CTA */}
+                      <div className="relative flex flex-col justify-center px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#a87a94]">
+                          {language === 'en' ? 'Client discovery' : 'Kliendi kogemus'}
                         </p>
-                        <blockquote className="mt-2 font-brand text-[1.4rem] font-medium leading-[1.5] tracking-[-0.015em] text-[#3a2c37] max-w-[42ch] sm:text-[1.55rem] lg:text-[1.75rem] xl:text-[1.9rem] xl:leading-[1.48]">
+                        <blockquote className="mt-2 font-brand text-[1.55rem] font-medium leading-[1.45] tracking-[-0.02em] text-[#2d232d] sm:text-[1.75rem] lg:text-[1.95rem]">
                           &ldquo;{quoteShort}&rdquo;
                         </blockquote>
-                        <div className="mt-3 flex items-center gap-1.5" role="img" aria-label={`${featured.rating} out of 5 stars`}>
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <span key={i} className="text-[#b86b8f] text-[0.9rem] leading-none" aria-hidden>
-                              {i < featured.rating ? '★' : '☆'}
-                            </span>
-                          ))}
+
+                        <div className="mt-3 flex items-center gap-2.5">
+                          <div className="flex items-center gap-0 text-[#b86b8f]" role="img" aria-label={`${featured.rating} out of 5`}>
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span key={i} className="text-[12px] leading-none" aria-hidden>
+                                {i < featured.rating ? '★' : '☆'}
+                              </span>
+                            ))}
+                          </div>
+                          <span className="text-[12px] font-medium text-[#7a6677]">
+                            {featured.sourceLabel || (language === 'en' ? 'Verified client' : 'Kinnitatud klient')}
+                          </span>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <p className="font-semibold text-[15px] text-[#2d232d]">{firstName}</p>
-                          {featured.sourceLabel && (
-                            <span className="inline-flex items-center rounded border border-[#e5d2dc] bg-[#fcf8fa] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[#6b5768]">
-                              {featured.sourceLabel}
+
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          <p className="text-[14px] font-semibold text-[#2d232d]">{firstName}</p>
+                          {serviceLabel && (
+                            <span className="inline-flex items-center rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[11px] font-semibold text-[#6a3b57]">
+                              {serviceLabel}
                             </span>
                           )}
+                        </div>
+
+                        <div className="mt-5 flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => router.push(localizePath('/book'))}
+                            className="cta-premium inline-flex min-h-[48px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_32px_-18px_rgba(194,77,134,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-[1.02] active:scale-[0.99]"
+                          >
+                            {language === 'en' ? 'Book same result' : 'Broneeri sama tulemus'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => router.push(localizePath('/book'))}
+                            className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-[#ead6e2] bg-white px-6 py-3 text-sm font-semibold text-[#6a3b57] transition-colors hover:bg-[#fff4fa]"
+                          >
+                            {language === 'en' ? 'See availability' : 'Vaata aegu'}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -2387,56 +2411,58 @@ export default function Home() {
                 );
               })()}
 
-              {/* Secondary cards — tighter rhythm, stronger hover, softer avatar */}
-              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-2 md:overflow-visible md:gap-5 lg:grid-cols-3 lg:gap-6">
-                {feedbackItems.slice(1).map((item) => {
-                  const oneLineQuote = item.feedbackText.length > 100 ? `${item.feedbackText.slice(0, 97)}…` : item.feedbackText;
-                  return (
-                    <article
-                      key={item.id}
-                      className="group flex min-w-[280px] flex-col overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.1)] md:min-w-0"
-                    >
-                      <div className="flex flex-1 flex-col p-3.5 sm:p-4">
-                        <div className="flex items-start gap-2.5">
-                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#f0dae6] bg-[#f8edf4] ring-2 ring-white/90 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06)] transition-transform duration-200 group-hover:scale-105">
-                            {item.clientAvatarUrl ? (
-                              <Image
-                                src={item.clientAvatarUrl}
-                                alt=""
-                                width={40}
-                                height={40}
-                                className="h-full w-full object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-[#9b7590]">
-                                {item.clientName.slice(0, 2).toUpperCase()}
-                              </div>
-                            )}
+              {/* Reel mini cards — swipeable reels strip (desktop + mobile) */}
+              <div className="relative">
+                <div className="flex gap-4 overflow-x-auto pb-2 pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth snap-x snap-mandatory md:gap-5">
+                  {feedbackItems.slice(1, 5).map((item) => {
+                    const firstName = item.clientName.trim().split(/\s+/)[0] || item.clientName;
+                    const caption =
+                      item.feedbackText.length > 30 ? `${item.feedbackText.slice(0, 27).trim()}…` : item.feedbackText.trim();
+                    return (
+                      <article
+                        key={item.id}
+                        className="group relative min-w-[220px] max-w-[240px] shrink-0 snap-start overflow-hidden rounded-[26px] border border-[#ebe0e6]/80 bg-white shadow-[0_16px_44px_-34px_rgba(60,40,52,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_70px_-46px_rgba(60,40,52,0.3)] md:min-w-[240px]"
+                      >
+                        <div className="relative aspect-[3/4] overflow-hidden bg-[#f8edf4]">
+                          {item.clientAvatarUrl ? (
+                            <Image
+                              src={item.clientAvatarUrl}
+                              alt=""
+                              fill
+                              unoptimized
+                              sizes="240px"
+                              className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_75%_at_50%_50%,#f0dce6_0%,#ead4e0_45%,#e5ccda_100%)]" />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#120c12]/60 via-[#120c12]/12 to-transparent" />
+
+                          {/* Tiny heart icon (decorative) */}
+                          <div className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white/90 backdrop-blur-md transition-transform duration-200 group-hover:scale-[1.04]">
+                            <FavoriteHeartIcon active={false} size={16} />
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-[14px] text-[#2f2530]">{item.clientName}</h3>
-                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                              <div className="flex items-center gap-0 text-[#b86b8f]" role="img" aria-label={`${item.rating} out of 5`}>
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <span key={i} className="text-[10px] leading-none" aria-hidden>
-                                    {i < item.rating ? '★' : '☆'}
-                                  </span>
-                                ))}
-                              </div>
-                              {item.sourceLabel && (
-                                <span className="inline-flex items-center rounded border border-[#e5d2dc] bg-[#fcf8fa] px-1.5 py-0.5 text-[10px] font-medium text-[#6b5768]">
-                                  {item.sourceLabel}
-                                </span>
-                              )}
+
+                          {/* Rating indicator */}
+                          <div className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/95 backdrop-blur-md">
+                            <span aria-hidden>★</span>
+                            <span>{item.rating}/5</span>
+                          </div>
+
+                          {/* Caption overlay */}
+                          <div className="absolute bottom-3 left-3 right-3">
+                            <div className="rounded-2xl bg-white/14 px-3.5 py-2 backdrop-blur-md transition-opacity duration-300 md:opacity-95 md:group-hover:opacity-100">
+                              <p className="text-[12px] font-medium leading-snug text-white">
+                                “{caption || (language === 'en' ? 'Loved it.' : 'Väga rahul.') }”
+                              </p>
+                              <p className="mt-1 text-[11px] font-semibold text-white/85">{firstName}</p>
                             </div>
                           </div>
                         </div>
-                        <p className="mt-2.5 text-[13px] leading-relaxed text-[#5f4c59] line-clamp-2">&ldquo;{oneLineQuote}&rdquo;</p>
-                      </div>
-                    </article>
-                  );
-                })}
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}

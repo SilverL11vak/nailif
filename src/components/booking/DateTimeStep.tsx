@@ -646,7 +646,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             id="booking-datetime-slot-area"
           >
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 12 }).map((_, i) => (
                 <SkeletonBlock key={i} className="h-[52px] rounded-full" />
               ))}
@@ -701,7 +701,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
               {currentSlots.map((slot) => (
                 <DateTimeSlotPill
                   key={slot.id}

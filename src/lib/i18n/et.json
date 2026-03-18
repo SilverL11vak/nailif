@@ -300,17 +300,17 @@
     "featuredService": {
       "badge": "Kliendi lemmik",
       "cta": "Soovitatud valik - broneeri",
-      "priceTrust": "Loplik hind kinnitatakse enne teenuse algust. Ettemaks 10 EUR.",
+      "priceTrust": "Lõplik hind kinnitatakse enne teenuse algust. Ettemaks 10 EUR.",
       "longevityFallback": "Tulemus püsib tavaliselt 3-4 nädalat."
     },
     "servicesUi": {
       "featuredTitle": "Soovitatud teenus",
       "whoForLabel": "Kellele:",
       "durationLabel": "Kestus",
-      "longevityLabel": "Pusivus",
-      "lastsLabel": "Pusib",
+      "longevityLabel": "Püsivus",
+      "lastsLabel": "Püsib",
       "priceLabel": "Alates",
-      "trustCue": "Sertifitseeritud hooldus, premium tooted ja puhas tootsoon.",
+      "trustCue": "Sertifitseeritud hooldus, premium tooted ja puhas tööprotsess.",
       "trustTag1": "Premium materjalid",
       "trustTag2": "Personaalne kuju",
       "cardCta": "Broneeri see teenus",
@@ -355,7 +355,7 @@
     },
     "serviceDecision": {
       "resultLabel": "Tulemus:",
-      "longevityLabel": "Pusivus:",
+      "longevityLabel": "Püsivus:",
       "suitabilityLabel": "Kellele sobib:",
       "fallback": {
         "gel-manicure": {

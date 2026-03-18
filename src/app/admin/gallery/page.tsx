@@ -42,7 +42,7 @@ export default function AdminGalleryPage() {
 
   const saveImage = async () => {
     if (!imageUrl) {
-      setError('Lisa pildi URL voi lae fail ules.');
+      setError('Lisa pildi URL või lae fail üles.');
       return;
     }
     setIsSaving(true);

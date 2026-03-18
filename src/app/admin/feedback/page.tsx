@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import type { FeedbackItem } from '@/lib/feedback';
 
@@ -49,8 +49,11 @@ export default function AdminFeedbackPage() {
   const [draft, setDraft] = useState<FeedbackDraft>(emptyDraft);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarDragOver, setAvatarDragOver] = useState(false);
 
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
@@ -100,17 +103,63 @@ export default function AdminFeedbackPage() {
           isVisible: draft.isVisible,
         }),
       });
-      if (!response.ok) throw new Error('Salvestamine ebaonnestus');
+      if (!response.ok) {
+        let message = 'Salvestamine ebaonnestus';
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore
+        }
+        if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
+        throw new Error(message);
+      }
       await loadFeedback();
       setIsDrawerOpen(false);
       setDraft(emptyDraft);
       setToast('Tagasiside salvestatud');
-    } catch {
-      setError('Tagasiside salvestamine ebaonnestus.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Tagasiside salvestamine ebaonnestus.');
     } finally {
       setIsSaving(false);
     }
   };
+
+  const uploadAvatarFile = async (file: File) => {
+    setError(null);
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/admin/upload-feedback-avatar', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        let message = 'Pildi üleslaadimine ebaõnnestus';
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore
+        }
+        if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
+        throw new Error(message);
+      }
+      const data = (await response.json()) as { url?: string };
+      const url = String(data.url ?? '').trim();
+      if (!url) throw new Error('Pildi URL puudub');
+      setDraft((prev) => ({ ...prev, clientAvatarUrl: url }));
+      setToast('Pilt üles laaditud');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Pildi üleslaadimine ebaõnnestus.');
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const avatarInitials = useMemo(() => (draft.clientName.trim().slice(0, 2) || 'NA').toUpperCase(), [draft.clientName]);
 
   const deleteFeedback = async (id: string, name: string) => {
     if (!window.confirm(`Kustutada tagasiside "${name}"?`)) return;
@@ -285,6 +334,11 @@ export default function AdminFeedbackPage() {
             </div>
 
             <div className="space-y-6 p-6">
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800">
+                  {error}
+                </div>
+              )}
               <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
                 <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Kliendi andmed</p>
                 <div className="space-y-4">
@@ -297,15 +351,95 @@ export default function AdminFeedbackPage() {
                       placeholder="nt Maria K."
                     />
                   </label>
-                  <label className="block">
-                    <span className="block text-sm font-medium text-slate-700">Avatar / pildi URL (valikuline)</span>
-                    <input
-                      value={draft.clientAvatarUrl}
-                      onChange={(e) => setDraft((p) => ({ ...p, clientAvatarUrl: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
-                      placeholder="https://..."
-                    />
-                  </label>
+                  <div className="grid gap-4 sm:grid-cols-[88px_1fr] sm:items-start">
+                    <div className="h-20 w-20 overflow-hidden rounded-2xl border border-[#e5e7eb] bg-slate-100">
+                      {draft.clientAvatarUrl?.trim() ? (
+                        <Image
+                          src={draft.clientAvatarUrl.trim()}
+                          alt=""
+                          width={160}
+                          height={160}
+                          unoptimized
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm font-semibold text-slate-500">
+                          {avatarInitials}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-slate-700">Avatar (URL või upload)</p>
+                      <div
+                        className={`rounded-xl border border-dashed px-4 py-3 transition-colors ${
+                          avatarDragOver ? 'border-[#c24d86] bg-[#fff1f8]' : 'border-[#e5e7eb] bg-white'
+                        }`}
+                        onDragEnter={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setAvatarDragOver(true);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setAvatarDragOver(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setAvatarDragOver(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setAvatarDragOver(false);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) void uploadAvatarFile(file);
+                        }}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) void uploadAvatarFile(file);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => avatarInputRef.current?.click()}
+                            disabled={isUploadingAvatar}
+                            className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            {isUploadingAvatar ? 'Laen üles...' : 'Vali fail'}
+                          </button>
+                          <span className="text-xs text-slate-500">või lohista pilt siia</span>
+                          {draft.clientAvatarUrl?.trim() && (
+                            <button
+                              type="button"
+                              onClick={() => setDraft((p) => ({ ...p, clientAvatarUrl: '' }))}
+                              className="ml-auto text-xs font-semibold text-red-600 hover:text-red-700"
+                            >
+                              Eemalda
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <label className="block">
+                        <span className="block text-xs font-medium text-slate-500">või kleebi URL</span>
+                        <input
+                          value={draft.clientAvatarUrl}
+                          onChange={(e) => setDraft((p) => ({ ...p, clientAvatarUrl: e.target.value }))}
+                          className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
+                          placeholder="https://..."
+                        />
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </section>
 

@@ -5,13 +5,13 @@ import { ClientProviders } from '@/components/providers/ClientProviders';
 
 const inter = Inter({
   variable: '--font-inter',
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   display: 'swap',
 });
 
 const cormorant = Cormorant_Garamond({
   variable: '--font-cormorant',
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   weight: ['500', '600'],
   display: 'swap',
 });

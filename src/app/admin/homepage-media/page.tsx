@@ -256,7 +256,7 @@ export default function AdminHomepageMediaPage() {
     }));
     setSectionFilter('hero');
     setNewHeroLabel('');
-    setSuccess('Uus hero meedia lisatud. Lisa URL voi uploadi fail ning salvesta.');
+    setSuccess('Uus hero meedia lisatud. Lisa URL või uploadi fail ning salvesta.');
   };
 
   return (
@@ -268,7 +268,7 @@ export default function AdminHomepageMediaPage() {
               <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Avalehe meedia</h1>
               <p className="mt-2 text-sm text-[#4b5563]">
-                Hero jaoks saad nuud hallata nii pilte kui videoid (loop ja regular). Koik muudatused salvestuvad andmebaasi.
+                Hero jaoks saad nüüd hallata nii pilte kui videoid (loop ja regular). Kõik muudatused salvestuvad andmebaasi.
               </p>
             </div>
             <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563]" href="/admin">
@@ -284,7 +284,7 @@ export default function AdminHomepageMediaPage() {
 
         <section className="rounded-2xl border border-[#e5e7eb] bg-white mb-5 p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-[#111827]">Lisa uus Hero meedia</h2>
-          <p className="mt-1 text-sm text-[#4b5563]">Saad lisada eraldi hero pildi voi video ning seada selle loop reziimi.</p>
+          <p className="mt-1 text-sm text-[#4b5563]">Saad lisada eraldi hero pildi või video ning seada selle loop režiimi.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
             <input
               value={newHeroLabel}

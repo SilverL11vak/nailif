@@ -16,6 +16,7 @@
     "ship": "powershell -ExecutionPolicy Bypass -File ./scripts/build-deploy-restart.ps1"
   },
   "dependencies": {
+    "@vercel/blob": "^2.3.1",
     "gsap": "^3.14.2",
     "lucide-react": "^0.577.0",
     "next": "^15.2.9",

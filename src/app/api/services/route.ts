@@ -47,7 +47,8 @@ export async function GET(request: Request) {
         ? undefined
         : {
             headers: {
-              'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=900',
+              // Short cache so admin service edits show on homepage within ~30s
+              'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
             },
           }
     );

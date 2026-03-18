@@ -61,11 +61,11 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
 
   return (
     <>
-      {/* Mobile — action dock: primary, highest in bottom stack */}
+      {/* Mobile — soft bottom sheet CTA (non-intrusive) */}
       <div className="safe-area-bottom fixed bottom-0 left-0 right-0 z-[50] md:hidden">
-        <div className="mx-auto max-w-xl px-3 pt-2 pb-safe">
+        <div className="mx-auto max-w-xl px-4 pt-2 pb-safe">
           <div
-            className="overflow-hidden rounded-2xl border border-[#e5d4de]/70 bg-gradient-to-b from-white to-[#fdf8fb]/95 shadow-[0_-12px_32px_-16px_rgba(70,45,58,0.18),0_-4px_16px_-8px_rgba(70,45,58,0.08)] backdrop-blur-xl"
+            className="overflow-hidden rounded-t-3xl border border-[#e5d4de]/70 bg-gradient-to-b from-white to-[#fdf8fb]/95 shadow-[0_-16px_44px_-24px_rgba(70,45,58,0.22),0_-6px_18px_-10px_rgba(70,45,58,0.08)] backdrop-blur-xl"
           >
             {selectedService && (
               <div className="px-4 pt-3 pb-1">
@@ -77,7 +77,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
             <div className={`px-4 ${selectedService ? 'pb-3 pt-1' : 'py-3'}`}>
               <button
                 onClick={handleClick}
-                className="cta-sticky-mobile group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] px-5 py-3 font-semibold text-[0.95rem] text-white shadow-[0_10px_28px_-10px_rgba(139,51,100,0.5)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_-10px_rgba(139,51,100,0.55)] active:scale-[0.99]"
+                className="cta-sticky-mobile group flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] px-5 py-3.5 font-semibold text-[0.98rem] text-white shadow-[0_12px_30px_-12px_rgba(139,51,100,0.5)] transition-all duration-200 active:scale-[0.99]"
               >
                 {!selectedService && (
                   <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

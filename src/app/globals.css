@@ -97,6 +97,36 @@ body {
   line-height: var(--type-body-line);
   letter-spacing: -0.005em;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+/* Global mobile readability + no horizontal scroll */
+.mobile-shell {
+  width: 100%;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 640px) {
+  .mobile-shell {
+    max-width: 1280px;
+    padding-left: var(--space-section-x);
+    padding-right: var(--space-section-x);
+  }
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }
 
 button,
@@ -209,8 +239,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 9999px;
   flex-shrink: 0;
   appearance: none;
@@ -281,6 +311,23 @@ textarea {
   max-width: 1280px;
   margin-left: auto;
   margin-right: auto;
+}
+
+@media (max-width: 640px) {
+  .section-inner {
+    max-width: 640px;
+  }
+}
+
+/* Touch comfort: minimum tap height on mobile */
+@media (max-width: 640px) {
+  button,
+  a[role='button'],
+  input,
+  select,
+  textarea {
+    min-height: 48px;
+  }
 }
 
 .section-title {

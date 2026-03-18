@@ -58,7 +58,7 @@ function fallbackReply(locale: Locale): ParsedReply {
     reply:
       locale === 'en'
         ? 'I may not have enough context for a precise answer right now.'
-        : 'Mul ei pruugi hetkel olla piisavalt konteksti tapselt vastamiseks.',
+        : 'Mul ei pruugi hetkel olla piisavalt konteksti täpselt vastamiseks.',
     handoffSuggested: true,
   };
 }
@@ -66,16 +66,16 @@ function fallbackReply(locale: Locale): ParsedReply {
 function getAIKnowledge(content: Record<string, string>): AIKnowledge {
   return {
     specialistName: normalizeText(content.ai_knowledge_specialist_name || 'Sandra Samun'),
-    specialistRole: normalizeText(content.ai_knowledge_specialist_role || 'Sertifitseeritud kuunetehnik'),
+    specialistRole: normalizeText(content.ai_knowledge_specialist_role || 'Sertifitseeritud küünetehnik'),
     ownerName: normalizeText(content.ai_knowledge_owner_name || 'Sandra Samun'),
     brandAbout: normalizeText(
       content.ai_knowledge_brand_about ||
-        'Nailify on premium kuunehoolduse stuudio, mis keskendub personaalsetele tulemustele.'
+        'Nailify on premium küünehoolduse stuudio, mis keskendub personaalsetele tulemustele.'
     ),
-    location: normalizeText(content.ai_knowledge_location || 'Mustamae stuudio, Tallinn'),
+    location: normalizeText(content.ai_knowledge_location || 'Mustamäe stuudio, Tallinn'),
     guideline: normalizeText(
       content.ai_knowledge_guideline ||
-        'Kui kusimus vajab loplikku kinnitust, suuna klient otse kuunetehnikule.'
+        'Kui küsimus vajab lõplikku kinnitust, suuna klient otse küünetehnikule.'
     ),
   };
 }
@@ -155,35 +155,35 @@ function resilientFallbackReply(
   if (asksPrice) {
     return {
       reply: serviceList
-        ? `Praegused hinnad: ${serviceList}. Loplik summa soltub valitud lisadest.`
-        : 'Hind soltub valitud teenusest ja lisadest. Tapse hinna naed broneerimise vaates.',
+        ? `Praegused hinnad: ${serviceList}. Lõplik summa sõltub valitud lisadest.`
+        : 'Hind sõltub valitud teenusest ja lisadest. Täpse hinna näed broneerimise vaates.',
       handoffSuggested: false,
     };
   }
   if (asksTime) {
     return {
       reply:
-        'Vabu aegu naed broneerimise vaates. Kui vajad kohest kinnitust tana, saad suhelda otse kuunetehnikuga.',
+        'Vabu aegu näed broneerimise vaates. Kui vajad kohest kinnitust täna, saad suhelda otse küünetehnikuga.',
       handoffSuggested: true,
     };
   }
   if (asksDesign) {
     return {
       reply:
-        'Tapsete disaini- ja kuunte seisukorra kusimuste puhul on koige parem kinnitada otse tehnikuga.',
+        'Täpsete disaini- ja küünte seisukorra küsimuste puhul on kõige parem kinnitada otse tehnikuga.',
       handoffSuggested: true,
     };
   }
   if (asksBooking) {
     return {
       reply:
-        'Broneerimine on lihtne: vali teenus, vali aeg, lisa andmed ja kinnita. Soovi korral saad enne loppu valikut muuta.',
+        'Broneerimine on lihtne: vali teenus, vali aeg, lisa andmed ja kinnita. Soovi korral saad enne lõppu valikut muuta.',
       handoffSuggested: false,
     };
   }
   return {
     reply: serviceList
-      ? `Saan aidata teenuste, hindade ja aegadega. Praegu saadaval: ${serviceList}. Kui soovid, utle millist teenust kaalud ja soovitan sobiva aja.`
+      ? `Saan aidata teenuste, hindade ja aegadega. Praegu saadaval: ${serviceList}. Kui soovid, ütle millist teenust kaalud ja soovitan sobiva aja.`
       : 'Saan aidata broneerimise sammude, teenuste ja aegadega.',
     handoffSuggested: false,
   };
@@ -378,7 +378,7 @@ export async function POST(request: Request) {
 
     const systemPrompt =
       locale === 'en'
-        ? `You are Nailify's booking assistant for a nail salon in Mustamae, Tallinn.
+        ? `You are Nailify's booking assistant for a nail salon in Mustamäe, Tallinn.
 Respond in English.
 Keep answers concise (1-3 short sentences), warm and practical.
 Use only known context. Never invent exact availability.
@@ -396,14 +396,14 @@ Business context:
 Return strictly in this format:
 NEEDS_HUMAN: yes|no
 REPLY: <assistant answer>`
-        : `Sa oled Nailify broneerimisassistent Mustamae stuudiole Tallinnas.
+        : `Sa oled Nailify broneerimisassistent Mustamäe stuudiole Tallinnas.
 Vasta eesti keeles.
-Hoia vastused luhikesed (1-3 lauset), soojad ja praktilised.
-Kasuta ainult teadaolevat konteksti. Ara motle valja tapseid vabu aegu.
-Kui kasutaja vajab loplikku kinnitust, keerulist disainisoovitust voi olukord on ebaselge, pane NEEDS_HUMAN: yes.
-Kui kusimus on lihtne (teenused, hinnaloogika, broneerimise sammud), pane NEEDS_HUMAN: no.
+Hoia vastused lühikesed (1-3 lauset), soojad ja praktilised.
+Kasuta ainult teadaolevat konteksti. Ära mõtle välja täpseid vabu aegu.
+Kui kasutaja vajab lõplikku kinnitust, keerulist disainisoovitust või olukord on ebaselge, pane NEEDS_HUMAN: yes.
+Kui küsimus on lihtne (teenused, hinnaloogika, broneerimise sammud), pane NEEDS_HUMAN: no.
 Teadaolevad teenused:
-${serviceContext || '- Teenused on nahtavad broneerimisvaates.'}
+${serviceContext || '- Teenused on nähtavad broneerimisvaates.'}
 Taustakontekst:
 - Spetsialist: ${knowledge.specialistName} (${knowledge.specialistRole})
 - Omanik: ${knowledge.ownerName}

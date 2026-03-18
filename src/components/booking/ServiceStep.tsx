@@ -88,7 +88,7 @@ export function ServiceStep() {
 
   const en = language === 'en';
   const styleHint = en ? 'Style selected — we’ll match the right service.' : 'Stiil on valitud — leiame sobiva teenuse.';
-  const defaultLongevity = text('service_default_longevity', en ? 'Personalized wear' : 'Individuaalne pusivus');
+  const defaultLongevity = text('service_default_longevity', en ? 'Personalized wear' : 'Individuaalne püsivus');
   const defaultSuitability = text('service_default_suitability', en ? 'Tailored to you' : 'Kohandatud sulle');
   const defaultResult = text('service_default_result', en ? 'Premium finish.' : 'Premium viimistlus.');
   const includeLabel = text('service_include_label', en ? 'Includes' : 'Sisaldab');
@@ -97,7 +97,7 @@ export function ServiceStep() {
   const chooseTimeLabel = text('service_choose_time_cta', en ? 'Choose time' : 'Vali aeg');
   const addOnHint = text(
     'service_addon_hint',
-    en ? 'Add nail art or repair in the next steps.' : 'Lisa disain voi parandus jargmistes sammudes.'
+    en ? 'Add nail art or repair in the next steps.' : 'Lisa disain või parandus järgmistes sammudes.'
   );
   const clientFavourite = text('service_client_favourite', en ? 'Popular' : 'Populaarne');
   const whoForLabel = en ? 'Best for' : 'Sobib';
@@ -105,19 +105,19 @@ export function ServiceStep() {
     'service_modal_preparation',
     en
       ? 'Arrive with clean nails. Add gel removal as a service if needed.'
-      : 'Tule puhaste kuuntega. Geeli eemaldus lisa teenusena.'
+      : 'Tule puhaste küüntega. Geeli eemaldus lisa teenusena.'
   );
   const detailsAftercare = text(
     'service_modal_aftercare',
     en
       ? 'Cuticle oil daily; avoid harsh chemicals for lasting shine.'
-      : 'Kuuneoli iga paev; vali tugevaid kemikaale.'
+      : 'Küünenahaõli iga päev; väldi tugevaid kemikaale, et tulemus püsiks kaunis.'
   );
   const detailsResult = text(
     'service_modal_result',
     en
       ? 'Final tone confirmed with Sandra before work starts.'
-      : 'Loplik toon kinnitatakse Sandraga enne too algust.'
+      : 'Lõplik toon kinnitatakse Sandraga enne töö algust.'
   );
 
   const toggleDetails = (e: React.MouseEvent, id: string) => {
@@ -303,7 +303,7 @@ export function ServiceStep() {
       {addOns.length > 0 && (
         <div className="mx-auto mt-10 max-w-[880px]">
           <p className="mb-2 text-center text-xs font-medium text-[#8a7a88]">
-            {text('service_addons_title', en ? 'Optional add-ons next:' : 'Valikulised lisad jargmisena:')}
+            {text('service_addons_title', en ? 'Optional add-ons next:' : 'Valikulised lisad järgmisena:')}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {addOns.slice(0, 4).map((chip) => (

@@ -54,7 +54,7 @@ export function ShopNavBar({ language, setLanguage, localizePath, copy, favorite
             <div className="relative">
               <button
                 onClick={() => setLangMenuOpen((o) => !o)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#fdf8fb] hover:text-[#4b5563]"
+                className="type-navbar-icon-btn"
                 aria-label="Language"
               >
                 <Globe size={18} strokeWidth={1.8} />
@@ -81,19 +81,19 @@ export function ShopNavBar({ language, setLanguage, localizePath, copy, favorite
             </div>
             <Link
               href={localizePath('/favorites')}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#fdf8fb] hover:text-[#4b5563]"
+              className="type-navbar-icon-btn relative"
               aria-label={language === 'en' ? 'Favourites' : 'Lemmikud'}
             >
               <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
               {favoritesCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[10px] font-semibold text-white">
+                <span className="absolute right-0 top-0 inline-flex min-h-[18px] min-w-[18px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[10px] font-semibold leading-none text-white shadow-[0_10px_18px_-12px_rgba(194,77,134,0.85)]">
                   {favoritesCount > 9 ? '9+' : favoritesCount}
                 </span>
               )}
             </Link>
             <button
               onClick={() => router.push(localizePath('/book'))}
-              className="rounded-full bg-[#c24d86] px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_14px_-4px_rgba(194,77,134,0.5)] hover:bg-[#a93d71] transition-colors"
+              className="hidden rounded-full bg-[#c24d86] px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_14px_-4px_rgba(194,77,134,0.5)] hover:bg-[#a93d71] transition-colors md:inline-flex"
             >
               {copy.nav.book}
             </button>
