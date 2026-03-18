@@ -520,7 +520,7 @@ export default function Home() {
     const cardWidth = 280 + 16;
     const onScroll = () => {
       const index = Math.round(el.scrollLeft / cardWidth);
-      setGalleryScrollIndex((i) => Math.min(Math.max(0, index), 4));
+      setGalleryScrollIndex(Math.min(Math.max(0, index), 4));
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
