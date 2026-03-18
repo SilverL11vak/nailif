@@ -135,7 +135,7 @@ async function ensureBookingsTableInternal() {
     } catch (e) {
       // Postgres throws 23505 if existing data already violates the unique constraint.
       // We skip to keep the app running; run migrations after cleaning duplicates.
-      const code = (e as any)?.code;
+      const code = (e as unknown as { code?: string }).code;
       if (code === '23505') {
         global.__nailify_bookings_unique_index_failed__ = true;
         console.warn('[bookings.ensureBookingsTableInternal] Unique index not created due to existing duplicates for slot_date+slot_time.');

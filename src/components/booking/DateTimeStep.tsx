@@ -117,7 +117,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   }, [isLoading, currentSlots.length]);
 
   const nextAvailableSlot = useMemo(
-    () => resolveEarliestUpcomingBookableSlot(allSlots as unknown as any) as TimeSlot | null,
+    () => resolveEarliestUpcomingBookableSlot(allSlots) ?? null,
     [allSlots]
   );
 

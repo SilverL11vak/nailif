@@ -10,6 +10,6 @@ import { resolveEarliestUpcomingBookableSlot } from './booking-engine/availabili
  */
 export function resolveEarliestUpcomingSlot(slots: TimeSlot[]): TimeSlot | null {
   // Delegate to the centralized booking-engine helper (Tallinn-aware + deterministic ordering).
-  return resolveEarliestUpcomingBookableSlot(slots as unknown as any) as TimeSlot | null;
+  return resolveEarliestUpcomingBookableSlot(slots);
 }
 

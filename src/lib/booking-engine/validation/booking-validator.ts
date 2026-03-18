@@ -70,7 +70,7 @@ export async function validateBookingCheckout(payload: BookingInsert): Promise<B
       addOnIds,
       slot: resolvedSlot,
     });
-  } catch (e) {
+  } catch {
     return { ok: false, status: 400, code: 'invalid_pricing_inputs', message: 'Invalid service or add-ons' };
   }
 

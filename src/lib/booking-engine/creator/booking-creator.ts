@@ -98,8 +98,8 @@ export async function createBookingCheckoutSession(input: {
 
     return { ok: true, bookingId: booking.id, checkoutUrl: session.url };
   } catch (e: unknown) {
-    const err = e as any;
-    const code = err?.code;
+    const err = e as unknown as { code?: string };
+    const code = err.code;
 
     // Unique constraint => slot is already reserved/booked.
     if (code === '23505') {

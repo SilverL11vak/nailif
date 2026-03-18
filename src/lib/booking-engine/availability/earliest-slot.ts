@@ -1,8 +1,21 @@
-import type { EngineTimeSlot } from '../types';
+import type { SlotStatus } from '../types';
 import { getCurrentTimeInTallinn, getTodayInTallinn } from '../../timezone';
 import { isSlotBookable } from './resolve-slot-status';
 
-export function resolveEarliestUpcomingBookableSlot(slots: EngineTimeSlot[]): EngineTimeSlot | null {
+type EarliestSlotInput = {
+  date: string;
+  time: string;
+  available: boolean;
+  status?: SlotStatus;
+};
+
+/**
+ * Resolve the earliest upcoming (future) bookable slot (free or sos).
+ * Deterministic ordering: date asc, then time asc.
+ *
+ * Note: callers may not provide `status` yet; in that case we fall back to `available`.
+ */
+export function resolveEarliestUpcomingBookableSlot<T extends EarliestSlotInput>(slots: T[]): T | null {
   // Tallinn-based "upcoming" filtering:
   // - today slots are only considered upcoming if `slot.time > currentTallinnTime` (strictly greater).
   // - ordering is deterministic by `date` then `time` (both are `YYYY-MM-DD` and `HH:MM`).
