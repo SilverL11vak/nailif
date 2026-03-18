@@ -516,12 +516,11 @@ export default function Home() {
 
   useEffect(() => {
     const el = galleryScrollRef.current;
-    const cardCount = 5;
-    if (!el || cardCount === 0) return;
+    if (!el) return;
     const cardWidth = 280 + 16;
     const onScroll = () => {
       const index = Math.round(el.scrollLeft / cardWidth);
-      setGalleryScrollIndex(Math.min(index, cardCount - 1));
+      setGalleryScrollIndex((i) => Math.min(Math.max(0, index), 4));
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
