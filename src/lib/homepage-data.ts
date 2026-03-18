@@ -6,6 +6,7 @@ import { listGalleryImages, type GalleryImage } from '@/lib/gallery';
 import { listServices, type ServiceRecord } from '@/lib/catalog';
 import { listHomepageMedia, type HomepageMediaItem } from '@/lib/homepage-media';
 import { listUpcomingAvailableSlots, type SlotRecord } from '@/lib/slots';
+import { getHomepageSectionsAll } from '@/lib/homepage-content';
 import { cache } from 'react';
 
 export interface HomepageData {
@@ -13,6 +14,7 @@ export interface HomepageData {
   gallery: GalleryImage[];
   services: ServiceRecord[];
   homepageMedia: Record<string, HomepageMediaItem>;
+  homepageSections: Record<string, string>;
   nextSlot: { date: string; time?: string } | null;
 }
 
@@ -22,18 +24,20 @@ export interface HomepageData {
  */
 export const getHomepageDataCached = cache(async (locale: string = 'et'): Promise<HomepageData> => {
   // Parallel fetching for performance
-  const [products, gallery, services, homepageMedia, slots]: [
+  const [products, gallery, services, homepageMedia, slots, homepageSections]: [
     Product[], 
     GalleryImage[], 
     ServiceRecord[], 
     HomepageMediaItem[], 
-    SlotRecord[]
+    SlotRecord[],
+    Record<string, string>
   ] = await Promise.all([
     listProducts(true, locale),
     listGalleryImages(),
     listServices(locale),
     listHomepageMedia(),
     listUpcomingAvailableSlots(1),
+    getHomepageSectionsAll(locale as 'et' | 'en'),
   ]);
 
   // Convert homepageMedia array to record for easier lookup
@@ -51,6 +55,7 @@ export const getHomepageDataCached = cache(async (locale: string = 'et'): Promis
     gallery,
     services,
     homepageMedia: homepageMediaRecord,
+    homepageSections,
     nextSlot,
   };
 });

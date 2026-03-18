@@ -769,20 +769,12 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
                   >
                     {date.getDate()}
                   </span>
-                  <div className="mt-2 flex h-1 w-full max-w-[2.5rem] gap-0.5 overflow-hidden rounded-full bg-[#f0ecee]">
+                  <div className="mt-2 flex h-1 w-full max-w-[2rem] gap-0.5 overflow-hidden rounded-full bg-[#f0ecee]">
                     {dens === 'full' && (
-                      <>
-                        <span className="h-full flex-1 rounded-full bg-[#5cb88a]" />
-                        <span className="h-full flex-1 rounded-full bg-[#5cb88a]" />
-                        <span className="h-full flex-1 rounded-full bg-[#5cb88a]" />
-                      </>
+                      <span className="h-full w-full rounded-full bg-[#5cb88a]" />
                     )}
                     {dens === 'limited' && (
-                      <>
-                        <span className="h-full flex-1 rounded-full bg-[#e8c46c]" />
-                        <span className="h-full w-1/3 rounded-full bg-[#e8e8ea]" />
-                        <span className="h-full w-1/3 rounded-full bg-[#e8e8ea]" />
-                      </>
+                      <span className="h-full w-2/3 rounded-full bg-[#e8c46c]" />
                     )}
                     {dens === 'none' && <span className="h-full w-full rounded-full bg-[#d8d4d6]" />}
                   </div>
@@ -791,16 +783,16 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             })}
           </div>
 
-          <div className="hidden lg:flex mb-6 flex-wrap items-center gap-3 text-[10px] text-[#9a8a94]">
-            <span className="inline-flex items-center gap-1.5">
+          <div className="mb-4 flex items-center gap-3 text-[10px] text-[#9a8a94]">
+            <span className="inline-flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-[#5cb88a]" />
-              {en ? 'Many openings' : 'Palju vabu'}
+              {en ? 'Available' : 'Vabu'}
             </span>
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-[#e8c46c]" />
-              {en ? 'Limited' : 'Vähe vabu'}
+              {en ? 'Few left' : 'Vähe'}
             </span>
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-[#d8d4d6]" />
               {en ? 'Full' : 'Täis'}
             </span>
@@ -808,7 +800,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
           <div className={slotAreaShake ? 'booking-slot-area-shake rounded-2xl' : ''} id="booking-datetime-slot-area">
           {availabilityContext && !isLoading && currentSlots.length > 0 && (
-            <div className="hidden lg:block mb-4 rounded-2xl border border-[#efe0e8] bg-white/80 px-4 py-3 text-sm font-medium text-[#5d4558] shadow-[0_12px_30px_-24px_rgba(57,33,52,0.16)]">
+            <div className="mb-4 rounded-xl border border-[#efe0e8] bg-white/80 px-4 py-2.5 text-sm font-medium text-[#5d4558]">
               {availabilityContext}
             </div>
           )}
@@ -918,7 +910,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-[18px] font-semibold leading-[1.2] tabular-nums text-[#2f2530] lg:text-[14px]">
+                          <p className="text-[16px] font-semibold leading-[1.2] tabular-nums text-[#2f2530] lg:text-[14px]">
                             {slot.time}
                           </p>
                         </div>
@@ -949,29 +941,14 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
                     : 'Vali päev, et näha vabu aegu.'}
               </p>
 
-              {/* Safe reassurance */}
-              <div className="mt-4 rounded-2xl border border-[#f0e6ea] bg-white/90 p-5 shadow-[0_12px_32px_-30px_rgba(57,33,52,0.16)] lg:hidden">
-                <div className="flex items-center gap-2">
+              {/* Safe reassurance - simplified */}
+              <div className="mt-4 flex items-center justify-center gap-4 rounded-xl border border-[#f0e6ea] bg-white/90 px-4 py-3 text-[12px] text-[#6f6168] lg:hidden">
+                <span className="flex items-center gap-1.5">
                   <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.2} />
-                  <p className="text-sm font-semibold text-[#2f2530]">
-                    {en ? 'Safe booking' : 'Turvaline broneering'}
-                  </p>
-                </div>
-
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  <div className="flex items-center gap-2 text-[13px] text-[#6f6168]">
-                    <Check className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.4} />
-                    <span>{en ? 'Change later' : 'Muuda hiljem'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[13px] text-[#6f6168]">
-                    <Check className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.4} />
-                    <span>{en ? 'Deposit confirms' : 'Ettemaks kinnitab'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[13px] text-[#6f6168]">
-                    <Check className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.4} />
-                    <span>{en ? 'No hidden fees' : 'Peidetud tasusid ei ole'}</span>
-                  </div>
-                </div>
+                  {en ? 'Safe booking' : 'Turvaline'}
+                </span>
+                <span className="h-1 w-1 rounded-full bg-[#d4c8cc]" />
+                <span>{en ? 'Free cancellation 24h' : 'Tühistamine 24h'}</span>
               </div>
             </>
           )}

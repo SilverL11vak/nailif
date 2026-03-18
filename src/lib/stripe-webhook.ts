@@ -8,6 +8,7 @@
 import Stripe from 'stripe';
 import { getStripeServer } from './stripe';
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 
 /**
  * Verify Stripe webhook signature
@@ -111,6 +112,16 @@ declare global {
 let webhookEnsurePromise: Promise<void> | null = global.__nailify_webhook_ensure__ ?? null;
 
 export async function ensureWebhookEventsTable() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/008_webhooks.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   if (!webhookEnsurePromise) {
     webhookEnsurePromise = ensureWebhookEventsTableInternal();
     global.__nailify_webhook_ensure__ = webhookEnsurePromise;

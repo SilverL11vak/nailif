@@ -20,13 +20,13 @@ export const TimeSlot = memo(function TimeSlot({ slot, isSelected, onSelect, com
 
   const getSlotBadge = () => {
     if (slot.isSos) {
-      return { label: language === 'en' ? 'Urgent slot' : 'Kiire aeg', className: 'text-[#9a5b80]' };
+      return { label: language === 'en' ? '⚡ Urgent' : '⚡ Kiire', className: 'text-[#9a5b80]' };
     }
     if (slot.isPopular) {
-      return { label: language === 'en' ? 'Popular' : 'Populaarne', className: 'text-[#6f7f59]' };
+      return { label: language === 'en' ? '★ Popular' : '★ Populaarne', className: 'text-[#6f7f59]' };
     }
     if (slot.count && slot.count <= 2) {
-      return { label: language === 'en' ? 'Almost full' : 'Peaaegu tais', className: 'text-[#b17a98]' };
+      return { label: language === 'en' ? '~2 left' : '~2 jäänud', className: 'text-[#b17a98]' };
     }
     return null;
   };
@@ -92,8 +92,8 @@ export const TimeSlot = memo(function TimeSlot({ slot, isSelected, onSelect, com
       <div className="flex w-full items-start justify-between gap-3">
         <div>
           <span className="block text-base font-semibold leading-none text-[#4d3347]">{slot.time}</span>
-          <span className={`mt-1 block text-[11px] font-medium ${slotBadge?.className ?? 'text-[#7d6275]'}`}>
-            {slotBadge?.label ?? (language === 'en' ? 'Available now' : 'Vaba aeg')}
+          <span className={`mt-1 block text-[11px] font-medium ${slotBadge?.className ?? 'text-[#8d6d5e]'}`}>
+            {slotBadge?.label ?? (language === 'en' ? 'Tap to select' : 'Valimiseks klõpsa')}
           </span>
         </div>
         {slot.sosSurcharge ? (

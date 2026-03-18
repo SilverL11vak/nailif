@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db';
+import { isDatabaseMigrated } from './schema-validator';
 
 export type AnalyticsEventType =
   | 'booking_open'
@@ -11,6 +12,16 @@ export type AnalyticsEventType =
   | 'booking_abandon';
 
 export async function ensureAnalyticsTables() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/006_analytics.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   await sql`
     CREATE TABLE IF NOT EXISTS booking_analytics_sessions (
       id uuid PRIMARY KEY,

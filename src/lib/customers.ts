@@ -1,4 +1,5 @@
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 
 export type CustomerRecord = {
   id: string;
@@ -100,6 +101,16 @@ async function ensureCustomersTablesInternal() {
 }
 
 export async function ensureCustomersTables() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/001_initial_schema.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   if (!customersEnsurePromise) {
     customersEnsurePromise = ensureCustomersTablesInternal();
     global.__nailify_customers_ensure__ = customersEnsurePromise;

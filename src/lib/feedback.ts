@@ -1,4 +1,5 @@
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 
 export interface FeedbackItem {
   id: string;
@@ -49,6 +50,16 @@ async function ensureFeedbackTableInternal() {
 }
 
 export async function ensureFeedbackTable() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/003_content.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   if (!feedbackEnsurePromise) {
     feedbackEnsurePromise = ensureFeedbackTableInternal();
   }

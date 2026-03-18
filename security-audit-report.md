@@ -1,363 +1,334 @@
-# Backend & API Security Audit Report
+# Code Skeptic Review - Nailify Architecture
 
-**Audit Date:** 2026-03-16  
-**Project:** Nailify (SSNails)  
-**Auditor:** Code Skeptic Mode
-
----
-
-## EXECUTIVE SUMMARY
-
-| Category | Rating |
-|----------|--------|
-| Critical Vulnerabilities | **4** |
-| High-Risk Issues | **5** |
-| Medium-Risk Issues | **4** |
-| Low-Risk Issues | **3** |
-
-**Overall Assessment:** The codebase has moderate security posture but contains **several critical issues** that must be addressed before production. Authentication is reasonably solid, but authorization, payment verification, and rate limiting need improvement.
+**Review Date:** 2024-01-15  
+**Reviewer:** Code Skeptic Mode  
+**Scope:** Recent architecture and implementation changes  
+**Focus:** Migration risks, hidden runtime coupling, data loss, session edge cases, localization, admin editing, deployment, rollback
 
 ---
 
-## CRITICAL RISKS (Must Fix Before Production)
+## 1. Critical Issues (MUST FIX)
 
-### 1. Stripe Payment Verification - CRITICAL
-**File:** [`src/app/api/stripe/confirm/route.ts`](src/app/api/stripe/confirm/route.ts:1)
+### 1.1 Migration Risk: No Transaction Rollback
+**File:** [`migrations/migrate.ts`](migrations/migrate.ts:120-132)
 
-**Issue:** The payment confirmation endpoint has **NO authentication** and **NO server-side Stripe webhook verification**. Any client can call this endpoint to mark any booking/order as paid.
+The migration runner splits SQL by semicolon and executes statements sequentially without transaction wrapping:
 
 ```typescript
-// Line 6-18 - No auth check, no webhook signature verification
-export async function POST(request: Request) {
-  const payload = (await request.json()) as Partial<{
-    sessionId: string;
-    type: 'booking' | 'order';
-  }>;
-  // Directly marks booking as paid based on client-provided sessionId
-  const bookingId = await markBookingPaidBySession(payload.sessionId);
-```
-
-**Attack Vector:** Attacker can book a service, not pay, then call `/api/stripe/confirm` with their session ID to mark it as paid. Or worse - they can enumerate session IDs and mark other bookings as paid.
-
-**Fix Required:**
-- Add admin authentication to this endpoint
-- Implement Stripe webhook signature verification
-- Or verify session ownership before marking paid
-
----
-
-### 2. Admin Account Creation - CRITICAL
-**File:** [`src/app/api/admin/login/route.ts`](src/app/api/admin/login/route.ts:30)
-
-**Issue:** The `createIfEmpty` flag in the login endpoint allows **unauthenticated admin account creation** when no admin exists.
-
-```typescript
-// Lines 30-36 - Creates admin without any auth when count === 0
-if (count === 0 && payload.createIfEmpty) {
-  await createAdminUser({
-    email,
-    password,
-    name: payload.name?.trim() || 'Sandra',
-  });
+for (const statement of statements) {
+  if (statement.trim()) {
+    await sql.unsafe(statement);
+  }
 }
 ```
 
-**Attack Vector:** First visitor to the site can create a superuser account by simply sending `createIfEmpty: true` in the login request. This is a classic "first-user-takeover" vulnerability.
+**Risk:** If migration 010 fails halfway through (e.g., after inserting 20 of 40 rows), the database is left in partial state. The `__migrations` table records the migration as executed, preventing retry.
 
-**Fix Required:**
-- Remove `createIfEmpty` from production
-- Add a site-wide secret/flag to enable admin creation
-- Or create admin via CLI only
+**Impact:** 
+- Partial data in `homepage_sections` table
+- Cannot re-run migration (marked as complete)
+- Manual DB intervention required
 
----
-
-### 3. Missing Rate Limiting on Public Endpoints - CRITICAL
-**Issue:** **NO rate limiting exists anywhere** in the codebase. No middleware, no external library, nothing.
-
-**Vulnerable Endpoints:**
-- [`/api/assistant-chat`](src/app/api/assistant-chat/route.ts:1) - Unlimited AI calls (cost abuse)
-- [`/api/bookings`](src/app/api/bookings/route.ts:1) - Unlimited booking creation
-- [`/api/bookings/checkout`](src/app/api/bookings/checkout/route.ts:1) - Unlimited payment flow creation
-- [`/api/cart/checkout`](src/app/api/cart/checkout/route.ts:1) - Unlimited checkout
-
-**Attack Vector:** 
-- AI chat spam: Attacker hammers the AI endpoint, draining the OpenRouter API quota
-- Booking spam: Automated bot creates thousands of fake bookings
-- DoS: API exhaustion from repeated requests
-
-**Fix Required:**
-- Implement rate limiting middleware (e.g., Upstash Redis, or Vercel KV)
-- Limit: 10 requests/minute for AI, 5 requests/minute for bookings
-
----
-
-### 4. Debug Mode Exposes Internal Info in Production - CRITICAL
-**File:** [`src/app/api/assistant-chat/route.ts`](src/app/api/assistant-chat/route.ts:339)
-
-**Issue:** The debug flag exposes internal AI information in production:
-
+**Recommendation:** Wrap each migration in explicit transaction:
 ```typescript
-const showDebug = process.env.NODE_ENV !== 'production';  // WRONG approach
-// Exposes: providerChain, finalProvider, finalModel, intentHandled, stage
-return NextResponse.json(showDebug ? { ok: true, ...fallback, debug } : ...);
-```
-
-**Problem:** 
-1. This relies on NODE_ENV which may not be correctly set on all deployments
-2. Leaks AI model names, API chain, fallback behavior to attackers
-
-**Fix Required:**
-- Remove debug output entirely OR use explicit env var
-- Don't expose internal AI architecture to clients
-
----
-
-## HIGH-RISK ISSUES
-
-### 5. Admin Status Endpoint Exposes Setup State
-**File:** [`src/app/api/admin/status/route.ts`](src/app/api/admin/status/route.ts:1)
-
-**Issue:** Publicly reveals whether admin account exists:
-
-```typescript
-// Returns { hasAdmin: true/false } to anyone
-const count = await adminCount();
-return NextResponse.json({ ok: true, hasAdmin: count > 0 });
-```
-
-**Attack Vector:** Attacker knows exactly when to attempt `createIfEmpty` takeover.
-
-**Recommendation:** Remove this endpoint or require auth.
-
----
-
-### 6. Weak Admin Session Validation in Middleware
-**File:** [`src/middleware.ts`](src/middleware.ts:33)
-
-**Issue:** Middleware only checks for cookie existence, not validity:
-
-```typescript
-// Line 38-42 - Only checks token exists, not if valid
-const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-if (!token) {
-  const loginUrl = new URL('/admin/login', request.url);
-  return NextResponse.redirect(loginUrl);
-}
-return NextResponse.next();  // Redirects to login if no cookie
-```
-
-**Problem:** If someone sets a fake cookie, they get redirected to login (OK), but the redirect itself doesn't indicate whether user exists - could be enumerate-able. Actually, this is reasonable - it's checking cookie presence, not user validity.
-
-**Actually:** This is borderline OK - it redirects if no cookie. But it doesn't validate token against DB, which is fine because that's done in the API routes.
-
----
-
-### 7. AI Chat Message History Not Rate Limited
-**File:** [`src/app/api/assistant-chat/route.ts`](src/app/api/assistant-chat/route.ts:356)
-
-**Issue:** Messages array has no size limit:
-
-```typescript
-const messages = rawMessages
-  .filter((m) => m && (m.role === 'user' || m.role === 'assistant'))
-  .map((m) => ({ role: m.role, text: normalizeText(String(m.text ?? '')) }))
-  .filter((m) => m.text.length > 0)
-  .slice(-8);  // Only keeps last 8, but what if attacker sends huge payload?
-```
-
-**Problem:** Even with `.slice(-8)`, the incoming array could be massive, causing:
-- Memory exhaustion
-- Processing delay
-- Cost inflation from parsing
-
-**Fix:** Add request body size limit validation at the edge.
-
----
-
-### 8. Slot Date/Time Validation in PATCH is Client-Side Only
-**File:** [`src/app/api/bookings/route.ts`](src/app/api/bookings/route.ts:110)
-
-**Issue:** While there IS validation for date/time format, there's no validation that:
-- The slot exists
-- The slot is available
-- The slot belongs to the date/time being updated
-
-**Attack Vector:** Admin can assign bookings to non-existent slots, creating data inconsistency.
-
----
-
-### 9. No CSRF Protection
-**Issue:** No CSRF tokens implemented anywhere. However, Next.js API routes are stateless by default, and SameSite cookies provide some protection. This is acceptable for this API design, but worth noting.
-
----
-
-## MEDIUM-RISK ISSUES
-
-### 10. Potential SQL Injection via Search Parameters
-**File:** [`src/app/api/bookings/route.ts`](src/app/api/bookings/route.ts:52)
-
-**Issue:** The `limit` parameter is parsed from URL and passed to SQL:
-
-```typescript
-const limitParam = url.searchParams.get('limit');
-const limit = limitParam ? Number(limitParam) : 100;  // Not validated before use
-```
-
-**Analysis:** While there IS sanitization in [`listBookings()`](src/lib/bookings.ts:160) (`Math.max(1, Math.min(500, Math.floor(limit)))`), passing arbitrary numbers and having them silently clamped is poor practice. Could hide logic bugs.
-
----
-
-### 11. No Input Length Limits on Text Fields
-**Issue:** Contact notes, descriptions, and other text fields have no max length validation in the API.
-
-**Vulnerable Fields:**
-- `contactNotes` - no length limit
-- `inspirationNote` - no length limit  
-- Service/product descriptions - no length limit
-
-**Attack Vector:** Large payload DoS, database storage bloat.
-
----
-
-### 12. Cart Checkout Missing Price Verification
-**File:** [`src/app/api/cart/checkout/route.ts`](src/app/api/cart/checkout/route.ts:40)
-
-**Issue:** Price is taken from database, but quantity could be manipulated:
-
-```typescript
-const quantities = new Map<string, number>();
-for (const item of payload.items) {
-  quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + Math.max(1, item.quantity));
-}
-```
-
-**Problem:** Max quantity is unbounded. Could order 10,000 of an item if stock is high enough.
-
-**Fix:** Add max quantity per item (e.g., 10).
-
----
-
-### 13. Gallery/Image URLs Not Validated
-**File:** [`src/app/api/gallery/route.ts`](src/app/api/gallery/route.ts:56)
-
-**Issue:** Image URLs are accepted without validation:
-
-```typescript
-const id = await createGalleryImage({
-  imageUrl: payload.imageUrl,  // No URL validation
-  caption: payload.caption ?? '',
-  isFeatured: payload.isFeatured ?? false,
+await sql.begin(async (tx) => {
+  for (const statement of statements) {
+    await tx.unsafe(statement);
+  }
 });
 ```
 
-**Attack Vector:** Store malicious URLs, XSS via URL payloads (if rendered in certain ways), SSRF if the app fetches these URLs.
-
 ---
 
-## LOW-RISK ISSUES / RECOMMENDATIONS
+### 1.2 Data Loss Risk: CASCADE DELETE on Sessions
+**File:** [`migrations/011_sessions.sql`](migrations/011_sessions.sql:21)
 
-### 14. No HTTPS Enforcement in Development
-**File:** [`src/lib/admin-auth.ts`](src/lib/admin-auth.ts:49)
-
-**Issue:** Cookie `secure` flag only set in production:
-
-```typescript
-response.cookies.set(ADMIN_SESSION_COOKIE, session.token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',  // OK but worth noting
-  ...
-});
+```sql
+session_id TEXT NOT NULL REFERENCES user_sessions(session_id) ON DELETE CASCADE
 ```
 
-**Recommendation:** This is correct - needed for localhost. No change needed.
+**Risk:** When a session is deleted, ALL associated favorites and cart data are permanently lost without warning.
+
+**Impact:**
+- User clears cookies → their saved favorites vanish instantly
+- No soft delete / archival
+- No "recently deleted" recovery
+
+**Recommendation:**
+1. Add `deleted_at` column instead of CASCADE
+2. Implement soft-delete cleanup job (run monthly)
+3. Archive important data before deletion
 
 ---
 
-### 15. Session Token Entropy
-**File:** [`src/lib/admin-auth.ts`](src/lib/admin-auth.ts:111)
+### 1.3 Session Edge Case: Cookie Format Vulnerability
+**File:** [`src/lib/session.ts`](src/lib/session.ts:60-61)
 
-**Issue:** Token uses 32 bytes (256-bit) from `randomBytes(32)`. This is **excellent** - no change needed.
+```typescript
+const cookieValue = `${sessionId}; path=/; max-age=${SESSION_MAX_AGE}; samesite=lax; secure`;
+document.cookie = `${SESSION_COOKIE}=${cookieValue}`;
+```
 
----
+**Issue:** The `secure` flag is set unconditionally, but on HTTP (development), the cookie won't be set at all, causing session to be recreated on every request.
 
-### 16. Password Hashing Uses Scrypt
-**File:** [`src/lib/admin-auth.ts`](src/lib/admin-auth.ts:24)
+**Risk:** Development mode appears broken; users can't stay logged in over HTTP.
 
-**Issue:** Using scrypt with 64-byte output, 16-byte salt. This is **good** - no change needed.
-
----
-
-## WHAT IS ALREADY SAFE
-
-### ✅ Authentication System
-- Session tokens are cryptographically secure (32 bytes)
-- Passwords properly hashed with scrypt + salt
-- HttpOnly, secure cookies in production
-- Session expiry (14 days)
-
-### ✅ Authorization on Admin Endpoints
-- All POST/PATCH/DELETE operations on admin resources require auth
-- Gallery, services, products, slots, bookings all check `getAdminFromCookies()`
-
-### ✅ Database Parameterization
-- Using `sql` tagged template literals throughout
-- No string concatenation in SQL queries
-- Proper use of parameterized queries
-
-### ✅ Public vs Admin Route Separation
-- Clear distinction between public GET and admin-only POST/PATCH/DELETE
-- Cache headers appropriately set
-
-### ✅ Input Validation (Partial)
-- Validates required fields exist
-- Validates enum values (status, paymentStatus, category)
-- Validates date/time format regex
-
-### ✅ Error Handling
-- Errors caught and returned as generic messages
-- No stack traces leaked to clients
+**Recommendation:** Make `secure` conditional:
+```typescript
+const secure = window.location.protocol === 'https:' ? '; secure' : '';
+document.cookie = `${SESSION_COOKIE}=${sessionId}; path=/; max-age=${SESSION_MAX_AGE}; samesite=lax${secure}`;
+```
 
 ---
 
-## QUICK WINS (Low Effort, High Impact)
+### 1.4 Localization Regression: Mixed Sources of Truth
+**Files:** 
+- [`src/lib/i18n/index.tsx`](src/lib/i18n/index.tsx:61)
+- [`src/lib/homepage-content.ts`](src/lib/homepage-content.ts:68-88)
+- [`src/app/page.tsx`](src/app/page.tsx) (hardcoded text)
 
-| Priority | Fix | Effort |
-|----------|-----|--------|
-| 1 | Remove `createIfEmpty` from login API | 5 min |
-| 2 | Add rate limiting to AI chat endpoint | 30 min |
-| 3 | Add auth to `/api/stripe/confirm` | 10 min |
-| 4 | Remove debug output from AI chat | 5 min |
-| 5 | Add input length limits | 20 min |
-| 6 | Add max quantity to cart | 10 min |
+**Risk:** Content exists in THREE places:
+1. JSON translation files (`et.json`, `en.json`)
+2. Database `homepage_sections` table
+3. Hardcoded in components
 
----
+**Current Behavior:** `getHomepageContent()` prioritizes DB, then falls back to JSON. But many components directly use `t()` from JSON, bypassing DB.
 
-## SILENT RISKS (Easy to Miss)
+**Impact:**
+- Admin edits DB content → some pages show DB, others show JSON
+- Inconsistent user experience
+- Confusion about which content is editable
 
-1. **OpenRouter API Key Exposure Risk**: If the key leaks, attackers can drain the quota. Currently the key is server-side only, but if Next.js ever renders client-side with that env var, it's exposed.
-
-2. **Database Connection String**: If `DATABASE_URL` is logged anywhere or accidentally thrown in error messages, credentials exposed. Currently seems OK.
-
-3. **Auto-table Creation**: The `ensure*Tables()` functions run on every request if tables don't exist. While not a security issue per se, it's unusual behavior that could be exploited for DoS (triggering many schema operations).
-
----
-
-## PRODUCTION REQUIREMENTS CHECKLIST
-
-- [ ] **CRITICAL**: Fix payment verification (add auth + webhook)
-- [ ] **CRITICAL**: Disable admin auto-creation
-- [ ] **CRITICAL**: Add rate limiting
-- [ ] **CRITICAL**: Remove/fix debug output in AI chat
-- [ ] HIGH: Remove or protect admin status endpoint
-- [ ] HIGH: Add input length validation
-- [ ] HIGH: Add cart quantity limits
-- [ ] MEDIUM: Validate image URLs
-- [ ] MEDIUM: Add request body size limits
+**Recommendation:** 
+- Audit all `t()` calls for homepage sections
+- Move all visible homepage text to DB or all to JSON (not mixed)
+- Document which keys are admin-editable
 
 ---
 
-## CONCLUSION
+## 2. High-Risk Issues (SHOULD FIX)
 
-The codebase has a **reasonably solid foundation** for authentication and database access patterns. However, the **lack of rate limiting** and **missing payment verification** are critical production blockers. The admin auto-creation vulnerability is particularly severe as it allows complete site takeover on first visit.
+### 2.1 Runtime Coupling: Schema Validator Bypass
+**File:** [`src/lib/session.ts`](src/lib/session.ts:117-132)
 
-**Recommended Action**: Address all 4 critical issues before any production deployment.
+```typescript
+if (process.env.NODE_ENV === 'production') {
+  const migrated = await isDatabaseMigrated();
+  if (migrated) {
+    return; // Skip table creation entirely
+  }
+}
+```
+
+**Risk:** In production, if migrations fail or are misconfigured, the app silently skips table creation. This creates a hidden dependency on migration state.
+
+**Impact:**
+- App works in dev (creates tables on-the-fly)
+- App fails in production (expects migrations to have run)
+- No error when tables missing in production
+
+**Recommendation:** Remove the conditional skip - always ensure tables exist:
+```typescript
+export async function ensureSessionTables(): Promise<void> {
+  await ensureSessionTablesInternal(); // Always run
+}
+```
+
+---
+
+### 2.2 Admin Editing: No Validation on Upsert
+**File:** [`src/lib/homepage-content.ts`](src/lib/homepage-content.ts:191-218)
+
+```typescript
+export async function upsertHomepageSection(entry: { ... }) {
+  await sql`...` // No length limits, no XSS sanitization
+}
+```
+
+**Risk:** Admin can insert:
+- Empty strings (content disappears)
+- Very long text (layout breaks)
+- Potentially malicious scripts (stored XSS if rendered without escaping)
+
+**Impact:**
+- Stored XSS if admin account is compromised
+- UI breakage from oversized content
+
+**Recommendation:** Add validation layer:
+```typescript
+function validateHomepageSection(entry) {
+  if (entry.valueEt.length > 500) throw new Error('ET content too long');
+  if (!entry.valueEt.trim()) throw new Error('Content required');
+  // Sanitize HTML/script tags
+}
+```
+
+---
+
+### 2.3 Session Persistence: Expired Sessions Still Queried
+**File:** [`src/lib/session.ts`](src/lib/session.ts:187-204)
+
+```typescript
+export async function getSessionData<T>(sessionId: string, dataType: SessionDataType): Promise<T | null> {
+  // No check if session is expired
+  const result = await sql`SELECT data_value FROM session_data WHERE session_id = ${sessionId} ...`;
+}
+```
+
+**Risk:** Even after session expires, old data is still retrieved until manually cleaned up.
+
+**Impact:**
+- Stale data served to users
+- Wasteful DB queries for expired sessions
+- Inconsistent state between server and client
+
+**Recommendation:** Add expiry check:
+```typescript
+const session = await sql`SELECT expires_at FROM user_sessions WHERE session_id = ${sessionId}`;
+if (new Date(session[0].expires_at) < new Date()) {
+  return null; // Session expired
+}
+```
+
+---
+
+### 2.4 Deployment Risk: No Database Backup Before Migration
+**File:** [`scripts/build-deploy-restart.ps1`](scripts/build-deploy-restart.ps1:10-16)
+
+```powershell
+Write-Host "==> Building app..."
+cmd /c "if exist .next rmdir /s /q .next"
+npm run build
+
+Write-Host "==> Deploying to Vercel (preview)..."
+$deployOutput = vercel deploy -y
+```
+
+**Risk:** 
+1. Migrations run on Vercel's first request
+2. No pre-deployment backup
+3. If migration fails, database may be in inconsistent state
+
+**Impact:**
+- Failed migrations leave partial data
+- No way to roll back to previous state
+- Production downtime until fixed
+
+**Recommendation:**
+1. Add backup step before deployment
+2. Run migrations separately from deployment
+3. Add health check to verify migration success
+
+---
+
+## 3. Medium-Risk Issues
+
+### 3.1 Duplicate Migration Logic
+**Files:**
+- [`migrations/010_homepage_sections.sql`](migrations/010_homepage_sections.sql:5-13)
+- [`src/lib/homepage-content.ts`](src/lib/homepage-content.ts:27-42)
+- [`src/lib/session.ts`](src/lib/session.ts:134-164)
+
+**Issue:** Each feature duplicates table creation logic:
+- SQL migration file
+- Runtime `ensureHomepageContentTables()`
+- Runtime `ensureSessionTables()`
+
+**Risk:** 
+- Inconsistency between SQL-defined schema and runtime expectations
+- Runtime tables may have different indexes/constraints than migrations
+
+**Recommendation:** Use migrations as single source of truth, remove runtime table creation:
+```typescript
+export async function ensureHomepageContentTables() {
+  // Just verify tables exist, don't create
+  const result = await sql`SELECT 1 FROM homepage_sections LIMIT 1`;
+}
+```
+
+---
+
+### 3.2 i18n Cookie Conflicts
+**File:** [`src/lib/i18n/index.tsx`](src/lib/i18n/index.tsx:53)
+
+```typescript
+document.cookie = `${LOCALE_COOKIE}=${lang}; path=/; max-age=31536000; samesite=lax`;
+```
+
+**Issue:** Language cookie and session cookie both use `samesite=lax`. When navigating between subdomains, cookies may not propagate.
+
+**Risk:** User sets language → switches device → language not remembered
+
+**Recommendation:** Consider using `samesite=strict` for primary cookie or implement subdomain-aware cookie domain.
+
+---
+
+### 3.3 Migration Race Condition
+**File:** [`migrations/migrate.ts`](src/lib/session.ts:103-110)
+
+```typescript
+async function acquireLock(sql: ReturnType<typeof postgres>): Promise<boolean> {
+  const result = await sql`SELECT pg_try_advisory_lock(${LOCK_ID}) as acquired`;
+  return result[0]?.acquired ?? false;
+}
+```
+
+**Risk:** If migration runner crashes after acquiring lock but before completing, lock is never released. Next migration run will fail indefinitely.
+
+**Impact:** Requires manual `SELECT pg_advisory_unlock(1234567890)` to recover.
+
+**Recommendation:** Add lock timeout or use `pg_advisory_lock` (blocking) instead of `pg_try_advisory_lock`.
+
+---
+
+## 4. Minor Issues / Cleanup
+
+### 4.1 Unused Code
+- [`src/lib/homepage-data.ts`](src/lib/homepage-data.ts) - appears unused
+- Legacy booking content fields in database
+
+### 4.2 Magic Numbers
+- Session expiry: `30 * 24 * 60 * 60` (should be constant)
+- Cleanup limit: `100` in `cleanupExpiredSessions()`
+
+### 4.3 Error Handling Gaps
+- No try-catch around `document.cookie` parsing (line 44 in session.ts)
+- Missing error boundaries in admin pages
+
+---
+
+## 5. Rollback Weaknesses
+
+### 5.1 No Reverse Migrations
+**Issue:** No `DOWN` migrations exist. Once applied, changes cannot be rolled back via migration runner.
+
+**Mitigation:** Manual DB restore required from backup.
+
+### 5.2 Seed Data Overwrites
+**File:** [`migrations/010_homepage_sections.sql`](migrations/010_homepage_sections.sql:22-63)
+
+```sql
+INSERT INTO homepage_sections ... ON CONFLICT (id) DO NOTHING;
+```
+
+**Issue:** If admin edits content AFTER migration runs, re-running migration does nothing. But if migration is manually reversed, content is lost.
+
+---
+
+## 6. Summary Table
+
+| Category | Issue Count | Severity |
+|----------|-------------|----------|
+| Critical | 4 | MUST FIX |
+| High | 4 | SHOULD FIX |
+| Medium | 3 | CONSIDER FIXING |
+| Minor | 3 | CLEANUP |
+
+### Priority Actions
+
+1. **Immediate:** Add transaction wrapping to migrations
+2. **Immediate:** Fix CASCADE DELETE to soft-delete
+3. **Before Production:** Fix cookie `secure` flag for HTTP
+4. **Before Production:** Remove dual schema creation (migrations OR runtime)
+5. **Before Production:** Add admin input validation
+6. **Roadmap:** Implement backup strategy for migrations

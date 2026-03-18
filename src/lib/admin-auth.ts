@@ -1,6 +1,7 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 
 export const ADMIN_SESSION_COOKIE = 'nailify_admin_session';
 const SESSION_TTL_DAYS = 14;
@@ -57,6 +58,16 @@ async function ensureAdminTablesInternal() {
 }
 
 export async function ensureAdminTables() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/007_admin.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   if (!adminEnsurePromise) {
     adminEnsurePromise = ensureAdminTablesInternal();
     global.__nailify_admin_ensure__ = adminEnsurePromise;

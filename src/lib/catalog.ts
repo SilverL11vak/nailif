@@ -1,4 +1,5 @@
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 import type { Service } from '@/store/booking-types';
 import type { LocaleCode } from './i18n/locale-path';
 import { mockServices } from '@/store/mock-data';
@@ -374,6 +375,17 @@ async function ensureCatalogTablesInternal() {
 }
 
 export async function ensureCatalogTables() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/002_catalog.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      // Migrations have run, tables should exist
+      return;
+    }
+  }
+
   if (!catalogEnsurePromise) {
     catalogEnsurePromise = ensureCatalogTablesInternal();
     global.__nailify_catalog_ensure__ = catalogEnsurePromise;

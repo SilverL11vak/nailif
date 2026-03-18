@@ -1,4 +1,5 @@
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 
 export interface GalleryImage {
   id: string;
@@ -45,6 +46,16 @@ declare global {
 let galleryEnsurePromise: Promise<void> | null = global.__nailify_gallery_ensure__ ?? null;
 
 export async function ensureGalleryTable() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/003_content.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   if (galleryEnsurePromise) {
     await galleryEnsurePromise;
     return;

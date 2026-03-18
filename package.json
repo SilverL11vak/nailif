@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "migrate": "npx tsx migrations/migrate.ts",
     "dev": "node -e \"const cp=require('node:child_process');const path=require('node:path');const root=path.dirname(process.env.npm_package_json||path.join(process.cwd(),'package.json'));const bin=path.join(root,'node_modules','next','dist','bin','next');const res=cp.spawnSync(process.execPath,[bin,'dev'],{stdio:'inherit'});process.exit(res.status??1);\"",
     "dev:3003": "node ./scripts/dev-with-prewarm.mjs",
     "dev:turbo": "node -e \"const cp=require('node:child_process');const path=require('node:path');const root=path.dirname(process.env.npm_package_json||path.join(process.cwd(),'package.json'));const bin=path.join(root,'node_modules','next','dist','bin','next');const res=cp.spawnSync(process.execPath,[bin,'dev','--turbopack'],{stdio:'inherit'});process.exit(res.status??1);\"",
@@ -33,9 +34,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

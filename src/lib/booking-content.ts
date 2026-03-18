@@ -1,4 +1,5 @@
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 import type { LocaleCode } from './i18n/locale-path';
 import type { AddOn } from '@/store/booking-types';
 
@@ -339,6 +340,16 @@ async function ensureBookingContentTablesInternal() {
 }
 
 export async function ensureBookingContentTables() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/005_booking.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   if (!bookingContentEnsurePromise) {
     bookingContentEnsurePromise = ensureBookingContentTablesInternal();
     global.__nailify_booking_content_ensure__ = bookingContentEnsurePromise;

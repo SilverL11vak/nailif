@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { PremiumImage as Image } from '@/components/ui/PremiumImage';
 import { HeroBookingWidget } from '@/components/booking/HeroBookingWidget';
-import { StickyBookingCTA } from '@/components/layout/StickyBookingCTA';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
@@ -14,6 +13,7 @@ import type { NailStyle } from '@/store/booking-types';
 import type { Product } from '@/lib/catalog';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
+import { getTodayInTallinn, getTomorrowInTallinn } from '@/lib/timezone';
 import {
   Globe,
   ShoppingBag,
@@ -160,10 +160,8 @@ export default function Home() {
           return;
         }
 
-        const today = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowDate = tomorrow.toISOString().split('T')[0];
+        const today = getTodayInTallinn();
+        const tomorrowDate = getTomorrowInTallinn();
 
         if (slot.date === today) {
           setNextAvailable(`${t('widget.todayAt')} ${slot.time}`);
@@ -669,6 +667,21 @@ export default function Home() {
       return (prev - 1 + galleryCardCount) % galleryCardCount;
     });
   };
+
+  // Touch handling for gallery swipe on mobile
+  const touchStartX = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const swipeThreshold = 60;
+    if (deltaX > swipeThreshold) prevGallery();
+    else if (deltaX < -swipeThreshold) nextGallery();
+    touchStartX.current = null;
+  };
+
   const getStyleLabel = (style: NailStyle) => {
     const key = `homepage.gallery.styleNames.${style.slug}`;
     const localized = t(key);
@@ -1248,27 +1261,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. Trust strip + Local Trust / Mustamäe — premium 3-column, editorial continuation of hero */}
-      <section className="border-y border-slate-200/70 bg-white/90 py-6 backdrop-blur-sm">
-        <div className={contentMax}>
-          <div className="flex flex-nowrap items-center justify-start gap-8 overflow-x-auto overscroll-x-contain py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:justify-center lg:gap-16">
-            <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span className="font-medium text-gray-700">4.9</span>
-              <span>{t('trust.googleRating')}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span className="font-medium text-gray-700">{t('trust.weeklyAppointmentsStat')}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span className="font-medium text-gray-700">100%</span>
-              <span>{t('trust.sterileEquipment')}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span className="font-medium text-gray-700">{t('trust.premiumProducts')}</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* (layout cleanup) removed empty trust strip spacer */}
       <section
         ref={localTrustSectionRef}
         className={`relative overflow-hidden border-t border-[#e8dce4]/50 bg-gradient-to-b from-[#faf8f9] via-[#f8f5f7] to-[#f6f2f5] ${sectionClass}`}
@@ -1631,7 +1624,7 @@ export default function Home() {
                   alt={getStyleLabel(nailStyles[0])}
                   width={1200}
                   height={900}
-                  className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                  className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 z-20 p-8 text-white">
@@ -1760,6 +1753,11 @@ export default function Home() {
             <p className="text-[1.05rem] leading-relaxed text-[#5d4a56]">
               {getI18nTextOrFallback('homepage.gallery.ctaLead', language === 'en' ? 'Find your next favorite style.' : 'Leia oma järgmine lemmik stiil.')}
             </p>
+            <p className="mt-2 text-[0.95rem] leading-relaxed text-[#7a6572]">
+              {language === 'en' 
+                ? 'Ready for your transformation?' 
+                : 'Valmis oma transformatsiooniks?'}
+            </p>
             <button
               type="button"
               onClick={() => router.push(localizePath('/book'))}
@@ -1773,7 +1771,11 @@ export default function Home() {
       </section>
 
       {activeGalleryIndex !== null && galleryCards[activeGalleryIndex] && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/72 p-4 backdrop-blur-sm">
+        <div 
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/72 p-4 backdrop-blur-sm"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <button
             className="absolute inset-0"
             onClick={closeGallery}
@@ -2985,8 +2987,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Mobile Sticky CTA */}
-      <StickyBookingCTA hideOnPaths={['/book', '/success']} />
     </div>
   );
 }

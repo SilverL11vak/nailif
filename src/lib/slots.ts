@@ -1,5 +1,7 @@
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 import type { TimeSlot } from '@/store/booking-types';
+import { getTodayInTallinn, getCurrentTimeInTallinn } from './timezone';
 
 export interface SlotRecord {
   id: string;
@@ -177,6 +179,16 @@ async function ensureSlotsTableInternal() {
 }
 
 export async function ensureSlotsTable() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/004_slots.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      return;
+    }
+  }
+
   if (!slotsEnsurePromise) {
     slotsEnsurePromise = ensureSlotsTableInternal();
     global.__nailify_slots_ensure__ = slotsEnsurePromise;
@@ -260,7 +272,8 @@ export async function listSlotsForDate(date: string, includeUnavailable = false)
 
 export async function listUpcomingAvailableSlots(limit = 8): Promise<SlotRecord[]> {
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(50, Math.floor(limit))) : 8;
-  const today = toDateString(new Date());
+  const today = getTodayInTallinn();
+  const currentTime = getCurrentTimeInTallinn();
 
   const rows = await sql<{
     id: number;
@@ -296,7 +309,17 @@ export async function listUpcomingAvailableSlots(limit = 8): Promise<SlotRecord[
     LIMIT ${safeLimit}
   `;
 
-  return rows.map(mapRowToSlot);
+  // Filter out past slots for today (client-side for simplicity)
+  const todayStr = getTodayInTallinn();
+  const filteredRows = rows.filter((row) => {
+    // Keep all future dates
+    if (row.slot_date > todayStr) return true;
+    // For today, only keep future times
+    if (row.slot_date === todayStr && row.slot_time > currentTime) return true;
+    return false;
+  });
+
+  return filteredRows.map(mapRowToSlot);
 }
 
 export async function upsertSlot(input: SlotInput): Promise<SlotRecord> {

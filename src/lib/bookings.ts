@@ -1,4 +1,5 @@
 import { sql } from './db';
+import { isDatabaseMigrated } from './schema-validator';
 import type { AddOn, ContactInfo, Service, TimeSlot } from '@/store/booking-types';
 // Customer linking happens only after verified payment success.
 
@@ -110,6 +111,17 @@ async function ensureBookingsTableInternal() {
 }
 
 export async function ensureBookingsTable() {
+  // TRANSITIONAL: Skip ensure in production if migrations have been run
+  // TODO: After migrations are fully deployed and verified, remove this function
+  // and rely entirely on migrations in migrations/001_initial_schema.sql
+  if (process.env.NODE_ENV === 'production') {
+    const migrated = await isDatabaseMigrated();
+    if (migrated) {
+      // Migrations have run, table should exist
+      return;
+    }
+  }
+
   if (!bookingsEnsurePromise) {
     bookingsEnsurePromise = ensureBookingsTableInternal();
     global.__nailify_bookings_ensure__ = bookingsEnsurePromise;

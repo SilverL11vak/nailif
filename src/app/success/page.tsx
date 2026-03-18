@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
@@ -35,7 +35,21 @@ function SuccessPageContent() {
   const [recommendedMaintenanceSlots, setRecommendedMaintenanceSlots] = useState<TimeSlot[]>([]);
   const [galleryUrls, setGalleryUrls] = useState<string[]>(FALLBACK_GALLERY);
 
-  const { selectedService, selectedSlot, totalPrice, totalDuration, reset } = useBookingStore();
+  const bookingStore = useBookingStore();
+  const { selectedService, selectedSlot, totalPrice, totalDuration, reset } = bookingStore;
+
+  // Capture booking data IMMEDIATELY before any store reset can occur
+  // This prevents €0 display when navigating to success page after payment
+  const capturedPriceRef = useRef<number>(typeof totalPrice === 'number' ? totalPrice : 0);
+  const capturedDurationRef = useRef<number>(typeof totalDuration === 'number' ? totalDuration : 0);
+  const capturedServiceRef = useRef(selectedService);
+  const capturedSlotRef = useRef(selectedSlot);
+
+  // Use captured values as fallback when store values are reset
+  const effectivePrice = totalPrice || capturedPriceRef.current;
+  const effectiveDuration = totalDuration || capturedDurationRef.current;
+  const effectiveService = selectedService || capturedServiceRef.current;
+  const effectiveSlot = selectedSlot || capturedSlotRef.current;
 
   const locale: LocaleCode = getLocaleFromPathname(pathname ?? '') ?? 'et';
   const L = (path: string) => withLocale(path, locale);
@@ -223,29 +237,29 @@ function SuccessPageContent() {
         if (type === 'booking') {
           markBookingSuccessForSession();
           trackBehaviorEvent('payment_success', {
-            serviceId: selectedService?.id,
-            slotId: selectedSlot?.id,
-            price: typeof totalPrice === 'number' ? totalPrice : undefined,
+            serviceId: effectiveService?.id,
+            slotId: effectiveSlot?.id,
+            price: effectivePrice || undefined,
           });
           trackEvent({
             eventType: 'booking_success',
             step: 6,
-            serviceId: selectedService?.id,
-            slotId: selectedSlot?.id,
+            serviceId: effectiveService?.id,
+            slotId: effectiveSlot?.id,
             metadata: {
               source: 'stripe_confirm',
-              totalPrice: typeof totalPrice === 'number' ? totalPrice : null,
-              totalDuration: typeof totalDuration === 'number' ? totalDuration : null,
+              totalPrice: effectivePrice || null,
+              totalDuration: effectiveDuration || null,
               deposit: DEPOSIT_EUROS,
-              remaining: typeof totalPrice === 'number' ? Math.max(0, Number((totalPrice - DEPOSIT_EUROS).toFixed(2))) : null,
-              serviceName: selectedService?.name ?? null,
+              remaining: effectivePrice ? Math.max(0, Number((effectivePrice - DEPOSIT_EUROS).toFixed(2))) : null,
+              serviceName: effectiveService?.name ?? null,
             },
           });
           trackFunnelEvent({
             event: 'payment_success',
-            serviceId: selectedService?.id,
-            slotId: selectedSlot?.id,
-            metadata: { totalPrice, totalDuration, deposit: DEPOSIT_EUROS },
+            serviceId: effectiveService?.id,
+            slotId: effectiveSlot?.id,
+            metadata: { totalPrice: effectivePrice, totalDuration: effectiveDuration, deposit: DEPOSIT_EUROS },
             language,
           });
           clearBookingSession();
@@ -322,37 +336,37 @@ function SuccessPageContent() {
   };
 
   const calendarUrl = useMemo(() => {
-    if (!selectedSlot || !selectedService) return '';
-    const start = new Date(`${selectedSlot.date}T${selectedSlot.time}:00`);
+    if (!effectiveSlot || !effectiveService) return '';
+    const start = new Date(`${effectiveSlot.date}T${effectiveSlot.time}:00`);
     const end = new Date(start);
-    end.setMinutes(end.getMinutes() + (totalDuration || selectedService.duration || 60));
+    end.setMinutes(end.getMinutes() + (effectiveDuration || effectiveService.duration || 60));
     const toGCal = (value: Date) =>
       value
         .toISOString()
         .replace(/[-:]/g, '')
         .split('.')[0] + 'Z';
-    const title = encodeURIComponent(`Nailify — ${selectedService.name}`);
+    const title = encodeURIComponent(`Nailify — ${effectiveService.name}`);
     const details = encodeURIComponent(
       en ? 'Appointment with Sandra at Nailify Mustamäe.' : 'Aeg Sandraga Nailify Mustamäe stuudios.'
     );
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${toGCal(start)}/${toGCal(end)}&details=${details}&location=${encodeURIComponent(copy.studio)}`;
-  }, [selectedService, selectedSlot, totalDuration, en, copy.studio]);
+  }, [effectiveService, effectiveSlot, effectiveDuration, en, copy.studio]);
 
-  const remainingStudio = Math.max(0, Math.round((totalPrice - DEPOSIT_EUROS) * 100) / 100);
+  const remainingStudio = Math.max(0, Math.round((effectivePrice - DEPOSIT_EUROS) * 100) / 100);
   const checkoutType = searchParams.get('type');
   const isOrderCheckoutFlow = checkoutType === 'order';
   const isBookingView =
     !isOrderCheckoutFlow &&
     (flowType === 'booking' ||
-      (flowType === null && (checkoutType === 'booking' || (!checkoutType && Boolean(selectedSlot)))));
+      (flowType === null && (checkoutType === 'booking' || (!checkoutType && Boolean(effectiveSlot)))));
 
-  const serviceDisplayName = selectedService
+  const serviceDisplayName = effectiveService
     ? en
-      ? selectedService.nameEn ?? selectedService.name
-      : selectedService.nameEt ?? selectedService.name
+      ? effectiveService.nameEn ?? effectiveService.name
+      : effectiveService.nameEt ?? effectiveService.name
     : '';
 
-  const durationDisplayMin = totalDuration || selectedService?.duration || 0;
+  const durationDisplayMin = effectiveDuration || effectiveService?.duration || 0;
 
   if (paymentStatus === 'error') {
     return (
@@ -485,7 +499,7 @@ function SuccessPageContent() {
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6d6268]">{copy.breakdownServiceTotalLabel}</span>
                   <span className="font-semibold tabular-nums text-[#2f282c]">
-                    €{typeof totalPrice === 'number' ? totalPrice : selectedService.price}
+                    €{effectivePrice || effectiveService?.price}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

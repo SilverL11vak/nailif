@@ -84,6 +84,15 @@ export default function AdminGalleryPage() {
     await loadImages();
   };
 
+  const updateCaption = async (id: string, newCaption: string) => {
+    await fetch('/api/gallery', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, caption: newCaption }),
+    });
+    await loadImages();
+  };
+
   const moveImage = async (index: number, direction: -1 | 1) => {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= images.length) return;
@@ -185,7 +194,18 @@ export default function AdminGalleryPage() {
                     </div>
                   </div>
                   <div className="p-4">
-                    <p className="text-sm font-medium text-slate-800 line-clamp-2">{image.caption || 'Ilma kirjelduseta'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="flex-1 text-sm font-medium text-slate-800 line-clamp-2">{image.caption || 'Ilma kirjelduseta'}</p>
+                      <button 
+                        onClick={() => {
+                          const newCaption = window.prompt('Muuda kirjeldust:', image.caption);
+                          if (newCaption !== null) updateCaption(image.id, newCaption);
+                        }}
+                        className="rounded-lg border border-[#e5e7eb] bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        Muuda
+                      </button>
+                    </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button onClick={() => moveImage(index, -1)} className="rounded-lg border border-[#e5e7eb] bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">↑</button>
                       <button onClick={() => moveImage(index, 1)} className="rounded-lg border border-[#e5e7eb] bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">↓</button>
