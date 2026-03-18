@@ -101,8 +101,8 @@ export function AdminSalonOverview({
     void (async () => {
       try {
         const [bRes, oRes, pRes] = await Promise.all([
-          fetch('/api/bookings?limit=80', { cache: 'no-store' }),
-          fetch('/api/orders?limit=200', { cache: 'no-store' }),
+          fetch('/api/bookings?limit=80&compact=1', { cache: 'no-store' }),
+          fetch('/api/orders?limit=200&compact=1', { cache: 'no-store' }),
           fetch('/api/products?admin=1&lang=et', { cache: 'no-store' }),
         ]);
         if (cancelled) return;

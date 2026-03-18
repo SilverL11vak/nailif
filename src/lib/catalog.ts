@@ -183,6 +183,7 @@ declare global {
 }
 
 let catalogEnsurePromise: Promise<void> | null = global.__nailify_catalog_ensure__ ?? null;
+let catalogMigrationCheckPromise: Promise<boolean> | null = null;
 
 function sanitizePublicImage(imageUrl: string | null): string | null {
   // Allow all image URLs including data URIs from admin uploads
@@ -220,6 +221,10 @@ async function ensureCatalogTablesInternal() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+  // Speeds up `active=true` service listings ordered by `sort_order` / `price`.
+  await sql`CREATE INDEX IF NOT EXISTS idx_services_active_sort_price_name
+    ON services (active, sort_order ASC, price ASC, name ASC)`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS products (
@@ -375,16 +380,14 @@ async function ensureCatalogTablesInternal() {
 }
 
 export async function ensureCatalogTables() {
-  // TRANSITIONAL: Skip ensure in production if migrations have been run
-  // TODO: After migrations are fully deployed and verified, remove this function
-  // and rely entirely on migrations in migrations/002_catalog.sql
-  if (process.env.NODE_ENV === 'production') {
-    const migrated = await isDatabaseMigrated();
-    if (migrated) {
-      // Migrations have run, tables should exist
-      return;
-    }
+  // TRANSITIONAL: Skip expensive ensure-table work when migrations are already applied.
+  // This avoids repeatedly running ALTER/UPDATE statements in environments where
+  // `NODE_ENV !== 'production'` but schema migrations have still been executed.
+  if (!catalogMigrationCheckPromise) {
+    catalogMigrationCheckPromise = isDatabaseMigrated().catch(() => false);
   }
+  const migrated = await catalogMigrationCheckPromise;
+  if (migrated) return;
 
   if (!catalogEnsurePromise) {
     catalogEnsurePromise = ensureCatalogTablesInternal();
@@ -417,7 +420,7 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     sort_order: number;
     active: boolean;
   }[]>`
-    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, COALESCE((SELECT sort_order FROM services s2 WHERE s2.id = services.id), 0) AS sort_order, active
+    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, sort_order, active
     FROM services
     WHERE active = TRUE
     ORDER BY sort_order ASC, price ASC, name ASC

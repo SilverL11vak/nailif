@@ -247,7 +247,8 @@ export default function Home() {
     let mounted = true;
     const loadServices = async () => {
       try {
-        const response = await fetch(`/api/services?lang=${language}`, { cache: 'no-store' });
+        // Use the API's Cache-Control header (short TTL) to avoid hammering DB on refresh.
+        const response = await fetch(`/api/services?lang=${language}`);
         if (!response.ok) return;
         const data = (await response.json()) as { services?: ServiceCard[] };
         if (mounted && Array.isArray(data.services) && data.services.length > 0) {

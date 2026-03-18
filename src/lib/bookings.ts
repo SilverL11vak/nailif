@@ -47,8 +47,22 @@ export interface BookingRecord {
   createdAt: string;
 }
 
+// Compact booking record for lightweight admin dashboards.
+// Omits heavy JSON + unused fields to reduce payload size and CPU.
+export interface BookingRecordCompact {
+  id: string;
+  status: string;
+  serviceName: string;
+  slotDate: string;
+  slotTime: string;
+  contactFirstName: string;
+  contactLastName: string | null;
+  createdAt: string;
+}
+
 declare global {
   var __nailify_bookings_ensure__: Promise<void> | undefined;
+  var __nailify_bookings_unique_index_failed__: boolean | undefined;
 }
 
 let bookingsEnsurePromise: Promise<void> | null = global.__nailify_bookings_ensure__ ?? null;
@@ -108,6 +122,29 @@ async function ensureBookingsTableInternal() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_name_snapshot TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_email_snapshot TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_phone_snapshot TEXT`;
+
+  // Atomic conflict prevention: one non-cancelled booking per slot date+time.
+  // Treats reserved/pending bookings as taken immediately.
+  if (!global.__nailify_bookings_unique_index_failed__) {
+    try {
+      await sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_active_slot_date_time
+          ON bookings(slot_date, slot_time)
+          WHERE status <> 'cancelled'
+      `;
+    } catch (e) {
+      // Postgres throws 23505 if existing data already violates the unique constraint.
+      // We skip to keep the app running; run migrations after cleaning duplicates.
+      const code = (e as any)?.code;
+      if (code === '23505') {
+        global.__nailify_bookings_unique_index_failed__ = true;
+        console.warn('[bookings.ensureBookingsTableInternal] Unique index not created due to existing duplicates for slot_date+slot_time.');
+      } else {
+        throw e;
+      }
+    }
+  }
+  await sql`CREATE INDEX IF NOT EXISTS idx_bookings_slot_date_time ON bookings(slot_date, slot_time)`;
 }
 
 export async function ensureBookingsTable() {
@@ -304,6 +341,46 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       createdAt: row.created_at,
     };
   });
+}
+
+export async function listBookingsCompact(limit = 100): Promise<BookingRecordCompact[]> {
+  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(500, Math.floor(limit))) : 100;
+
+  // Minimal select to avoid fetching/JSON parsing unused columns in admin overview.
+  const rows = await sql<{
+    id: number;
+    status: string;
+    service_name: string;
+    slot_date: string;
+    slot_time: string;
+    contact_first_name: string;
+    contact_last_name: string | null;
+    created_at: string;
+  }[]>`
+    SELECT
+      id,
+      status,
+      service_name,
+      slot_date::text,
+      slot_time,
+      contact_first_name,
+      contact_last_name,
+      created_at::text
+    FROM bookings
+    ORDER BY created_at DESC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    status: row.status,
+    serviceName: row.service_name,
+    slotDate: row.slot_date,
+    slotTime: row.slot_time,
+    contactFirstName: row.contact_first_name,
+    contactLastName: row.contact_last_name,
+    createdAt: row.created_at,
+  }));
 }
 
 export async function setBookingStripeSession(bookingId: string, sessionId: string) {

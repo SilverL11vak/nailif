@@ -17,6 +17,18 @@ export interface OrderRecord {
   paidAt: string | null;
 }
 
+// Compact order record for lightweight admin dashboards.
+// Avoids JSON parsing of `items_json`.
+export interface OrderRecordCompact {
+  id: string;
+  orderType: 'booking_deposit' | 'product_purchase';
+  status: 'pending' | 'paid' | 'cancelled' | 'failed';
+  amountTotal: number;
+  customerName: string | null;
+  createdAt: string;
+  paidAt: string | null;
+}
+
 interface CreateOrderInput {
   orderType: 'booking_deposit' | 'product_purchase';
   amountTotal: number;
@@ -334,4 +346,40 @@ export async function listOrders(limit = 100): Promise<OrderRecord[]> {
       paidAt: row.paid_at,
     };
   });
+}
+
+export async function listOrdersCompact(limit = 100): Promise<OrderRecordCompact[]> {
+  const safeLimit = Math.max(1, Math.min(500, Math.floor(limit)));
+
+  const rows = await sql<{
+    id: number;
+    order_type: 'booking_deposit' | 'product_purchase';
+    status: 'pending' | 'paid' | 'cancelled' | 'failed';
+    amount_total: number;
+    customer_name: string | null;
+    created_at: string;
+    paid_at: string | null;
+  }[]>`
+    SELECT
+      id,
+      order_type,
+      status,
+      amount_total,
+      customer_name,
+      created_at::text,
+      paid_at::text
+    FROM orders
+    ORDER BY created_at DESC
+    LIMIT ${safeLimit}
+  `;
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    orderType: row.order_type,
+    status: row.status,
+    amountTotal: row.amount_total,
+    customerName: row.customer_name,
+    createdAt: row.created_at,
+    paidAt: row.paid_at,
+  }));
 }

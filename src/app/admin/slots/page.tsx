@@ -36,6 +36,8 @@ type BookingCell = {
   clientName: string;
 };
 
+type SlotWithStatus = TimeSlot & { status?: string };
+
 type SlotState = 'free' | 'blocked' | 'booked' | 'sos';
 
 const sosLabels = ['Kiire aeg', 'Täna saadaval', 'Viimane aeg'];
@@ -201,10 +203,13 @@ export default function AdminSlotsPage() {
       const to = toIsoDate(toDate);
       const [slotsRes, bookingsRes] = await Promise.all([
         fetch(`/api/slots?admin=1&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { cache: 'no-store' }),
-        fetch('/api/bookings?limit=500', { cache: 'no-store' }),
+        // Compact mode: admin slots UI uses it only for booking details (client name / service name).
+        fetch('/api/bookings?limit=500&compact=1', { cache: 'no-store' }),
       ]);
+
       if (!slotsRes.ok) throw new Error('Aegade laadimine ebaonnestus');
       if (!bookingsRes.ok) throw new Error('Broneeringute laadimine ebaonnestus');
+
       const slotsData = (await slotsRes.json()) as { slots?: TimeSlot[] };
       const bookingsData = (await bookingsRes.json()) as {
         bookings?: Array<{
@@ -216,6 +221,7 @@ export default function AdminSlotsPage() {
           contactLastName: string | null;
         }>;
       };
+
       setSlots(slotsData.slots ?? []);
       setBookings(
         (bookingsData.bookings ?? [])
@@ -249,35 +255,45 @@ export default function AdminSlotsPage() {
     selectedDaySlots.forEach((s) => m.set(s.time, s));
     return m;
   }, [selectedDaySlots]);
+
+  // Booking detail lookup for booked slots (client name/service).
+  // Slot availability state comes from API-provided `slot.status`, not this overlay map.
   const bookedMap = useMemo(() => {
     const m = new Map<string, BookingCell>();
-    bookings.filter((b) => b.slotDate === selectedDate).forEach((b) => m.set(b.slotTime, b));
+    bookings
+      .filter((b) => b.slotDate === selectedDate)
+      .forEach((b) => m.set(b.slotTime, b));
     return m;
   }, [bookings, selectedDate]);
 
   const slotState = useCallback(
     (time: string): SlotState => {
-      if (bookedMap.has(time)) return 'booked';
-      const slot = slotMap.get(time);
+      const slot = slotMap.get(time) as SlotWithStatus | undefined;
+      const status = slot?.status;
+      if (status === 'booked') return 'booked';
+      if (status === 'sos') return 'sos';
+      if (status === 'free') return 'free';
+      if (status === 'blocked') return 'blocked';
+      // Back-compat fallback (shouldn't be needed once API always returns `status`).
       if (slot?.available && slot.isSos) return 'sos';
       if (slot?.available) return 'free';
       return 'blocked';
     },
-    [bookedMap, slotMap]
+    [slotMap]
   );
 
   const dayAvailability = useMemo(() => {
     const map = new Map<string, { free: number; booked: number; sos: number; blocked: number }>();
     days.forEach((d) => {
       const daySlots = slots.filter((s) => s.date === d.iso);
-      const dayBookings = bookings.filter((b) => b.slotDate === d.iso).length;
-      const free = daySlots.filter((s) => s.available && !s.isSos).length;
-      const sos = daySlots.filter((s) => s.available && s.isSos).length;
-      const blocked = daySlots.filter((s) => !s.available).length;
-      map.set(d.iso, { free, booked: dayBookings, sos, blocked });
+      const free = daySlots.filter((s) => (s as SlotWithStatus).status === 'free').length;
+      const booked = daySlots.filter((s) => (s as SlotWithStatus).status === 'booked').length;
+      const sos = daySlots.filter((s) => (s as SlotWithStatus).status === 'sos').length;
+      const blocked = daySlots.filter((s) => (s as SlotWithStatus).status === 'blocked').length;
+      map.set(d.iso, { free, booked, sos, blocked });
     });
     return map;
-  }, [days, slots, bookings]);
+  }, [days, slots]);
 
   useEffect(() => {
     if (!selectedTime) {
@@ -342,7 +358,7 @@ export default function AdminSlotsPage() {
 
   const setSlotStatus = useCallback(
     async (time: string, available: boolean, sosExtras?: { isSos: boolean; sosSurcharge?: number; sosLabel?: string }) => {
-      if (bookedMap.has(time)) return;
+      if (slotState(time) === 'booked') return;
       const prev = getSlotPreviousState(time);
       setIsSaving(true);
       setError(null);
@@ -361,7 +377,7 @@ export default function AdminSlotsPage() {
         setIsSaving(false);
       }
     },
-    [bookedMap, getSlotPreviousState, selectedDate, loadSlots, showToast, upsertSlot]
+    [slotState, getSlotPreviousState, selectedDate, loadSlots, showToast, upsertSlot]
   );
 
   const applyPresetDay = async (makeAvailable: boolean) => {
@@ -370,7 +386,7 @@ export default function AdminSlotsPage() {
     setGeneratorFeedback(null);
     if (generatorFeedbackRef.current) clearTimeout(generatorFeedbackRef.current);
     try {
-      const toApply = workingHoursTimes.filter((time) => !bookedMap.has(time));
+      const toApply = workingHoursTimes.filter((time) => slotState(time) !== 'booked');
       await Promise.all(
         toApply.map(async (time) => upsertSlot(selectedDate, time, makeAvailable))
       );
@@ -397,7 +413,7 @@ export default function AdminSlotsPage() {
     try {
       await Promise.all(
         timeGrid.map(async (time) => {
-          if (bookedMap.has(time)) return;
+          if (slotState(time) === 'booked') return;
           await upsertSlot(selectedDate, time, false);
         })
       );
@@ -417,7 +433,7 @@ export default function AdminSlotsPage() {
     try {
       await Promise.all(
         times.map(async (time) => {
-          if (bookedMap.has(time)) return;
+          if (slotState(time) === 'booked') return;
           await upsertSlot(selectedDate, time, true);
         })
       );
@@ -432,7 +448,7 @@ export default function AdminSlotsPage() {
   };
 
   const saveSos = async () => {
-    if (!selectedTime || bookedMap.has(selectedTime)) return;
+    if (!selectedTime || slotState(selectedTime) === 'booked') return;
     setIsSaving(true);
     setError(null);
     try {
@@ -458,7 +474,7 @@ export default function AdminSlotsPage() {
       type: 'block' | 'unblock' | 'sos',
       times: string[]
     ) => {
-      const editable = times.filter((t) => !bookedMap.has(t));
+      const editable = times.filter((t) => slotState(t) !== 'booked');
       if (editable.length === 0) return;
       const previousStates: UndoAction['previousStates'] = {};
       editable.forEach((t) => {
@@ -489,7 +505,7 @@ export default function AdminSlotsPage() {
         setIsSaving(false);
       }
     },
-    [selectedDate, bookedMap, getSlotPreviousState, loadSlots, showToast, upsertSlot]
+    [selectedDate, slotState, getSlotPreviousState, loadSlots, showToast, upsertSlot]
   );
 
   const performUndo = useCallback(
@@ -529,10 +545,10 @@ export default function AdminSlotsPage() {
     const daySlots = slots.filter((s) => s.date === selectedDate);
     const free = daySlots.filter((s) => s.available && !s.isSos).length;
     const sos = daySlots.filter((s) => s.available && s.isSos).length;
-    const booked = bookings.filter((b) => b.slotDate === selectedDate).length;
+    const booked = daySlots.filter((s) => (s as SlotWithStatus).status === 'booked').length;
     const blocked = daySlots.filter((s) => !s.available).length;
     return { total: daySlots.length, free, sos, booked, blocked };
-  }, [slots, bookings, selectedDate]);
+  }, [slots, selectedDate]);
 
   const selectedDayLabel = useMemo(() => {
     const d = days.find((x) => x.iso === selectedDate);
@@ -563,7 +579,7 @@ export default function AdminSlotsPage() {
 
   const handleSlotClick = useCallback(
     (time: string, isShift: boolean) => {
-      if (bookedMap.has(time)) return;
+      if (slotState(time) === 'booked') return;
       if (isShift && lastShiftTime !== null) {
         const range = timeRange(lastShiftTime, time);
         setSelectedTimes((prev) => new Set([...prev, ...range]));
@@ -574,29 +590,29 @@ export default function AdminSlotsPage() {
       }
       setLastShiftTime(time);
     },
-    [bookedMap, lastShiftTime, timeRange]
+    [slotState, lastShiftTime, timeRange]
   );
 
   const handleSlotMouseDown = useCallback(
     (time: string) => {
-      if (bookedMap.has(time)) return;
+      if (slotState(time) === 'booked') return;
       setDragAnchor(time);
       setSelectedTimes(new Set([time]));
       setSelectedTime(time);
       setLastShiftTime(time);
       setIsDragSelecting(true);
     },
-    [bookedMap]
+    [slotState]
   );
 
   const handleSlotMouseEnter = useCallback(
     (time: string) => {
-      if (!isDragSelecting || !dragAnchor || bookedMap.has(time)) return;
+      if (!isDragSelecting || !dragAnchor || slotState(time) === 'booked') return;
       const range = timeRange(dragAnchor, time);
       setSelectedTimes((prev) => new Set([...prev, ...range]));
       setSelectedTime(time);
     },
-    [isDragSelecting, dragAnchor, bookedMap, timeRange]
+    [isDragSelecting, dragAnchor, slotState, timeRange]
   );
 
   useEffect(() => {
@@ -613,10 +629,10 @@ export default function AdminSlotsPage() {
   }, []);
 
   const handleDeleteSlot = useCallback(() => {
-    if (!selectedTime || bookedMap.has(selectedTime)) return;
+    if (!selectedTime || slotState(selectedTime) === 'booked') return;
     void setSlotStatus(selectedTime, false);
     clearSelection();
-  }, [selectedTime, bookedMap, clearSelection, setSlotStatus]);
+  }, [selectedTime, slotState, clearSelection, setSlotStatus]);
 
   return (
     <main className="min-h-screen bg-[#fafafa]">

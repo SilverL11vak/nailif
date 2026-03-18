@@ -3,6 +3,7 @@ import {
   ensureBookingsTable,
   insertBooking,
   listBookings,
+  listBookingsCompact,
   updateBookingAdminFields,
   deleteBooking,
   type BookingInsert,
@@ -51,9 +52,10 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const limitParam = url.searchParams.get('limit');
     const limit = limitParam ? Number(limitParam) : 100;
+    const compact = url.searchParams.get('compact') === '1';
 
     await ensureBookingsTable();
-    const bookings = await listBookings(limit);
+    const bookings = compact ? await listBookingsCompact(limit) : await listBookings(limit);
 
     return NextResponse.json({
       ok: true,

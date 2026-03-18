@@ -10,6 +10,10 @@ import {
 import { getAdminFromCookies } from '@/lib/admin-auth';
 import { getLocaleFromPathname } from '@/lib/i18n/locale-path';
 
+const SERVICES_CACHE_TTL_MS = 30_000;
+type ServicesCacheEntry = { expiresAt: number; services: Service[] };
+const servicesCache = new Map<string, ServicesCacheEntry>();
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -30,10 +34,27 @@ function isCategory(value: string): value is Service['category'] {
 
 export async function GET(request: Request) {
   try {
-    await ensureCatalogTables();
     const { searchParams, pathname } = new URL(request.url);
     const admin = searchParams.get('admin') === '1';
     const locale = searchParams.get('lang') ?? getLocaleFromPathname(pathname) ?? 'et';
+
+    // Stabilize homepage performance by preventing repeated DB reads.
+    if (!admin) {
+      const cached = servicesCache.get(locale);
+      if (cached && cached.expiresAt > Date.now()) {
+        return NextResponse.json(
+          { ok: true, services: cached.services },
+          {
+            headers: {
+              // Short cache so admin service edits show on homepage within ~30s
+              'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+            },
+          }
+        );
+      }
+    }
+
+    await ensureCatalogTables();
     if (admin) {
       const adminUser = await getAdminFromCookies();
       if (!adminUser) {
@@ -41,6 +62,14 @@ export async function GET(request: Request) {
       }
     }
     const services = admin ? await listAdminServices(locale) : await listServices(locale);
+
+    if (!admin) {
+      servicesCache.set(locale, {
+        expiresAt: Date.now() + SERVICES_CACHE_TTL_MS,
+        services,
+      });
+    }
+
     return NextResponse.json(
       { ok: true, services },
       admin

@@ -2,6 +2,7 @@ import { sql } from './db';
 import { isDatabaseMigrated } from './schema-validator';
 import type { TimeSlot } from '@/store/booking-types';
 import { getTodayInTallinn, getCurrentTimeInTallinn } from './timezone';
+import { ensureBookingsTable } from './bookings';
 
 export interface SlotRecord {
   id: string;
@@ -205,6 +206,8 @@ export async function listSlotsInRange(input: {
     throw new Error('Invalid date range');
   }
 
+  await ensureBookingsTable();
+
   const rowType = sql<{
     id: number;
     slot_date: string;
@@ -227,7 +230,15 @@ export async function listSlotsInRange(input: {
             id,
             slot_date::text,
             slot_time,
-            available,
+            -- Final availability for the booking UI/public slot pickers:
+            -- if a non-cancelled booking exists for this slot, it must never be treated as available.
+            (available AND NOT EXISTS (
+              SELECT 1
+              FROM bookings b
+              WHERE b.slot_date = time_slots.slot_date
+                AND b.slot_time = time_slots.slot_time
+                AND b.status <> 'cancelled'
+            )) AS available,
             capacity,
             is_popular,
             is_fastest,
@@ -257,6 +268,13 @@ export async function listSlotsInRange(input: {
           FROM time_slots
           WHERE slot_date BETWEEN ${input.from}::date AND ${input.to}::date
             AND available = TRUE
+            AND NOT EXISTS (
+              SELECT 1
+              FROM bookings b
+              WHERE b.slot_date = time_slots.slot_date
+                AND b.slot_time = time_slots.slot_time
+                AND b.status <> 'cancelled'
+            )
           ORDER BY slot_date ASC, slot_time ASC
         `;
 
@@ -274,6 +292,8 @@ export async function listUpcomingAvailableSlots(limit = 8): Promise<SlotRecord[
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(50, Math.floor(limit))) : 8;
   const today = getTodayInTallinn();
   const currentTime = getCurrentTimeInTallinn();
+
+  await ensureBookingsTable();
 
   const rows = await sql<{
     id: number;
@@ -304,22 +324,23 @@ export async function listUpcomingAvailableSlots(limit = 8): Promise<SlotRecord[
       updated_at::text
     FROM time_slots
     WHERE available = TRUE
-      AND slot_date >= ${today}::date
+      AND (
+        slot_date > ${today}::date
+        OR (slot_date = ${today}::date AND slot_time > ${currentTime})
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM bookings b
+        WHERE b.slot_date = time_slots.slot_date
+          AND b.slot_time = time_slots.slot_time
+          AND b.status <> 'cancelled'
+      )
     ORDER BY slot_date ASC, slot_time ASC
     LIMIT ${safeLimit}
   `;
-
-  // Filter out past slots for today (client-side for simplicity)
-  const todayStr = getTodayInTallinn();
-  const filteredRows = rows.filter((row) => {
-    // Keep all future dates
-    if (row.slot_date > todayStr) return true;
-    // For today, only keep future times
-    if (row.slot_date === todayStr && row.slot_time > currentTime) return true;
-    return false;
-  });
-
-  return filteredRows.map(mapRowToSlot);
+  // Note: filtering for "today but past time" is done in SQL to avoid hiding the
+  // earliest future slot when callers use small `limit` values (e.g. `limit=1`).
+  return rows.map(mapRowToSlot);
 }
 
 export async function upsertSlot(input: SlotInput): Promise<SlotRecord> {

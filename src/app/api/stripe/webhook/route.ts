@@ -7,8 +7,9 @@ import {
   isEventProcessed,
   recordProcessedEvent,
 } from '@/lib/stripe-webhook';
-import { markBookingPaidFromWebhook } from '@/lib/bookings';
-import { markOrderPaidFromWebhook } from '@/lib/orders';
+import { ensureBookingsTable, markBookingPaidFromWebhook } from '@/lib/bookings';
+import { ensureOrdersTable, markOrderPaidFromWebhook } from '@/lib/orders';
+import { sql } from '@/lib/db';
 
 /**
  * Stripe Webhook Handler
@@ -160,8 +161,38 @@ async function handleCheckoutSessionCompleted(
 async function handleCheckoutSessionExpired(
   session: Stripe.Checkout.Session
 ): Promise<{ status: string }> {
-  // TODO: Implement expiration handling if needed
-  // For now, just log it
-  console.log(`Checkout session expired: ${session.id}`);
-  return { status: 'expired_logged' };
+  const metadata = parseCheckoutMetadata(session);
+  if (!metadata) {
+    console.warn(`Checkout session expired without metadata: ${session.id}`);
+    return { status: 'no_metadata' };
+  }
+
+  // Release reserved slot(s) by cancelling the pending booking and marking it as failed.
+  // This is safe because our Availability Engine treats `status = 'cancelled'` as released.
+  await ensureBookingsTable();
+  await ensureOrdersTable();
+
+  try {
+    if (metadata.bookingId) {
+      await sql`
+        UPDATE bookings
+        SET status = 'cancelled',
+            payment_status = 'failed'
+        WHERE id = ${metadata.bookingId}::bigint
+      `;
+    }
+
+    if (metadata.orderId) {
+      await sql`
+        UPDATE orders
+        SET status = 'cancelled'
+        WHERE id = ${metadata.orderId}::bigint
+      `;
+    }
+
+    return { status: 'expired_released' };
+  } catch (e) {
+    console.error(`Failed to handle expired checkout session ${session.id}:`, e);
+    return { status: 'expired_release_failed' };
+  }
 }

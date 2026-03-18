@@ -12,6 +12,7 @@ import { Check, ChevronLeft, ChevronRight, ShieldCheck, Star } from 'lucide-reac
 import { trackEvent, trackSlotClick, touchBookingActivity } from '@/lib/analytics-client';
 import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
+import { resolveEarliestUpcomingBookableSlot } from '@/lib/booking-engine/availability/earliest-slot';
 
 function toIsoDate(date: Date) {
   const year = date.getFullYear();
@@ -116,10 +117,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   }, [isLoading, currentSlots.length]);
 
   const nextAvailableSlot = useMemo(
-    () =>
-      allSlots
-        .filter((slot) => slot.available)
-        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0] ?? null,
+    () => resolveEarliestUpcomingBookableSlot(allSlots as unknown as any) as TimeSlot | null,
     [allSlots]
   );
 

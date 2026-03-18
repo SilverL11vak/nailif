@@ -7,6 +7,7 @@ import type { TimeSlot as TimeSlotType } from '@/store/booking-types';
 import { trackEvent } from '@/lib/funnel-track';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 import { getTodayInTallinn, getTomorrowInTallinn, getCurrentTimeInTallinn } from '@/lib/timezone';
+import { resolveEarliestUpcomingSlot } from '@/lib/resolve-earliest-upcoming-slot';
 import { ArrowRight } from 'lucide-react';
 
 export function HeroBookingWidget() {
@@ -19,8 +20,7 @@ export function HeroBookingWidget() {
   const pulseOnceRef = useRef(false);
 
   const nextSlot = useMemo(() => {
-    if (availableSlots.length === 0) return null;
-    return [...availableSlots].sort((a, b) => `${a.date}-${a.time}`.localeCompare(`${b.date}-${b.time}`))[0];
+    return resolveEarliestUpcomingSlot(availableSlots);
   }, [availableSlots]);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export function HeroBookingWidget() {
     const loadSlots = async () => {
       setSlotsLoading(true);
       try {
-        const response = await fetch('/api/slots?upcoming=1&limit=1');
+        const response = await fetch('/api/slots?upcoming=1&limit=1', { cache: 'no-store' });
         if (!response.ok) throw new Error('Failed to load slots');
         const data = (await response.json()) as { slots?: TimeSlotType[] };
         if (mounted) {

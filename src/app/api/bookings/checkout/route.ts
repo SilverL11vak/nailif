@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import {
-  ensureBookingsTable,
-  insertBooking,
-  setBookingStripeSession,
-  type BookingInsert,
-} from '@/lib/bookings';
-import { ensureOrdersTable, createOrder, setOrderStripeSession } from '@/lib/orders';
-import { getStripeServer } from '@/lib/stripe';
+import type { BookingInsert } from '@/lib/bookings';
 import { checkRateLimit } from '@/lib/rate-limit';
-
-const BOOKING_DEPOSIT_EUR = 10;
+import { createBookingCheckoutSession } from '@/lib/booking-engine/creator/booking-creator';
+import { validateBookingCheckout } from '@/lib/booking-engine/validation/booking-validator';
 
 function isValidPayload(payload: unknown): payload is BookingInsert {
   if (!payload || typeof payload !== 'object') return false;
@@ -44,71 +37,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid booking payload' }, { status: 400 });
     }
 
-    await ensureBookingsTable();
-    await ensureOrdersTable();
-
-    const booking = await insertBooking({
-      ...payload,
-      status: 'pending_payment',
-      paymentStatus: 'pending',
-      depositAmount: BOOKING_DEPOSIT_EUR,
-    });
-
-    const orderId = await createOrder({
-      orderType: 'booking_deposit',
-      amountTotal: BOOKING_DEPOSIT_EUR,
-      currency: 'eur',
-      customerName: `${payload.contact.firstName} ${payload.contact.lastName ?? ''}`.trim(),
-      customerEmail: payload.contact.email ?? undefined,
-      customerPhone: payload.contact.phone,
-      bookingId: booking.id,
-      items: [
-        {
-          id: payload.service.id,
-          name: `${payload.service.name} deposit`,
-          quantity: 1,
-          price: BOOKING_DEPOSIT_EUR,
-        },
-      ],
-    });
-
     const h = await headers();
     const baseUrl = getBaseUrlFromHeaders(h.get('origin'), h.get('host'));
-    const stripe = getStripeServer();
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      submit_type: 'book',
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: 'eur',
-            unit_amount: BOOKING_DEPOSIT_EUR * 100,
-            product_data: {
-              name: `Booking deposit - ${payload.service.name}`,
-              description: 'Advance payment to secure your Nailify slot.',
-            },
-          },
-        },
-      ],
-      customer_email: payload.contact.email ?? undefined,
-      metadata: {
-        flow: 'booking_deposit',
-        booking_id: booking.id,
-        order_id: orderId,
-      },
-      success_url: `${baseUrl}/success?type=booking&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/book?payment=cancelled`,
+    const validation = await validateBookingCheckout(payload);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.message, code: validation.code }, { status: validation.status });
+    }
+
+    const creation = await createBookingCheckoutSession({
+      payload,
+      resolvedSlot: validation.resolvedSlot,
+      serviceForInsert: validation.serviceForInsert,
+      pricingSnapshot: validation.pricingSnapshot,
+      baseUrl,
     });
 
-    await setBookingStripeSession(booking.id, session.id);
-    await setOrderStripeSession(orderId, session.id);
+    if (!creation.ok) {
+      return NextResponse.json({ error: creation.message, code: creation.code }, { status: creation.status });
+    }
 
     return NextResponse.json({
       ok: true,
-      bookingId: booking.id,
-      checkoutUrl: session.url,
+      bookingId: creation.bookingId,
+      checkoutUrl: creation.checkoutUrl,
     });
   } catch (error) {
     console.error('POST /api/bookings/checkout error:', error);

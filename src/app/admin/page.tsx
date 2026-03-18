@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { AdminDailyPerformanceStrip } from '@/components/admin/AdminDailyPerformanceStrip';
@@ -105,7 +106,21 @@ export default async function AdminHomePage() {
           revenueSecuredToday={stats.revenueToday}
         />
 
-        <AdminAnalyticsSummaryStrip />
+        <Suspense
+          fallback={
+            <section className="mb-8 rounded-2xl border border-[#ebe6e3] bg-white px-5 py-4 shadow-[0_4px_20px_-8px_rgba(42,36,40,0.07)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">Funnel intelligence</p>
+                  <p className="mt-1 text-sm font-medium text-[#5c4f55]">Loading analytics…</p>
+                </div>
+                <div className="h-9 w-[160px] animate-pulse rounded-full bg-[#f3f4f6]" />
+              </div>
+            </section>
+          }
+        >
+          <AdminAnalyticsSummaryStrip />
+        </Suspense>
 
         {/* KPI strip */}
         <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureOrdersTable, listOrders } from '@/lib/orders';
+import { ensureOrdersTable, listOrders, listOrdersCompact } from '@/lib/orders';
 import { getAdminFromCookies } from '@/lib/admin-auth';
 
 export async function GET(request: Request) {
@@ -12,7 +12,8 @@ export async function GET(request: Request) {
     await ensureOrdersTable();
     const { searchParams } = new URL(request.url);
     const limit = Number(searchParams.get('limit') ?? '100');
-    const orders = await listOrders(limit);
+    const compact = searchParams.get('compact') === '1';
+    const orders = compact ? await listOrdersCompact(limit) : await listOrders(limit);
     return NextResponse.json({ ok: true, count: orders.length, orders });
   } catch (error) {
     console.error('GET /api/orders error:', error);

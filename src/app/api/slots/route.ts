@@ -3,15 +3,13 @@ import { getAdminFromCookies } from '@/lib/admin-auth';
 import {
   deleteSlot,
   ensureSlotsTable,
-  listSlotsForDate,
-  listSlotsInRange,
-  listUpcomingAvailableSlots,
   toBookingTimeSlot,
   updateSlot,
   upsertSlot,
 } from '@/lib/slots';
 import { ensureBookingContentTables, listBookingContent } from '@/lib/booking-content';
 import { getLocaleFromPathname } from '@/lib/i18n/locale-path';
+import { listResolvedSlotsInRange, listResolvedUpcomingSlots } from '@/lib/booking-engine/availability/availability-engine';
 import type { TimeSlot } from '@/store/booking-types';
 
 function toDateString(date: Date) {
@@ -158,22 +156,23 @@ export async function GET(request: Request) {
     }
     if (upcoming) {
       const limit = Number(searchParams.get('limit') ?? 8);
-      const slots = await listUpcomingAvailableSlots(limit);
-      const mapped = slots.map(toBookingTimeSlot);
+      const slots = await listResolvedUpcomingSlots({ limit });
       const smartPayload = smart
-        ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+        ? enrichSmartSlots(slots as unknown as TimeSlot[], { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
         : null;
       return NextResponse.json(
         {
           ok: true,
-          slots: smartPayload?.slots ?? mapped,
+          slots: (smartPayload?.slots ?? slots) as unknown as TimeSlot[],
           recommendedTimes: smartPayload?.recommended ?? [],
         },
         admin
           ? undefined
           : {
               headers: {
-                'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+                // Availability must be consistent with bookings/blocks immediately
+                // (homepage hero uses `limit=1` and should never show booked slots).
+                'Cache-Control': 'no-store',
               },
             }
       );
@@ -181,22 +180,27 @@ export async function GET(request: Request) {
 
     const date = searchParams.get('date');
     if (date) {
-      const slots = await listSlotsForDate(date, admin || smart);
-      const mapped = slots.map(toBookingTimeSlot);
+      const slots = await listResolvedSlotsInRange({
+        from: date,
+        to: date,
+        view: admin ? 'admin' : 'booking',
+        includeUnavailable: admin || smart,
+      });
       const smartPayload = smart
-        ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+        ? enrichSmartSlots(slots as unknown as TimeSlot[], { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
         : null;
       return NextResponse.json(
         {
           ok: true,
-          slots: smartPayload?.slots ?? mapped,
+          slots: (smartPayload?.slots ?? slots) as unknown as TimeSlot[],
           recommendedTimes: smartPayload?.recommended ?? [],
         },
         admin
           ? undefined
           : {
               headers: {
-                'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+                // Slot availability depends on bookings/blocks; avoid stale cache.
+                'Cache-Control': 'no-store',
               },
             }
       );
@@ -205,22 +209,27 @@ export async function GET(request: Request) {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     if (from && to) {
-      const slots = await listSlotsInRange({ from, to, includeUnavailable: admin || smart });
-      const mapped = slots.map(toBookingTimeSlot);
+      const slots = await listResolvedSlotsInRange({
+        from,
+        to,
+        view: admin ? 'admin' : 'booking',
+        includeUnavailable: admin || smart,
+      });
       const smartPayload = smart
-        ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+        ? enrichSmartSlots(slots as unknown as TimeSlot[], { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
         : null;
       return NextResponse.json(
         {
           ok: true,
-          slots: smartPayload?.slots ?? mapped,
+          slots: (smartPayload?.slots ?? slots) as unknown as TimeSlot[],
           recommendedTimes: smartPayload?.recommended ?? [],
         },
         admin
           ? undefined
           : {
               headers: {
-                'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+                // Slot availability depends on bookings/blocks; avoid stale cache.
+                'Cache-Control': 'no-store',
               },
             }
       );
@@ -232,27 +241,28 @@ export async function GET(request: Request) {
     const end = new Date();
     end.setDate(end.getDate() + (safeDays - 1));
 
-    const slots = await listSlotsInRange({
+    const slots = await listResolvedSlotsInRange({
       from: toDateString(start),
       to: toDateString(end),
+      view: admin ? 'admin' : 'booking',
       includeUnavailable: admin || smart,
     });
-    const mapped = slots.map(toBookingTimeSlot);
     const smartPayload = smart
-      ? enrichSmartSlots(mapped, { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
+      ? enrichSmartSlots(slots as unknown as TimeSlot[], { urgencyBoost, smartReorder, gapSensitivity, preferredDuration })
       : null;
 
     return NextResponse.json(
       {
         ok: true,
-        slots: smartPayload?.slots ?? mapped,
+        slots: (smartPayload?.slots ?? slots) as unknown as TimeSlot[],
         recommendedTimes: smartPayload?.recommended ?? [],
       },
       admin
         ? undefined
         : {
             headers: {
-              'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+              // Slot availability depends on bookings/blocks; avoid stale cache.
+              'Cache-Control': 'no-store',
             },
           }
     );
