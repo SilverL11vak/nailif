@@ -225,13 +225,11 @@ export function ContactStep() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-8 text-center">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#9a7c6d]">Samm 3</p>
-        <h2 className="mb-2 text-2xl font-semibold text-[#2f2622]">{t('contact.yourDetails')}</h2>
-        <p className="text-[#6f655f]">{t('contact.sendConfirmation')}</p>
-        <p className="mt-2 text-sm text-[#7f7068]">
-          {text('contact_step_hint', language === 'en' ? 'You are one step away from confirmation.' : 'Oled vaid uhe sammu kaugusel kinnitamisest.')}
-        </p>
+      <div className="mb-8 text-center md:mb-10">
+        <h2 className="font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2622] md:text-[1.85rem]">
+          {t('contact.yourDetails')}
+        </h2>
+        <p className="mt-2 text-[15px] text-[#6f655f]">{t('contact.sendConfirmation')}</p>
       </div>
 
       <div className="mb-5 rounded-2xl border border-[#eadce5] bg-[#fffafe] p-4">
@@ -410,8 +408,10 @@ export function ContactStep() {
       </div>
 
       <button
+        id="booking-sticky-primary-action"
+        type="button"
         onClick={handleSubmit}
-        className="cta-premium mt-5 w-full rounded-2xl bg-[#b88468] py-5 text-base font-semibold text-white shadow-[0_20px_32px_-24px_rgba(72,49,35,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#a67359]"
+        className="cta-premium mt-5 w-full rounded-full bg-[linear-gradient(135deg,#a56b52_0%,#b88468_50%,#9a6a52_100%)] py-4 text-base font-semibold text-white shadow-[0_14px_32px_-14px_rgba(120,80,60,0.45)] transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-12px_rgba(120,80,60,0.4)] active:scale-[0.99]"
       >
         {language === 'en' ? 'Confirm details and continue' : 'Kinnita andmed ja liigu edasi'}
       </button>

@@ -271,12 +271,12 @@ export function SmartChatWidget() {
       )}
 
       {!isOpen && (
-        <div className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-4 z-[45] md:bottom-24 md:right-6">
+        <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-5 z-[45] md:bottom-24 md:right-6">
           <button
             onClick={() => setIsOpen(true)}
             aria-expanded={isOpen}
             aria-label={t('chat.triggerAria')}
-            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e8d3df] bg-[linear-gradient(180deg,#fff8fc_0%,#fff0f7_100%)] text-[#8b5576] shadow-[0_22px_30px_-22px_rgba(118,73,102,0.52)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_34px_-20px_rgba(118,73,102,0.58)]"
+            className="inline-flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-full border border-[#e8d3df] bg-[linear-gradient(180deg,#fff8fc_0%,#fff0f7_100%)] text-[#8b5576] shadow-[0_8px_20px_-12px_rgba(118,73,102,0.2)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-12px_rgba(118,73,102,0.25)]"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path

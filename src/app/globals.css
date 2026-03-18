@@ -284,7 +284,7 @@ textarea {
 }
 
 .section-title {
-  font-size: clamp(26px, 3vw, var(--type-h2-size));
+  font-size: clamp(28px, 4vw, 36px);
   line-height: var(--type-h2-line);
   font-weight: var(--type-h2-weight);
   letter-spacing: var(--type-h2-tracking);

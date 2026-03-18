@@ -22,13 +22,10 @@ const nailStyles = [
   { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: 'W' },
 ];
 
-type TimelineStage = 1 | 2 | 3 | 4;
-
-function stepToStage(step: number): TimelineStage {
+function funnelStepFromBookingStep(step: number): 1 | 2 | 3 {
   if (step <= 1) return 1;
   if (step === 2) return 2;
-  if (step === 3 || step === 4) return 3;
-  return 4;
+  return 3;
 }
 
 function BookingContent() {
@@ -41,17 +38,12 @@ function BookingContent() {
   const setMode = useBookingStore((state) => state.setMode);
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectedSlot = useBookingStore((state) => state.selectedSlot);
-  const selectedStyle = useBookingStore((state) => state.selectedStyle);
   const setSelectedStyle = useBookingStore((state) => state.setSelectedStyle);
   const selectService = useBookingStore((state) => state.selectService);
   const selectDate = useBookingStore((state) => state.selectDate);
   const setStep = useBookingStore((state) => state.setStep);
   const nextStep = useBookingStore((state) => state.nextStep);
   const totalPrice = useBookingStore((state) => state.totalPrice);
-  const totalDuration = useBookingStore((state) => state.totalDuration);
-  const allAddOns = useBookingStore((state) => state.selectedAddOns);
-  const selectedAddOns = allAddOns.filter((item) => item.selected);
-  const contactInfo = useBookingStore((state) => state.contactInfo);
   const { services } = useServices();
   useBookingAddOns();
 
@@ -59,6 +51,7 @@ function BookingContent() {
   const activeTimelineRef = useRef<HTMLButtonElement | null>(null);
   const activePanelRef = useRef<HTMLDivElement>(null);
   const serviceRef = useRef<HTMLDivElement>(null);
+  const step3Ref = useRef<HTMLDivElement>(null);
   const transitionsEnabled = true;
 
   const copy = useMemo(
@@ -86,6 +79,16 @@ function BookingContent() {
             noSos: 'No surcharge',
             duration: 'Approximate duration',
             tech: 'Technician',
+            funnel1: 'Choose service',
+            funnel2: 'Choose time',
+            funnel3: 'Confirm booking',
+            stepLabel: 'Step',
+            progressTitle: 'Your booking',
+            mobileSelectService: 'Select a service',
+            mobileContinueTime: 'Choose time',
+            mobilePickSlot: 'Pick a time',
+            mobileContinue: 'Continue',
+            mobileConfirm: 'Confirm booking',
           }
         : {
             header: 'Broneerimine Sandraga',
@@ -109,6 +112,16 @@ function BookingContent() {
             noSos: 'Lisatasuta',
             duration: 'Ligikaudne kestus',
             tech: 'Tehnik',
+            funnel1: 'Vali teenus',
+            funnel2: 'Vali aeg',
+            funnel3: 'Kinnita broneering',
+            stepLabel: 'Samm',
+            progressTitle: 'Sinu broneering',
+            mobileSelectService: 'Vali teenus',
+            mobileContinueTime: 'Vali aeg',
+            mobilePickSlot: 'Vali kellaaeg',
+            mobileContinue: 'Jätka',
+            mobileConfirm: 'Kinnita broneering',
           },
     [language]
   );
@@ -164,48 +177,61 @@ function BookingContent() {
     activePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [currentStep]);
 
-  const currentStage = stepToStage(currentStep);
+  const funnelStep = funnelStepFromBookingStep(currentStep);
+  const progressFillPct = funnelStep === 1 ? 33.333 : funnelStep === 2 ? 66.667 : 100;
   const selectedSlotLabel = selectedSlot
     ? `${new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'short', day: 'numeric', month: 'short' })} ${t('confirm.at')} ${selectedSlot.time}`
     : null;
 
-  const timeline = [
-    {
-      id: 'service',
-      stage: 1 as TimelineStage,
-      label: copy.stageService,
-      preview: copy.stageServicePreview,
-      summary: selectedService?.name || null,
-      editStep: 1,
-    },
-    {
-      id: 'time',
-      stage: 2 as TimelineStage,
-      label: copy.stageTime,
-      preview: copy.stageTimePreview,
-      summary: selectedSlotLabel,
-      editStep: 2,
-    },
-    {
-      id: 'details',
-      stage: 3 as TimelineStage,
-      label: copy.stageDetails,
-      preview: copy.stageDetailsPreview,
-      summary:
-        contactInfo?.firstName || selectedAddOns.length > 0
-          ? `${contactInfo?.firstName ?? ''}${contactInfo?.firstName && selectedAddOns.length > 0 ? ' - ' : ''}${selectedAddOns.length > 0 ? `${selectedAddOns.length} ${language === 'en' ? 'extras' : 'lisa'}` : ''}`
-          : null,
-      editStep: 3,
-    },
-    {
-      id: 'confirmation',
-      stage: 4 as TimelineStage,
-      label: copy.stageConfirm,
-      preview: copy.stageConfirmPreview,
-      summary: currentStep === 5 ? `${copy.total}: €${totalPrice || selectedService?.price || 0}` : null,
-      editStep: 5,
-    },
+  const funnelSteps = [
+    { n: 1 as const, title: copy.funnel1 },
+    { n: 2 as const, title: copy.funnel2 },
+    { n: 3 as const, title: copy.funnel3 },
   ];
+
+  const prefetchSlotsNav = () => {
+    const now = new Date();
+    const to = new Date(now);
+    to.setDate(to.getDate() + 40);
+    const from = now.toISOString().slice(0, 10);
+    const toStr = to.toISOString().slice(0, 10);
+    void fetch(`/api/slots?from=${from}&to=${toStr}`).catch(() => null);
+  };
+
+  const handleFunnelStepClick = (n: 1 | 2 | 3) => {
+    if (n === 1 && currentStep > 1) setStep(1);
+    if (n === 2 && currentStep > 2) setStep(2);
+    if (n === 3 && currentStep > 3) setStep(3);
+  };
+
+  const handleMobileStickyCta = () => {
+    if (currentStep === 1) {
+      if (!selectedService) return;
+      prefetchSlotsNav();
+      nextStep();
+    } else if (currentStep === 2) {
+      if (!selectedSlot) return;
+      nextStep();
+    } else {
+      document.getElementById('booking-sticky-primary-action')?.click();
+    }
+  };
+
+  const mobileCtaDisabled =
+    (currentStep === 1 && !selectedService) || (currentStep === 2 && !selectedSlot);
+
+  const mobileCtaLabel =
+    currentStep === 1
+      ? selectedService
+        ? copy.mobileContinueTime
+        : copy.mobileSelectService
+      : currentStep === 2
+        ? selectedSlot
+          ? copy.mobileContinue
+          : copy.mobilePickSlot
+        : currentStep === 5
+          ? copy.mobileConfirm
+          : copy.mobileContinue;
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -220,7 +246,7 @@ function BookingContent() {
       case 1:
         return <ServiceStep />;
       case 2:
-        return <DateTimeStep />;
+        return <DateTimeStep step3AnchorRef={step3Ref} />;
       case 3:
         return <ContactStep />;
       case 4:
@@ -233,173 +259,192 @@ function BookingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fffdfa_0%,_#fff6fb_46%,_#fff2f8_100%)] pb-28 lg:pb-10">
-      <header className="sticky top-0 z-30 border-b border-[#f0e2ea] bg-[linear-gradient(180deg,rgba(255,255,255,0.95)_0%,rgba(255,246,251,0.92)_100%)] backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleBack}
-              className="inline-flex items-center gap-2 rounded-full border border-[#ecdbe5] bg-white px-3 py-2 text-sm font-medium text-[#634f5f] transition hover:bg-[#fff4fa]"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              {t('booking.back')}
-            </button>
-            <div className="text-center">
-              <p className="type-overline text-[#b77f9f]">{copy.header}</p>
-              <p className="type-small mt-1 text-[#745f6e]">{copy.helper}</p>
-            </div>
-            <div className="w-16" />
+    <div
+      className={`min-h-screen bg-[radial-gradient(ellipse_at_top,_#fffdfa_0%,_#fff6fb_50%,_#fef5f9_100%)] xl:pb-12 ${
+        currentStep === 5
+          ? 'pb-[calc(12rem+env(safe-area-inset-bottom))]'
+          : 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
+      }`}
+    >
+      <header className="sticky top-0 z-40 border-b border-[#f0e6ec]/80 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#ecdbe5] bg-white px-3 py-2 text-sm font-medium text-[#634f5f] transition-[background-color,transform] duration-[180ms] hover:bg-[#fff8fc] active:scale-[0.98]"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {t('booking.back')}
+          </button>
+          <div className="min-w-0 text-center">
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.2em] text-[#c24d86]">{copy.progressTitle}</p>
+            <p className="truncate text-xs text-[#8a7a88]">{copy.header}</p>
           </div>
+          <div className="w-14 shrink-0 sm:w-20" aria-hidden />
         </div>
       </header>
 
-      <main className="w-full px-3 pb-8 pt-4 sm:px-5 sm:pt-5 lg:px-8 xl:px-10">
-        <div className="mx-auto grid w-full max-w-[1600px] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <main className="mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 md:pt-10 lg:px-8 lg:pt-[48px] xl:pt-20">
+        <div
+          className={`grid items-start gap-8 xl:gap-10 ${currentStep === 2 ? '' : 'xl:grid-cols-[minmax(0,1fr)_300px]'}`}
+        >
           <section
             ref={serviceRef}
-            className={`overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(255,248,252,0.99)_100%)] ring-1 ring-[#f0e3eb] transition-all duration-300 sm:rounded-[30px] xl:rounded-[36px] ${
-              isStepTransitioning
-                ? 'shadow-[0_34px_84px_-36px_rgba(95,38,77,0.24),0_0_0_1px_rgba(240,221,233,0.8)]'
-                : 'shadow-[0_30px_80px_-36px_rgba(95,38,77,0.22)]'
+            className={`overflow-hidden rounded-[24px] bg-white/90 shadow-[0_24px_64px_-40px_rgba(95,38,77,0.28)] ring-1 ring-[#f0e6ec]/90 transition-shadow duration-[180ms] xl:rounded-[28px] ${
+              isStepTransitioning ? 'shadow-[0_32px_72px_-36px_rgba(194,77,134,0.22)]' : ''
             }`}
           >
-            <div className="h-1 w-full bg-[#f4e7ee]">
+            <div className="h-1 w-full bg-[#f4eaef]">
               <div
-                className="h-full bg-[linear-gradient(90deg,#e3b6cd_0%,#cf6ca0_55%,#b54a83_100%)] transition-all duration-300"
-                style={{ width: `${(currentStage / 4) * 100}%` }}
+                className="h-full rounded-r-full bg-[linear-gradient(90deg,#e8b8d4_0%,#c24d86_55%,#a93d71_100%)] transition-[width] duration-[180ms] ease-out"
+                style={{ width: `${progressFillPct}%` }}
               />
             </div>
 
-            <div className="hidden gap-2 px-4 pt-5 sm:grid sm:grid-cols-4 sm:px-6 xl:px-8">
-              {timeline.map((item) => {
-                const status = currentStage > item.stage ? 'done' : currentStage === item.stage ? 'active' : 'upcoming';
-                return (
-                  <button
-                    key={`timeline-inline-${item.id}`}
-                    type="button"
-                    ref={status === 'active' ? activeTimelineRef : undefined}
-                    onClick={() => {
-                      if (status === 'done') {
-                        setStep(item.editStep as 1 | 2 | 3 | 4 | 5);
-                      }
-                    }}
-                    className={`rounded-2xl border px-3 py-2.5 text-left transition-all duration-300 ${
-                      status === 'active'
-                        ? 'border-[#ecd9e4] bg-[linear-gradient(145deg,#fff,#fff5fb)] shadow-[0_16px_24px_-20px_rgba(119,64,97,0.28)]'
-                        : status === 'done'
-                          ? 'border-[#eee0e8] bg-[#fff8fc]'
-                          : 'border-[#f2e7ee] bg-white/80'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
-                          status === 'done'
-                            ? 'bg-[#eddde6] text-[#6a4c62]'
-                            : status === 'active'
-                              ? 'bg-[#c24d86] text-white'
-                              : 'bg-[#f4e8ef] text-[#8a6e82]'
-                        }`}
-                      >
-                        {status === 'done' ? '✓' : item.stage}
+            <div className="border-b border-[#f5eaef] px-4 py-5 sm:px-6 md:px-8 md:py-8">
+              <p className="mb-4 text-center text-[10px] font-medium uppercase tracking-[0.28em] text-[#b8a0ae]">{copy.helper}</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                {funnelSteps.map(({ n, title }) => {
+                  const isActive = funnelStep === n;
+                  const isDone = funnelStep > n;
+                  const canJumpBack = (n === 1 && currentStep > 1) || (n === 2 && currentStep > 2) || (n === 3 && currentStep > 3);
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      ref={isActive ? activeTimelineRef : undefined}
+                      tabIndex={canJumpBack || isActive ? 0 : -1}
+                      aria-current={isActive ? 'step' : undefined}
+                      onClick={() => {
+                        if (canJumpBack) handleFunnelStepClick(n);
+                      }}
+                      className={`rounded-2xl px-4 py-3 text-left transition-all duration-[180ms] sm:py-3.5 ${
+                        isActive
+                          ? 'bg-[linear-gradient(180deg,#fffdfb_0%,#fff5f9_100%)] shadow-[0_12px_32px_-20px_rgba(194,77,134,0.35)] ring-2 ring-[#c24d86]/20'
+                          : isDone
+                            ? 'bg-white/70 opacity-90 ring-1 ring-[#eee5ea] hover:bg-[#fffafc] hover:opacity-100'
+                            : 'pointer-events-none bg-[#faf8f9]/80 opacity-[0.38] ring-1 ring-transparent'
+                      } ${canJumpBack ? 'cursor-pointer' : isActive ? 'cursor-default' : ''}`}
+                    >
+                      <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-[#c24d86]">
+                        {language === 'en' ? `STEP ${n}` : `${copy.stepLabel} ${n}`} —{' '}
+                        <span className="font-semibold normal-case tracking-normal text-[#2f2530]">{title}</span>
                       </span>
-                      <span className="truncate text-xs font-semibold text-[#4a3243]">{item.label}</span>
-                    </div>
-                    <p className="mt-1 truncate text-[11px] text-[#806a79]">
-                      {status === 'done' && item.summary ? item.summary : item.preview}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="px-4 pt-4 text-center sm:px-8 sm:pt-6 xl:px-12 xl:pt-7">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-[#b27a98]">{copy.helper}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div
               ref={activePanelRef}
-              className={`px-4 pb-8 pt-4 sm:px-8 sm:pb-11 sm:pt-5 xl:px-12 xl:pb-12 xl:pt-6 ${transitionsEnabled ? 'animate-fade-in-up' : ''}`}
+              className={`px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 md:px-8 md:pb-14 xl:px-10 ${transitionsEnabled ? 'booking-step-fade' : ''}`}
               key={currentStep}
             >
+              <div
+                ref={step3Ref}
+                className="pointer-events-none h-0 w-full scroll-mt-[76px]"
+                aria-hidden
+                tabIndex={-1}
+              />
               {renderStep()}
             </div>
           </section>
 
-          <aside className="hidden xl:block">
-            <div className="sticky top-28 overflow-hidden rounded-3xl border border-[#eddde7] bg-white/94 p-5 shadow-[0_26px_44px_-34px_rgba(95,38,77,0.32)] backdrop-blur-sm">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#9d6b8a]">{copy.summary}</p>
-
-              <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#fff6fb] p-3 ring-1 ring-[#efe1ea]">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#f2deea,#e4bfd5)] text-[#935c7c]">
-                  {selectedStyle?.emoji ?? '✦'}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#4a3344]">{selectedService?.name || copy.pickService}</p>
-                  <p className="text-xs text-[#7f6677]">{copy.studio}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 divide-y divide-[#f1e5ec] rounded-2xl border border-[#efe1ea] bg-[#fffafd] text-sm">
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{copy.dateTime}</p>
-                  <p className="mt-1 font-medium text-[#5d4558]">{selectedSlotLabel || copy.pickSlot}</p>
-                </div>
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{copy.duration}</p>
-                  <p className="mt-1 font-medium text-[#5d4558]">{totalDuration || selectedService?.duration || 0} min</p>
-                </div>
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{copy.tech}</p>
-                  <p className="mt-1 font-medium text-[#5d4558]">Sandra</p>
-                </div>
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{copy.total}</p>
-                  <p className="mt-1 text-xl font-semibold text-[#b04b80]">€{totalPrice || selectedService?.price || 0}</p>
-                </div>
-              </div>
-
-              {selectedSlot?.isSos && (
-                <div className="mt-3 rounded-xl border border-[#f0d8e6] bg-[#faf3f7] px-3 py-2">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#8f5d78]">{copy.sos}</p>
-                  <p className="mt-1 font-semibold text-[#b05387]">
-                    {selectedSlot.sosSurcharge ? `+€${selectedSlot.sosSurcharge}` : copy.noSos}
+          <aside className={currentStep === 2 ? 'hidden' : 'hidden xl:block'}>
+            <div className="sticky top-24 rounded-2xl bg-white/75 p-6 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.18)] backdrop-blur-xl">
+              <div className="mb-5 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-xs font-bold text-white">
+                  {funnelStep}
+                </span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8899c]">
+                    {copy.stepLabel} {funnelStep} / 3
+                  </p>
+                  <p className="text-sm font-semibold text-[#2f2530]">
+                    {funnelStep === 1 ? copy.funnel1 : funnelStep === 2 ? copy.funnel2 : copy.funnel3}
                   </p>
                 </div>
+              </div>
+              <div className="space-y-4 border-t border-[#f0e8ed] pt-5">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.pickService}</p>
+                  <p className="mt-0.5 font-brand text-lg font-semibold text-[#3a2a35]">{selectedService?.name ?? '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.dateTime}</p>
+                  <p className="mt-0.5 text-sm font-medium text-[#5d4558]">{selectedSlotLabel ?? copy.pickSlot}</p>
+                </div>
+                <div className="flex items-end justify-between border-t border-dashed border-[#ebe0e6] pt-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.total}</span>
+                  <span className="text-2xl font-semibold tabular-nums text-[#c24d86]">
+                    €{totalPrice || selectedService?.price || 0}
+                  </span>
+                </div>
+              </div>
+              {selectedSlot?.isSos && (
+                <p className="mt-3 text-xs text-[#9d6b8a]">
+                  {copy.sos}: {selectedSlot.sosSurcharge ? `+€${selectedSlot.sosSurcharge}` : copy.noSos}
+                </p>
               )}
             </div>
           </aside>
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[#eeddE8] bg-white/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm xl:hidden">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-[#4a3243]">{selectedService?.name || copy.pickService}</p>
-            <p className="truncate text-xs text-[#7f6677]">{selectedSlotLabel || copy.pickSlot}</p>
+      {currentStep !== 2 && currentStep !== 5 && (
+        <>
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-28 bg-[linear-gradient(180deg,transparent_0%,rgba(255,250,252,0.92)_45%,#fff8fb_100%)] xl:hidden"
+        aria-hidden
+      />
+
+      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 xl:hidden pointer-events-none">
+        <div className="pointer-events-auto flex h-16 w-full max-w-lg items-center gap-3 rounded-full border border-white/60 bg-white/65 px-4 shadow-[0_12px_40px_-12px_rgba(57,33,52,0.25)] backdrop-blur-xl">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-[#2f2530]">{selectedService?.name || copy.pickService}</p>
+            <p className="text-sm font-semibold tabular-nums text-[#c24d86]">€{totalPrice || selectedService?.price || 0}</p>
           </div>
-          <div className="text-right">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9b7a8d]">{copy.total}</p>
-            <p className="text-sm font-semibold text-[#b04b80]">€{totalPrice || selectedService?.price || 0}</p>
-          </div>
+          <button
+            type="button"
+            disabled={mobileCtaDisabled}
+            onClick={handleMobileStickyCta}
+            className={`shrink-0 rounded-full px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(194,77,134,0.55)] transition-all duration-[180ms] ${
+              mobileCtaDisabled
+                ? 'cursor-not-allowed bg-[#e8dce2] text-[#9a8a94] shadow-none'
+                : 'bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] hover:shadow-[0_10px_28px_-6px_rgba(194,77,134,0.5)] active:scale-[0.98]'
+            }`}
+          >
+            {mobileCtaLabel}
+          </button>
         </div>
       </div>
+        </>
+      )}
 
-      <style jsx>{`
-        @keyframes fade-in-up {
+      <style jsx global>{`
+        .booking-step-fade {
+          animation: bookingStepFade 180ms ease-out both;
+        }
+        @keyframes bookingStepFade {
           from {
             opacity: 0;
-            transform: translateY(10px) scale(0.995);
+            transform: translateY(6px);
           }
           to {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
           }
         }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.28s ease-out;
+        @media (prefers-reduced-motion: reduce) {
+          .booking-step-fade {
+            animation: none;
+          }
+        }
+        .booking-cta-primary:hover:not(:disabled) {
+          box-shadow: 0 16px 40px -10px rgba(194, 77, 134, 0.45);
         }
       `}</style>
     </div>

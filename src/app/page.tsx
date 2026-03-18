@@ -54,6 +54,11 @@ const galleryFallbackKeys = [
   'gallery_fallback_6',
 ];
 
+/** Next.js Image often paints an empty/gray box for data: URLs; native img displays base64 JPEGs reliably */
+function isDataImageUrl(src: string | null | undefined): boolean {
+  return typeof src === 'string' && /^\s*data:image\//i.test(src.trim());
+}
+
 export default function Home() {
   const router = useRouter();
   const { t, language, setLanguage, localizePath } = useTranslation();
@@ -635,11 +640,35 @@ export default function Home() {
     const localized = t(key);
     return localized === key ? fallback : localized;
   };
+  /** DB/admin may accidentally store a literal i18n path — never show it as user-facing copy */
+  const isServiceFieldKeyLeak = (value: string | undefined | null) => {
+    const s = (value ?? '').trim();
+    if (!s) return false;
+    if (s.startsWith('homepage.serviceDecision.fallback.')) return true;
+    return /^homepage\.[a-z0-9]+\.[a-zA-Z0-9._-]+$/i.test(s) && s.includes('serviceDecision');
+  };
   // Avoid leaking translation keys when service-specific fallback is missing (use generic fallback)
   const getServiceFallback = (serviceId: string, kind: 'result' | 'suitability' | 'longevity', genericFallback: string) => {
     const key = `homepage.serviceDecision.fallback.${serviceId}.${kind}`;
     const localized = t(key);
-    return localized === key ? genericFallback : localized;
+    if (localized === key || isServiceFieldKeyLeak(localized)) return genericFallback;
+    return localized;
+  };
+  const getServiceResultLine = (service: ServiceCard) => {
+    const raw = service.resultDescription?.trim();
+    if (raw && !isServiceFieldKeyLeak(raw)) return raw;
+    return getServiceFallback(
+      service.id,
+      'result',
+      language === 'en' ? 'Professional finish tailored to your nails.' : 'Professionaalne viimistlus sinu küüntele.'
+    );
+  };
+  const getServiceDescriptionExtra = (service: ServiceCard) => {
+    const d = service.description?.trim();
+    if (!d || isServiceFieldKeyLeak(d)) return '';
+    const result = getServiceResultLine(service);
+    if (d.toLowerCase() === result.toLowerCase()) return '';
+    return ` ${d}`;
   };
 
   const getServiceCategoryLabel = (category: ServiceCard['category'] | undefined) => {
@@ -672,13 +701,11 @@ export default function Home() {
   // Services: Only use API data - no mockServices fallback
   // If API returns empty, the section will show an empty state
   const servicesSource = serviceCards.length > 0 ? serviceCards : [];
-  const featuredService = servicesSource.find((service) => Boolean(service.isPopular)) ?? servicesSource[0];
-  const services = [
-    ...(featuredService ? [featuredService] : []),
-    ...servicesSource.filter((service) => service.id !== featuredService?.id),
-  ];
-  // Show all active services - no arbitrary slice limits
-  const regularServices = services.filter((service) => service.id !== featuredService?.id);
+  /** Featured hero only when admin marks a popular service — avoids duplicating the same list as “featured + first card again” */
+  const featuredService = servicesSource.find((service) => Boolean(service.isPopular)) ?? null;
+  const regularServices = featuredService
+    ? servicesSource.filter((service) => service.id !== featuredService.id)
+    : servicesSource;
   const specialistGallery = Array.from({ length: 3 }).map((_, index) => ({
     imageUrl: orderedGalleryItems[index]?.imageUrl ?? galleryUrls[index] ?? media('team_portrait') ?? galleryUrls[0] ?? '',
     caption:
@@ -742,11 +769,14 @@ export default function Home() {
   const navLinkClass =
     'type-navbar-link group relative py-1 text-[#584a58] transition-colors duration-200 hover:text-[#2f2530]';
   const utilityIconClass =
-    'type-navbar-icon-btn relative hidden lg:inline-flex';
+    'type-navbar-icon-btn relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center';
 
-  /* Premium layout: max 1280px, section spacing 120/80/64 */
-  const sectionClass = 'py-16 md:py-20 lg:py-[120px]';
+  /* Premium layout: max 1280px, normalized section spacing */
+  const sectionClass = 'py-16 md:py-20 lg:py-24';
   const contentMax = 'mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8';
+  const headerTitleGap = 'mt-3';
+  const headerSubtitleGap = 'mt-3';
+  const headerToContent = 'mb-8 md:mb-10';
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
@@ -764,8 +794,8 @@ export default function Home() {
           <div className={`flex items-center justify-between transition-all duration-300 ${
             isScrolled ? 'h-16' : 'h-20'
           }`}>
-            {/* Logo */}
-            <div className="flex items-center gap-2">
+            {/* Logo — breathing room on mobile */}
+            <div className="flex min-w-0 flex-shrink items-center gap-2 pr-2 sm:pr-0">
               <span
                 className={`font-brand type-navbar-logo leading-none transition-all duration-300 ${isScrolled ? 'lg:text-[34px]' : 'lg:text-[38px]'}`}
                 style={{ color: colors.primary, letterSpacing: '-0.015em' }}
@@ -782,8 +812,8 @@ export default function Home() {
               <button onClick={() => scrollToSection('location')} className={navLinkClass}><span>{t('nav.contact')}</span><span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 bg-[#c996b4] transition-transform duration-140 group-hover:scale-x-100" /></button>
             </nav>
 
-            {/* Right Side */}
-            <div className="flex items-center gap-3">
+            {/* Right Side — mobile: icons + menu only (booking via sticky CTA) */}
+            <div className="flex flex-shrink-0 items-center gap-3 sm:gap-3 lg:gap-4">
               <div className="relative hidden lg:block">
                 <button
                   onClick={() => setIsLangMenuOpen((prev) => !prev)}
@@ -810,33 +840,35 @@ export default function Home() {
                 )}
               </div>
 
-              <button
-                onClick={goToFavorites}
-                className={utilityIconClass}
-                aria-label={language === 'en' ? 'Open favourites' : 'Ava lemmikud'}
-                title={language === 'en' ? 'Favourites' : 'Lemmikud'}
-              >
-                <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
-                {favoritesCount > 0 && (
-                  <span className="absolute right-0 top-0 -translate-y-1/2 translate-x-1/4 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-[#c24d86] px-0.5 text-[9px] font-semibold text-white">
-                    {favoritesCount > 9 ? '9+' : favoritesCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={goToShop}
-                className={utilityIconClass}
-                aria-label={language === 'en' ? 'Open shop' : 'Ava pood'}
-                title={language === 'en' ? 'Shop' : 'Pood'}
-              >
-                <ShoppingBag size={18} strokeWidth={1.8} />
-                {cartCount > 0 && (
-                  <span className="absolute right-0 top-0 -translate-y-1/2 translate-x-1/4 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-[#c24d86] px-0.5 text-[9px] font-semibold text-white">
-                    {cartCount > 9 ? '9+' : cartCount}
-                  </span>
-                )}
-              </button>
+              {/* Icon cluster — spacing from logo; badges inset so they don’t crowd the edge */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goToFavorites}
+                  className={utilityIconClass}
+                  aria-label={language === 'en' ? 'Open favourites' : 'Ava lemmikud'}
+                  title={language === 'en' ? 'Favourites' : 'Lemmikud'}
+                >
+                  <FavoriteHeartIcon active={favoritesCount > 0} size={20} />
+                  {favoritesCount > 0 && (
+                    <span className="absolute right-0.5 top-0.5 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold text-white">
+                      {favoritesCount > 9 ? '9+' : favoritesCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={goToShop}
+                  className={utilityIconClass}
+                  aria-label={language === 'en' ? 'Open shop' : 'Ava pood'}
+                  title={language === 'en' ? 'Shop' : 'Pood'}
+                >
+                  <ShoppingBag size={20} strokeWidth={1.8} />
+                  {cartCount > 0 && (
+                    <span className="absolute right-0.5 top-0.5 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold text-white">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
+                  )}
+                </button>
+              </div>
                
               {nextAvailable && (
                 <div className="type-navbar-utility hidden lg:flex items-center gap-1.5 text-[#7a6978]">
@@ -848,20 +880,21 @@ export default function Home() {
                 </div>
               )}
               
-              {/* Book Now Button */}
-              <button 
+              {/* Book Now — lg+ only (.btn-primary display would otherwise override hidden on mobile) */}
+              <button
+                type="button"
                 onClick={() => router.push(localizePath('/book'))}
-                className="type-navbar-cta btn-primary h-11 hidden lg:inline-flex px-6 text-white"
+                className="btn-primary type-navbar-cta !hidden min-h-[44px] items-center justify-center rounded-full px-6 text-base font-semibold text-white transition-all duration-180 lg:!inline-flex"
               >
                 {t('nav.bookNow')}
               </button>
 
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#d4b4c7] bg-transparent text-[#7a6174] hover:border-[#b8659a] hover:bg-[#fff1f8] transition-all duration-180 lg:hidden"
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-[#d4b4c7] bg-transparent text-[#7a6174] transition-all duration-180 hover:border-[#b8659a] hover:bg-[#fff1f8] lg:hidden"
                 aria-label="Open menu"
               >
-                <Menu size={18} strokeWidth={1.8} />
+                <Menu size={20} strokeWidth={1.8} />
               </button>
             </div>
           </div>
@@ -879,126 +912,103 @@ export default function Home() {
             ref={mobileMenuPanelRef}
             role="dialog"
             aria-modal="true"
-            className="mobile-menu-anim-panel absolute inset-y-0 right-0 w-[86%] max-w-sm overflow-y-auto bg-[#fffdfd] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-5 shadow-[0_30px_56px_-34px_rgba(57,33,52,0.52)] [animation:mobileMenuPanelIn_240ms_cubic-bezier(0.22,0.8,0.22,1)_both]"
+            className="mobile-menu-anim-panel absolute inset-y-0 right-0 flex w-[88%] max-w-[360px] flex-col overflow-hidden bg-[#fffdfd] shadow-[0_30px_56px_-34px_rgba(57,33,52,0.52)] [animation:mobileMenuPanelIn_280ms_cubic-bezier(0.22,0.8,0.22,1)_both]"
           >
-            <div className="flex min-h-full flex-col">
-              <div className="mb-7 flex items-center justify-between border-b border-[#efe2ea] pb-5">
+            <div className="flex min-h-[100dvh] flex-1 flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+              <div className="mobile-menu-anim-item mb-6 flex items-center justify-between border-b border-[#efe2ea] pb-4 [animation:mobileMenuItemIn_240ms_ease-out_both]">
                 <span
-                  className="font-brand type-navbar-logo leading-none"
+                  className="font-brand text-[1.65rem] font-semibold leading-none tracking-tight"
                   style={{ color: colors.primary }}
                 >
                   Nailify
                 </span>
                 <button
+                  type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
                   data-mobile-menu-close="true"
-                  className="inline-flex h-[37px] w-[37px] items-center justify-center rounded-full border border-[#e8d9e3] text-[#6f5b6c] transition-colors duration-200 active:bg-[#f9eef5]"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[#e8d9e3] text-[#6f5b6c] transition-colors duration-200 hover:bg-[#faf5f8] active:bg-[#f9eef5]"
                   aria-label="Close menu"
                 >
-                  <svg className="h-[17px] w-[17px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
 
-              <nav className="space-y-[26px]" aria-label="Mobile primary navigation">
-                <button
-                  onClick={() => goToPage('/')}
-                  className="type-mobile-nav mobile-menu-anim-item min-h-11 w-full py-2.5 text-left text-[22px] text-[#2f2530] transition-opacity duration-150 active:opacity-70 [animation:mobileMenuItemIn_220ms_ease-out_both]"
-                  style={{ animationDelay: '0ms' }}
-                >
-                  {t('homepage.mobile.home')}
-                </button>
-                <button
-                  onClick={() => goToSection('services')}
-                  className="type-mobile-nav mobile-menu-anim-item min-h-11 w-full py-2.5 text-left text-[22px] text-[#2f2530] transition-opacity duration-150 active:opacity-70 [animation:mobileMenuItemIn_220ms_ease-out_both]"
-                  style={{ animationDelay: '18ms' }}
-                >
-                  {t('nav.services')}
-                </button>
-                <button
-                  onClick={() => goToSection('gallery')}
-                  className="type-mobile-nav mobile-menu-anim-item min-h-11 w-full py-2.5 text-left text-[22px] text-[#2f2530] transition-opacity duration-150 active:opacity-70 [animation:mobileMenuItemIn_220ms_ease-out_both]"
-                  style={{ animationDelay: '36ms' }}
-                >
-                  {t('nav.gallery')}
-                </button>
-                <button
-                  onClick={() => goToSection('products')}
-                  className="type-mobile-nav mobile-menu-anim-item min-h-11 w-full py-2.5 text-left text-[22px] text-[#2f2530] transition-opacity duration-150 active:opacity-70 [animation:mobileMenuItemIn_220ms_ease-out_both]"
-                  style={{ animationDelay: '54ms' }}
-                >
-                  {t('homepage.nav.products')}
-                </button>
-                <button
-                  onClick={() => goToSection('team')}
-                  className="type-mobile-nav mobile-menu-anim-item min-h-11 w-full py-2.5 text-left text-[22px] text-[#2f2530] transition-opacity duration-150 active:opacity-70 [animation:mobileMenuItemIn_220ms_ease-out_both]"
-                  style={{ animationDelay: '72ms' }}
-                >
-                  {t('homepage.mobile.team')}
-                </button>
-                <button
-                  onClick={() => goToSection('location')}
-                  className="type-mobile-nav mobile-menu-anim-item min-h-11 w-full py-2.5 text-left text-[22px] text-[#2f2530] transition-opacity duration-150 active:opacity-70 [animation:mobileMenuItemIn_220ms_ease-out_both]"
-                  style={{ animationDelay: '90ms' }}
-                >
-                  {t('nav.contact')}
-                </button>
+              <nav className="mobile-menu-anim-item flex-1 space-y-0.5 overflow-y-auto [animation:mobileMenuItemIn_260ms_ease-out_40ms_both]" aria-label="Mobile primary navigation">
+                {[
+                  { fn: () => goToPage(localizePath('/')), label: t('homepage.mobile.home') },
+                  { fn: () => goToSection('services'), label: t('nav.services') },
+                  { fn: () => goToSection('gallery'), label: t('nav.gallery') },
+                  { fn: () => goToSection('products'), label: t('homepage.nav.products') },
+                  { fn: () => goToSection('team'), label: t('homepage.mobile.team') },
+                  { fn: () => goToSection('location'), label: t('nav.contact') },
+                ].map((item, i) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={item.fn}
+                    className="mobile-menu-anim-item flex min-h-[52px] w-full items-center rounded-xl px-1 py-1 text-left text-[1.125rem] font-medium tracking-tight text-[#2f2530] transition-colors active:bg-[#faf5f8] [animation:mobileMenuItemIn_220ms_ease-out_both]"
+                    style={{ animationDelay: `${60 + i * 28}ms` }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </nav>
 
-              <div className="mobile-menu-anim-item mt-6 border-t border-[#f0e4eb]/35 pt-5 [animation:mobileMenuItemIn_220ms_ease-out_both] w-[60%] mx-auto" style={{ animationDelay: '118ms' }}>
-                <div className="flex items-center gap-5">
+              <div className="mobile-menu-anim-item mt-6 space-y-4 border-t border-[#f0e4eb] pt-5 [animation:mobileMenuItemIn_240ms_ease-out_120ms_both]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a8899c]">
+                  {language === 'en' ? 'Account & language' : 'Konto ja keel'}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
                   <button
+                    type="button"
                     onClick={() => goToPage(localizePath('/favorites'))}
-                    className="type-navbar-utility inline-flex min-h-11 items-center gap-2 text-[#6e5c6c] transition-colors duration-200 active:text-[#4d3c4b]"
+                    className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
                   >
-                    <FavoriteHeartIcon active={favoritesCount > 0} size={16} />
+                    <FavoriteHeartIcon active={favoritesCount > 0} size={20} />
                     <span>{language === 'en' ? 'Favourites' : 'Lemmikud'}</span>
                     {favoritesCount > 0 && (
-                      <span className="rounded-full bg-[#c24d86] px-1.5 text-[10px] font-semibold text-white">
-                        {favoritesCount > 9 ? '9+' : favoritesCount}
-                      </span>
+                      <span className="text-xs font-semibold text-[#c24d86]">{favoritesCount > 9 ? '9+' : favoritesCount}</span>
                     )}
                   </button>
                   <button
+                    type="button"
                     onClick={() => goToPage(localizePath('/shop'))}
-                    className="type-navbar-utility inline-flex min-h-11 items-center gap-2 text-[#6e5c6c] transition-colors duration-200 active:text-[#4d3c4b]"
+                    className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
                   >
-                    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7.5 8.5V7.75a4.5 4.5 0 019 0v.75m-10 0h11l-.86 9.02a1.5 1.5 0 01-1.49 1.36H8.35a1.5 1.5 0 01-1.49-1.36L6 8.5z" /></svg>
-                    <span>{language === 'en' ? 'Cart' : 'Korv'}</span>
+                    <ShoppingBag className="h-5 w-5 text-[#7a6174]" strokeWidth={1.8} />
+                    <span>{language === 'en' ? 'Shop' : 'Pood'}</span>
                     {cartCount > 0 && (
-                      <span className="rounded-full bg-[#c24d86] px-1.5 text-[10px] font-semibold text-white">
-                        {cartCount > 9 ? '9+' : cartCount}
-                      </span>
+                      <span className="text-xs font-semibold text-[#c24d86]">{cartCount > 9 ? '9+' : cartCount}</span>
                     )}
                   </button>
                 </div>
-
-                <div className="mt-3 inline-flex h-9 items-center rounded-full border border-[#e8d9e3] bg-white p-1">
+                <div className="flex h-11 w-full items-center justify-center gap-1 rounded-2xl border border-[#e8d9e3] bg-white p-1">
                   <button
+                    type="button"
                     onClick={() => handleLanguageChange('et')}
-                    className={`type-navbar-utility min-h-8 rounded-full px-3 transition-all duration-140 ${
-                      language === 'et' ? 'bg-[#fff1f8] text-[#6a3b57] shadow-[0_2px_6px_-0_rgba(106,59,87,0.2)]' : 'text-[#7a6878]'
+                    className={`min-h-9 flex-1 rounded-xl px-3 text-sm font-medium transition-all duration-140 ${
+                      language === 'et' ? 'bg-[#fff1f8] text-[#6a3b57]' : 'text-[#7a6878]'
                     }`}
                   >
-                    EST
+                    Eesti
                   </button>
-                  <span className="mx-1 h-4 w-px bg-[#eadce5]/35" />
                   <button
+                    type="button"
                     onClick={() => handleLanguageChange('en')}
-                    className={`type-navbar-utility min-h-8 rounded-full px-3 transition-all duration-140 ${
-                      language === 'en' ? 'bg-[#fff1f8] text-[#6a3b57] shadow-[0_2px_6px_-0_rgba(106,59,87,0.2)]' : 'text-[#7a6878]'
+                    className={`min-h-9 flex-1 rounded-xl px-3 text-sm font-medium transition-all duration-140 ${
+                      language === 'en' ? 'bg-[#fff1f8] text-[#6a3b57]' : 'text-[#7a6878]'
                     }`}
                   >
-                    ENG
+                    English
                   </button>
                 </div>
-              </div>
-
-              <div className="mobile-menu-anim-item mt-auto pt-12 pb-2 [animation:mobileMenuItemIn_220ms_ease-out_both]" style={{ animationDelay: '148ms' }}>
                 <button
-                  onClick={() => goToPage('/book')}
-                  className="btn-primary h-10 sm:h-11 w-full rounded-2xl sm:rounded-full text-white"
+                  type="button"
+                  onClick={() => goToPage(localizePath('/book'))}
+                  className="btn-primary mobile-menu-anim-item min-h-[52px] w-full rounded-2xl text-base font-semibold text-white shadow-[0_14px_28px_-12px_rgba(194,77,134,0.45)] [animation:mobileMenuItemIn_220ms_ease-out_both]"
+                  style={{ animationDelay: '180ms' }}
                 >
                   {t('nav.bookNow')}
                 </button>
@@ -1058,7 +1068,7 @@ export default function Home() {
       `}</style>
 
       {/* 2. HERO — Premium luxury nail studio conversion: editorial left + floating glass booking card right */}
-      <section className={`relative min-h-[85vh] overflow-hidden pt-24 md:pt-28 lg:min-h-[90vh] lg:pt-32 ${isScrolled ? 'pt-20' : ''}`}>
+      <section className={`relative min-h-[85vh] overflow-hidden pb-12 pt-24 md:pt-28 lg:min-h-[90vh] lg:pb-14 lg:pt-32 ${isScrolled ? 'pt-20' : ''}`}>
         {/* Background: subtle radial from top-left, light pink/cream, soft vignette */}
         <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,#fdf6f9_0%,#faf5f8_35%,#f6f0f4_70%,#f2ecf0_100%)]" aria-hidden />
         <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_50%,transparent_50%,rgba(240,230,235,0.4)_100%)]" aria-hidden />
@@ -1133,7 +1143,7 @@ export default function Home() {
                 }`}
                 style={{ transitionDelay: '340ms' }}
               >
-                <span className="flex items-center gap-1.5">⭐ {language === 'en' ? '4.9 rated' : '4.9 hinnang'}</span>
+                <span className="flex items-center gap-1.5">{t('trust.rating')} {language === 'en' ? 'rated' : 'hinnang'}</span>
                 <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
                 <span>{language === 'en' ? '1200+ clients' : '1200+ klienti'}</span>
                 <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
@@ -1172,7 +1182,7 @@ export default function Home() {
 
             {/* Trust row — mobile only (order 3: after headline, CTA, card) */}
             <p className="order-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[14px] text-[#6f5e66] lg:hidden">
-              <span className="flex items-center gap-1.5">⭐ {language === 'en' ? '4.9 rated' : '4.9 hinnang'}</span>
+              <span className="flex items-center gap-1.5">{t('trust.rating')} {language === 'en' ? 'rated' : 'hinnang'}</span>
               <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
               <span>{language === 'en' ? '1200+ clients' : '1200+ klienti'}</span>
               <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
@@ -1185,7 +1195,7 @@ export default function Home() {
       </section>
 
       {/* 3. Trust strip + Local Trust / Mustamäe — premium 3-column, editorial continuation of hero */}
-      <section className="border-y border-slate-200/80 bg-white/80 py-8 backdrop-blur-sm">
+      <section className="border-y border-slate-200/70 bg-white/90 py-6 backdrop-blur-sm">
         <div className={contentMax}>
           <div className="flex flex-wrap items-center justify-center gap-8 lg:gap-16">
             <div className="flex items-center gap-2 text-gray-500 text-sm">
@@ -1193,23 +1203,21 @@ export default function Home() {
               <span>{t('trust.googleRating')}</span>
             </div>
             <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span className="font-medium text-gray-700">150+</span>
-              <span>{t('trust.appointmentsThisWeek')}</span>
+              <span className="font-medium text-gray-700">{t('trust.weeklyAppointmentsStat')}</span>
             </div>
             <div className="flex items-center gap-2 text-gray-500 text-sm">
               <span className="font-medium text-gray-700">100%</span>
               <span>{t('trust.sterileEquipment')}</span>
             </div>
             <div className="flex items-center gap-2 text-gray-500 text-sm">
-              <span className="font-medium text-gray-700">{t('homepage.trust.premium')}</span>
-              <span>{t('trust.premiumProducts')}</span>
+              <span className="font-medium text-gray-700">{t('trust.premiumProducts')}</span>
             </div>
           </div>
         </div>
       </section>
       <section
         ref={localTrustSectionRef}
-        className="relative overflow-hidden border-t border-[#e8dce4]/60 bg-gradient-to-b from-[#faf8f9] via-[#f8f5f7] to-[#f6f2f5] py-20 lg:py-[120px]"
+        className={`relative overflow-hidden border-t border-[#e8dce4]/50 bg-gradient-to-b from-[#faf8f9] via-[#f8f5f7] to-[#f6f2f5] ${sectionClass}`}
       >
         {/* Optional very low opacity texture */}
         <div className="pointer-events-none absolute inset-0 opacity-[0.03]" aria-hidden>
@@ -1272,7 +1280,7 @@ export default function Home() {
                 }`}
                 style={{ transitionDelay: localTrustInView ? '0ms' : '0ms' }}
               >
-                <span className="text-[#c24d86]" aria-hidden>⭐</span>
+                <span className="text-[#c24d86]" aria-hidden>•</span>
                 <span className="text-sm font-semibold text-[#2d232d]">{t('trust.rating')}</span>
                 <span className="text-sm text-[#6f5e66]">{t('trust.googleRating')}</span>
               </div>
@@ -1283,7 +1291,7 @@ export default function Home() {
                 }`}
                 style={{ transitionDelay: localTrustInView ? '80ms' : '0ms' }}
               >
-                <span className="text-[#c24d86]" aria-hidden>⭐</span>
+                <span className="text-[#c24d86]" aria-hidden>•</span>
                 <span className="text-sm font-semibold text-[#2d232d]">{t('trust.clients')}</span>
               </div>
               <div className="hidden h-px w-12 bg-[#e0d0d8] lg:block" aria-hidden />
@@ -1293,7 +1301,7 @@ export default function Home() {
                 }`}
                 style={{ transitionDelay: localTrustInView ? '160ms' : '0ms' }}
               >
-                <span className="text-[#c24d86]" aria-hidden>⭐</span>
+                <span className="text-[#c24d86]" aria-hidden>•</span>
                 <span className="text-sm font-semibold text-[#2d232d]">{t('trust.mustamaeStudio')}</span>
               </div>
             </div>
@@ -1307,40 +1315,51 @@ export default function Home() {
         className={`relative bg-gradient-to-b from-[#faf8f9] to-[#f5f2f4] ${sectionClass}`}
       >
         <div className={`relative ${contentMax}`}>
-          <header className="mb-14 text-center md:mb-16">
+          <header className={`text-center ${headerToContent}`}>
             <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e]">{t('services.eyebrow')}</p>
-            <h2 className="mt-3 font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] md:text-[42px] lg:text-[44px]">
+            <h2 className={`font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] ${headerTitleGap}`}>
               {t('services.title')}
             </h2>
-            <p className="mx-auto mt-4 max-w-[42ch] text-base leading-relaxed text-[#6b5a62]">{t('services.subtitle')}</p>
+            <p className={`mx-auto max-w-[32rem] text-[1rem] leading-relaxed text-[#6b5a62] ${headerSubtitleGap}`}>{t('services.subtitle')}</p>
           </header>
 
-          <div className="space-y-14 lg:space-y-20">
+          <div className="space-y-12 lg:space-y-16">
             {/* LAYER 1 — Featured service hero (horizontal on desktop, stacked on mobile) */}
             {featuredService && (
               <article
                 onClick={() => router.push(localizePath('/book'))}
-                className={`group cursor-pointer overflow-hidden rounded-[28px] bg-white shadow-[0_24px_48px_-16px_rgba(80,50,65,0.18),0_0_0_1px_rgba(0,0,0,0.04)] transition-all duration-500 ease-out hover:shadow-[0_32px_64px_-20px_rgba(80,50,65,0.22),0_0_0_1px_rgba(0,0,0,0.06)] ${
+                className={`group cursor-pointer overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.08)] transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.12)] hover:scale-[1.01] ${
                   servicesInView ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
                 style={{ transitionDuration: '0.6s' }}
               >
                 <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-0">
-                  <div className="relative aspect-[4/5] overflow-hidden lg:col-span-5 lg:aspect-[5/6] lg:min-h-[420px]">
+                  {/* pb aspect box: data-URI / huge intrinsic imgs break aspect-ratio+abs in some engines */}
+                  <div className="relative w-full max-lg:pb-[125%] overflow-hidden rounded-t-[28px] bg-[#f5e8ef] lg:col-span-5 lg:min-h-[420px] lg:pb-0 lg:aspect-[5/6] lg:rounded-l-[28px] lg:rounded-tr-none">
                     <div className="absolute left-5 top-5 z-10 rounded-full bg-white/95 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7a4d66] shadow-lg backdrop-blur-sm">
                       {t('homepage.featuredService.badge')}
                     </div>
-                    <div className="absolute inset-0 z-[1] rounded-t-[28px] lg:rounded-l-[28px] lg:rounded-tr-none ring-1 ring-inset ring-black/5" />
+                    <div className="pointer-events-none absolute inset-0 z-[1] rounded-t-[28px] ring-1 ring-inset ring-black/5 lg:rounded-l-[28px] lg:rounded-tr-none" />
                     {featuredService.imageUrl || '' ? (
-                      <Image
-                        src={featuredService.imageUrl || ''}
-                        alt={featuredService.name}
-                        width={960}
-                        height={720}
-                        className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                      />
+                      isDataImageUrl(featuredService.imageUrl) ? (
+                        <img
+                          src={featuredService.imageUrl || ''}
+                          alt={featuredService.name}
+                          className="absolute inset-0 box-border h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                          style={{ maxWidth: '100%', maxHeight: '100%' }}
+                          decoding="async"
+                        />
+                      ) : (
+                        <Image
+                          src={featuredService.imageUrl || ''}
+                          alt={featuredService.name}
+                          fill
+                          sizes="(max-width: 1024px) 100vw, 42vw"
+                          className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                        />
+                      )
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-[#f5e8ef] text-5xl text-[#9f7c91]">MN</div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-[#f5e8ef] text-5xl text-[#9f7c91]">MN</div>
                     )}
                   </div>
                   <div className="flex flex-col justify-between p-6 lg:col-span-7 lg:p-10 lg:pl-12 lg:pr-14">
@@ -1349,8 +1368,8 @@ export default function Home() {
                         {featuredService.name}
                       </h3>
                       <p className="mt-4 line-clamp-4 text-[1rem] leading-[1.65] text-[#564553]">
-                        {featuredService.resultDescription || getServiceFallback(featuredService.id, 'result', language === 'en' ? 'Professional result.' : 'Professionaalne tulemus.')}
-                        {featuredService.description ? ` ${featuredService.description}` : ''}
+                        {getServiceResultLine(featuredService)}
+                        {getServiceDescriptionExtra(featuredService)}
                       </p>
                       <div className="mt-6 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#f0e8ec] px-3.5 py-1.5 text-xs font-medium text-[#5d4a59]">
@@ -1409,12 +1428,12 @@ export default function Home() {
 
             {/* LAYER 2 — Service card grid (3 cols desktop; horizontal scroll mobile) */}
             <div className="overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-visible lg:pb-0">
-              <div className="flex gap-6 lg:grid lg:grid-cols-3 lg:gap-10">
+              <div className="flex min-w-0 gap-6 lg:grid lg:grid-cols-3 lg:gap-10">
                 {regularServices.map((service, index) => (
                   <article
                     key={service.id}
                     onClick={() => router.push(localizePath('/book'))}
-                    className={`group flex min-w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_16px_40px_-16px_rgba(70,45,58,0.14),0_0_0_1px_rgba(0,0,0,0.04)] transition-all duration-400 ease-out hover:-translate-y-1 hover:shadow-[0_24px_48px_-16px_rgba(70,45,58,0.2),0_0_0_1px_rgba(0,0,0,0.06)] lg:min-w-0 ${
+                    className={`group flex w-[min(300px,calc(100vw-2.5rem))] max-w-full shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.06)] transition-all duration-400 ease-out hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.1)] lg:w-auto lg:min-w-0 lg:max-w-none ${
                       servicesInView ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
                     }`}
                     style={{
@@ -1422,18 +1441,28 @@ export default function Home() {
                       transitionDuration: '0.5s',
                     }}
                   >
-                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-[24px] bg-[#f5e8ef]">
-                      <div className="absolute inset-0 z-[1] rounded-t-[24px] ring-1 ring-inset ring-black/5 pointer-events-none" />
+                    <div className="relative w-full overflow-hidden rounded-t-2xl bg-[#f5e8ef] pb-[75%]">
+                      <div className="pointer-events-none absolute inset-0 z-[1] rounded-t-2xl ring-1 ring-inset ring-black/5" />
                       {service.imageUrl || '' ? (
-                        <Image
-                          src={service.imageUrl || ''}
-                          alt={service.name}
-                          width={600}
-                          height={450}
-                          className="h-full w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.05]"
-                        />
+                        isDataImageUrl(service.imageUrl) ? (
+                          <img
+                            src={service.imageUrl || ''}
+                            alt={service.name}
+                            className="absolute inset-0 box-border h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                            style={{ maxWidth: '100%', maxHeight: '100%' }}
+                            decoding="async"
+                          />
+                        ) : (
+                          <Image
+                            src={service.imageUrl || ''}
+                            alt={service.name}
+                            fill
+                            sizes="(max-width: 1024px) min(300px,90vw), 33vw"
+                            className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                          />
+                        )
                       ) : (
-                        <div className="flex h-full items-center justify-center text-4xl text-[#9f7c91]">MN</div>
+                        <div className="absolute inset-0 flex items-center justify-center text-4xl text-[#9f7c91]">MN</div>
                       )}
                     </div>
                     <div className="flex flex-1 flex-col p-5 lg:p-6">
@@ -1441,7 +1470,7 @@ export default function Home() {
                         {service.name}
                       </h3>
                       <p className="mt-2 line-clamp-2 text-[0.9rem] leading-[1.55] text-[#5f4c59]">
-                        {service.resultDescription || getServiceFallback(service.id, 'result', language === 'en' ? 'Professional result.' : 'Professionaalne tulemus.')}
+                        {getServiceResultLine(service)}
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#f0e8ec] px-2.5 py-1 text-[11px] font-medium text-[#5d4a59]">
@@ -1484,17 +1513,16 @@ export default function Home() {
       {/* ===================== */}
       {/* 5. RESULTS GALLERY — Immersive luxury nail gallery / Meie tööd */}
       {/* ===================== */}
-      <section id="gallery" ref={gallerySectionRef} className="relative w-full bg-[#faf8f9] py-20 lg:py-[120px]">
-        <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
-          {/* Section header */}
-          <header className="mb-14 text-center md:mb-16 lg:mb-[60px]">
+      <section id="gallery" ref={gallerySectionRef} className={`relative w-full bg-[#faf8f9] ${sectionClass}`}>
+        <div className={contentMax}>
+          <header className={`text-center ${headerToContent}`}>
             <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e]">
               {getI18nTextOrFallback('homepage.gallery.eyebrow', language === 'en' ? 'OUR WORK' : 'MEIE TÖÖ')}
             </p>
-            <h2 className="mt-3 font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] md:text-[42px]">
+            <h2 className={`font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] ${headerTitleGap}`}>
               {getI18nTextOrFallback('homepage.gallery.realResultsTitle', language === 'en' ? 'Real results.' : 'Päris tulemused.')}
             </h2>
-            <p className="mx-auto mt-4 max-w-[42ch] text-base leading-relaxed text-[#6b5a62]">
+            <p className={`mx-auto max-w-[32rem] text-[1rem] leading-relaxed text-[#6b5a62] ${headerSubtitleGap}`}>
               {t('homepage.gallery.subtitle')}
             </p>
           </header>
@@ -1514,7 +1542,7 @@ export default function Home() {
                   alt={getStyleLabel(nailStyles[0])}
                   width={1200}
                   height={900}
-                  className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                  className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 z-20 p-8 text-white">
@@ -1599,20 +1627,40 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile: horizontal scroll gallery */}
-          <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden" ref={galleryScrollRef}>
+          {/* Mobile: single-row horizontal gallery, scroll-snap, no wrap */}
+          <div
+            className="-mx-4 flex flex-nowrap gap-4 overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory px-4 pb-4 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+            ref={galleryScrollRef}
+          >
             {galleryCards.map((card, index) => (
               <article
                 key={card.style.id}
-                className={`relative h-[320px] min-w-[280px] shrink-0 overflow-hidden rounded-[24px] shadow-[0_20px_40px_-12px_rgba(60,40,55,0.2)] transition-all duration-500 ${
+                className={`relative flex w-[280px] max-w-[85vw] shrink-0 snap-center snap-always flex-col overflow-hidden rounded-2xl bg-[#f5e8ef] shadow-[0_8px_24px_-12px_rgba(60,40,55,0.1)] transition-all duration-500 ${
                   galleryInView ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{ transitionDelay: `${index * 60}ms` }}
               >
                 <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(index)} aria-label={getStyleLabel(card.style)} />
-                <Image src={card.imageUrl} alt={getStyleLabel(card.style)} width={560} height={640} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 z-20 p-5 text-white">
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#f0e2eb]">
+                  {isDataImageUrl(card.imageUrl) ? (
+                    <img
+                      src={card.imageUrl}
+                      alt={getStyleLabel(card.style)}
+                      className="absolute inset-0 h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <Image
+                      src={card.imageUrl}
+                      alt={getStyleLabel(card.style)}
+                      fill
+                      sizes="(max-width: 430px) 85vw, 280px"
+                      className="object-cover"
+                    />
+                  )}
+                </div>
+                <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/75 via-black/30 to-transparent p-5 pt-12 text-white">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/85">
                     {index === 0 ? getI18nTextOrFallback('homepage.gallery.signatureLook', 'Signature look') : ''}
                   </p>
@@ -1634,8 +1682,8 @@ export default function Home() {
                 onClick={() => {
                   const el = galleryScrollRef.current;
                   if (el) {
-                    const cardWidth = 280 + 16;
-                    el.scrollTo({ left: index * cardWidth, behavior: 'smooth' });
+                    const card = el.children[index] as HTMLElement | undefined;
+                    if (card) card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                   }
                   setGalleryScrollIndex(index);
                 }}
@@ -1672,13 +1720,22 @@ export default function Home() {
             aria-label={getI18nTextOrFallback('homepage.gallery.closeLightbox', language === 'en' ? 'Close gallery' : 'Sulge galerii')}
           />
           <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[1.8rem] border border-white/35 bg-[#140f13] shadow-[0_36px_60px_-28px_rgba(0,0,0,0.7)]">
-            <Image
-              src={galleryCards[activeGalleryIndex].imageUrl}
-              alt={getStyleLabel(galleryCards[activeGalleryIndex].style)}
-              width={1600}
-              height={1100}
-              className="h-[62vh] w-full object-cover md:h-[70vh]"
-            />
+            {isDataImageUrl(galleryCards[activeGalleryIndex].imageUrl) ? (
+              <img
+                src={galleryCards[activeGalleryIndex].imageUrl}
+                alt={getStyleLabel(galleryCards[activeGalleryIndex].style)}
+                className="h-[62vh] w-full object-cover md:h-[70vh]"
+                decoding="async"
+              />
+            ) : (
+              <Image
+                src={galleryCards[activeGalleryIndex].imageUrl}
+                alt={getStyleLabel(galleryCards[activeGalleryIndex].style)}
+                width={1600}
+                height={1100}
+                className="h-[62vh] w-full object-cover md:h-[70vh]"
+              />
+            )}
             <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_56%,rgba(0,0,0,0.7)_100%)]" />
             <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-5 text-white md:p-6">
               <p className="text-xs uppercase tracking-[0.16em] text-white/75">{t('homepage.gallery.featuredLabel')}</p>
@@ -1718,10 +1775,10 @@ export default function Home() {
       {/* ===================== */}
       <section id="pricing" className={`bg-slate-50/50 ${sectionClass}`}>
         <div className={contentMax}>
-          <div className="mb-10 text-center lg:mb-12">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b77f9f]">{t('homepage.addons.eyebrow')}</p>
-            <h2 className="section-title">{t('homepage.addons.title')}</h2>
-            <p className="mt-3 text-[1.01rem] text-[#7b6778]">{t('homepage.addons.subtitle')}</p>
+          <div className={`text-center ${headerToContent}`}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[#b77f9f]">{t('homepage.addons.eyebrow')}</p>
+            <h2 className={`section-title ${headerTitleGap}`}>{t('homepage.addons.title')}</h2>
+            <p className={`text-[1rem] text-[#7b6778] ${headerSubtitleGap}`}>{t('homepage.addons.subtitle')}</p>
             <p className="mt-2 text-sm text-[#9a7891]">{t('homepage.addons.helper')}</p>
           </div>
 
@@ -1759,7 +1816,7 @@ export default function Home() {
       <section
         id="team"
         ref={sandraSectionRef}
-        className="relative overflow-visible border-t border-[#e8dce4]/70 bg-gradient-to-b from-[#fdf8fa] via-[#faf5f8] to-[#f8f2f6] py-20 md:py-28 lg:py-[140px]"
+        className={`relative overflow-visible border-t border-[#e8dce4]/60 bg-gradient-to-b from-[#fdf8fa] via-[#faf5f8] to-[#f8f2f6] ${sectionClass}`}
       >
         <div className={`relative ${contentMax}`}>
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16 lg:items-center">
@@ -1798,7 +1855,7 @@ export default function Home() {
                 {getI18nTextOrFallback('homepage.team.eyebrow', language === 'en' ? 'Personal specialist' : 'Isiklik spetsialist')}
               </p>
               <h2
-                className={`mt-3 font-brand text-[2.25rem] font-semibold leading-[1.08] tracking-[-0.02em] text-[#1f171d] transition-all duration-600 sm:text-[2.75rem] lg:text-[3.25rem] ${
+                className={`mt-2 font-brand text-[36px] font-semibold leading-tight tracking-tight text-[#1f171d] transition-all duration-600 ${
                   isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
                 }`}
                 style={{ transitionDelay: '180ms' }}
@@ -2049,10 +2106,10 @@ export default function Home() {
                 <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12 lg:gap-5">
                   {/* ZONE 1 — Hero: magazine cover proportion — image ~15% shorter, overlay higher + wider, gradient behind card, stronger title */}
                   {featuredProduct && (
-                    <article className="group relative overflow-hidden rounded-[24px] bg-white/95 shadow-[0_12px_36px_-16px_rgba(60,35,55,0.1),0_4px_16px_-8px_rgba(60,35,55,0.06)] transition-all duration-300 hover:-translate-y-0.5 lg:col-span-8">
+                    <article className="group relative overflow-hidden rounded-2xl bg-white/95 shadow-[0_12px_36px_-16px_rgba(60,35,55,0.1),0_4px_16px_-8px_rgba(60,35,55,0.06)] transition-all duration-300 hover:-translate-y-0.5 lg:col-span-8">
                       <div className="relative flex flex-col pb-0">
-                        {/* Hero image: reduced height ~15% so grid can rise; soft gradient behind overlay area */}
-                        <div className="relative h-[220px] overflow-hidden rounded-t-[24px] bg-[#f8edf3] sm:h-[240px] lg:h-[265px]">
+                        {/* Hero image: aspect-ratio for responsive fill, no fixed height */}
+                        <div className="relative aspect-[4/3] min-h-[200px] overflow-hidden rounded-t-2xl bg-[#f8edf3] sm:aspect-[3/2] lg:aspect-[8/5]">
                           {featuredProduct.imageUrl ? (
                             <Image
                               src={featuredProduct.imageUrl}
@@ -2063,7 +2120,7 @@ export default function Home() {
                               className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                             />
                           ) : (
-                            <div className="flex h-full items-center justify-center text-sm text-[#7f6679]">{featuredProduct.name}</div>
+                            <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-[#7f6679]">{featuredProduct.name}</div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-[#2a1828]/70 via-[#2a1828]/12 to-transparent" />
                           {/* Soft gradient fade behind where overlay card sits */}
@@ -2071,7 +2128,7 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); toggleFavorite(featuredProduct.id); }}
-                            className={`absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 transition-all duration-200 hover:scale-110 ${
+                            className={`absolute right-3 top-3 z-10 inline-flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-full bg-white/95 transition-all duration-200 hover:scale-110 ${
                               isFavorite(featuredProduct.id) ? 'text-[#c24d86]' : 'text-[#8b6c81] hover:text-[#b07a9a]'
                             }`}
                             aria-label={isFavorite(featuredProduct.id) ? (language === 'en' ? 'Remove from favourites' : 'Eemalda lemmikutest') : (language === 'en' ? 'Add to favourites' : 'Lisa lemmikutesse')}
@@ -2080,7 +2137,7 @@ export default function Home() {
                           </button>
                         </div>
                         {/* Overlay card: higher into image, slightly wider, less padding — bottom-sheet style on mobile */}
-                        <div className="relative -mt-20 mx-2.5 w-[calc(100%-1.25rem)] max-w-[min(100%,34rem)] rounded-[20px] bg-white/92 p-4 shadow-[0_8px_32px_-12px_rgba(50,28,45,0.12)] backdrop-blur-md sm:mx-3 sm:-mt-24 lg:-mt-28 lg:mx-4 lg:max-w-[38rem] lg:p-5">
+                        <div className="relative -mt-20 mx-2.5 w-[calc(100%-1.25rem)] max-w-[min(100%,34rem)] rounded-2xl bg-white/92 p-4 shadow-[0_8px_32px_-12px_rgba(50,28,45,0.12)] backdrop-blur-md sm:mx-3 sm:-mt-24 sm:p-4 lg:-mt-28 lg:mx-4 lg:max-w-[38rem] lg:p-5">
                           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a06f8d]">
                             {featuredProduct.isFeatured
                               ? getI18nTextOrFallback('homepage.products.badgeRecommended', language === 'en' ? 'Sandra recommends' : 'Sandra soovitab')
@@ -2110,13 +2167,13 @@ export default function Home() {
                             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                               <button
                                 onClick={() => router.push(localizePath('/book'))}
-                                className="w-full rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_45%,#8f3362_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_-8px_rgba(139,51,100,0.55)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+                                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_45%,#8f3362_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_-8px_rgba(139,51,100,0.55)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
                               >
                                 {getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
                               </button>
                               <button
                                 onClick={() => goToProduct(featuredProduct.id)}
-                                className="w-full rounded-full bg-transparent px-4 py-2.5 text-sm font-semibold text-[#6a4c64] transition-all duration-200 hover:bg-[#fdf4f9] hover:scale-[1.01] active:scale-[0.99] sm:w-auto"
+                                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-transparent px-4 py-2.5 text-sm font-semibold text-[#6a4c64] transition-all duration-200 hover:bg-[#fdf4f9] hover:scale-[1.01] active:scale-[0.99] sm:w-auto"
                               >
                                 {getI18nTextOrFallback('homepage.products.ctaViewProduct', language === 'en' ? 'View product details' : 'Vaata toote detaile')}
                               </button>
@@ -2214,7 +2271,7 @@ export default function Home() {
                             <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
                           </button>
                         </div>
-                        <div className="flex flex-1 flex-col p-3">
+                        <div className="flex min-h-[7.5rem] flex-1 flex-col p-4">
                           <h4 className={`font-semibold leading-snug text-[#322a33] ${isTall ? 'text-base' : 'text-[15px]'}`}>
                             {product.name}
                           </h4>
@@ -2224,11 +2281,11 @@ export default function Home() {
                           <p className="mt-1 text-[10px] font-medium text-[#9e7690]">
                             {getI18nTextOrFallback('homepage.products.cardUseCase', language === 'en' ? 'Supports longer-lasting salon results.' : 'Toetab kauapüsivamat salongitulemust.')}
                           </p>
-                          <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                          <div className="mt-auto flex flex-col gap-2 pt-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                             <span className={`font-semibold text-[#b04b80] ${isTall ? 'text-base' : 'text-[15px]'}`}>EUR {product.price}</span>
                             <button
                               onClick={() => goToProduct(product.id)}
-                              className="w-full rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(139,51,100,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+                              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-3.5 py-2.5 text-[11px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(139,51,100,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
                             >
                               {getI18nTextOrFallback('homepage.products.ctaRetailTile', language === 'en' ? 'Buy now' : 'Osta kohe')}
                             </button>
@@ -2250,40 +2307,43 @@ export default function Home() {
       <section
         id="testimonials"
         ref={testimonialsSectionRef}
-        className="relative overflow-hidden py-20 md:py-24 lg:py-[120px] bg-gradient-to-b from-[#faf6f8] via-[#f8f2f5] to-[#f5eef2]"
+        className={`relative overflow-hidden bg-gradient-to-b from-[#fbf7f9] via-[#f8f2f5] to-[#f4edf1] ${sectionClass}`}
       >
+        {/* Calm trust zone: very subtle tint + soft radial */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_20%,rgba(252,248,250,0.5)_0%,transparent_55%)]" aria-hidden />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-2/5 bg-gradient-to-t from-[#f5eef2]/40 to-transparent" aria-hidden />
+
         <div className={`relative z-10 ${contentMax} transition-all duration-700 ease-out ${testimonialsInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          {/* Header — label, large title, centered subtext */}
-          <div className="mb-14 text-center lg:mb-16">
-            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.28em] text-[#b77f9f]">
+          <header className={`text-center ${headerToContent}`}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.26em] text-[#a87a94]">
               {t('homepage.testimonials.eyebrow')}
             </p>
-            <h2 className="text-[2rem] font-semibold leading-tight tracking-[-0.02em] text-[#2d232d] md:text-[2.5rem] lg:text-[3rem] xl:text-[48px]">
+            <h2 className={`font-brand text-[36px] font-semibold leading-tight tracking-tight text-[#2d232d] ${headerTitleGap}`}>
               {t('homepage.testimonials.title')}
             </h2>
-            <p className="mx-auto mt-4 max-w-[520px] text-base leading-relaxed text-[#6f5d6d] lg:text-[1.05rem]">
+            <p className={`mx-auto max-w-[32rem] text-[1rem] font-medium leading-relaxed text-[#5f4d5a] ${headerSubtitleGap}`}>
               {t('homepage.testimonials.subtitle')}
             </p>
-          </div>
+          </header>
 
           {feedbackItems.length === 0 ? (
-            <div className="rounded-3xl border border-[#f0e2eb] bg-white/80 px-6 py-16 text-center shadow-[0_8px_32px_-16px_rgba(80,45,70,0.06)]">
+            <div className="rounded-3xl border border-[#efe0e8] bg-white/90 px-6 py-14 text-center shadow-[0_12px_40px_-20px_rgba(70,40,60,0.08)]">
               <p className="text-[#7e6376]">{t('homepage.testimonials.subtitle')}</p>
             </div>
           ) : (
             <>
-              {/* TOP — Featured testimonial hero card (first visible feedback) */}
+              {/* Featured testimonial — editorial hero card, layered depth + inner highlight */}
               {feedbackItems[0] && (() => {
                 const featured = feedbackItems[0];
                 const firstName = featured.clientName.trim().split(/\s+/)[0] || featured.clientName;
                 const quoteShort = featured.feedbackText.length > 160 ? `${featured.feedbackText.slice(0, 157)}…` : featured.feedbackText;
                 return (
                   <article
-                    className="group mb-10 overflow-hidden rounded-3xl bg-white shadow-[0_16px_48px_-24px_rgba(70,40,60,0.12),0_8px_24px_-12px_rgba(70,40,60,0.08)] transition-all duration-500 hover:scale-[1.01] hover:shadow-[0_24px_56px_-24px_rgba(70,40,60,0.18),0_12px_32px_-12px_rgba(70,40,60,0.1)] lg:mb-14"
+                    className="group mb-6 overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.08)] transition-all duration-400 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.12)] hover:scale-[1.01] lg:mb-8"
                   >
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.42fr)_1fr] min-h-[280px] lg:min-h-[320px]">
-                      {/* Left — client image or soft blurred nail-style background */}
-                      <div className="relative h-48 overflow-hidden bg-[#f5e8ef] lg:h-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.36fr)_1fr] min-h-[240px] lg:min-h-[280px]">
+                      {/* Left — client avatar / blurred visual anchor (existing data only) */}
+                      <div className="relative h-40 overflow-hidden bg-[#f5e8ef] lg:h-auto">
                         {featured.clientAvatarUrl ? (
                           <Image
                             src={featured.clientAvatarUrl}
@@ -2291,32 +2351,32 @@ export default function Home() {
                             width={560}
                             height={560}
                             unoptimized
-                            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                           />
                         ) : (
-                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_50%,#f0dce6_0%,#ead4e0_50%,#e5ccda_100%)]" />
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_75%_at_50%_50%,#f0dce6_0%,#ead4e0_45%,#e5ccda_100%)]" />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/95 lg:to-white/98" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/12 to-white/92 lg:to-white/95" />
                       </div>
-                      {/* Right — quote, name, stars, platform */}
-                      <div className="relative flex flex-col justify-center px-6 py-8 lg:px-14 lg:py-14">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#b47f9e]">
+                      {/* Right — editorial quote, rating near quote, name + platform */}
+                      <div className="relative flex flex-col justify-center px-4 py-5 sm:px-5 sm:py-6 lg:px-8 lg:py-7">
+                        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#a87a94]">
                           {t('homepage.testimonials.heroMomentLabel')}
                         </p>
-                        <blockquote className="mt-3 text-[22px] font-medium leading-relaxed tracking-[-0.01em] text-[#3a2c37] sm:text-[24px] lg:text-[28px] xl:text-[32px]">
+                        <blockquote className="mt-2 font-brand text-[1.4rem] font-medium leading-[1.5] tracking-[-0.015em] text-[#3a2c37] max-w-[42ch] sm:text-[1.55rem] lg:text-[1.75rem] xl:text-[1.9rem] xl:leading-[1.48]">
                           &ldquo;{quoteShort}&rdquo;
                         </blockquote>
-                        <p className="mt-4 font-semibold text-[#2d232d]">{firstName}</p>
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="flex items-center gap-0.5 text-[#c24d86]" role="img" aria-label={`${featured.rating} out of 5 stars`}>
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <span key={i} className="text-base transition-transform duration-200 hover:scale-110 lg:text-lg" aria-hidden>
-                                {i < featured.rating ? '★' : '☆'}
-                              </span>
-                            ))}
-                          </div>
+                        <div className="mt-3 flex items-center gap-1.5" role="img" aria-label={`${featured.rating} out of 5 stars`}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <span key={i} className="text-[#b86b8f] text-[0.9rem] leading-none" aria-hidden>
+                              {i < featured.rating ? '★' : '☆'}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <p className="font-semibold text-[15px] text-[#2d232d]">{firstName}</p>
                           {featured.sourceLabel && (
-                            <span className="rounded-full border border-[#ebd3e0] bg-[#fdf8fb] px-3 py-1 text-xs font-medium text-[#7e6376]">
+                            <span className="inline-flex items-center rounded border border-[#e5d2dc] bg-[#fcf8fa] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[#6b5768]">
                               {featured.sourceLabel}
                             </span>
                           )}
@@ -2327,53 +2387,52 @@ export default function Home() {
                 );
               })()}
 
-              {/* BOTTOM — Smaller testimonial cards grid (remaining feedback after featured) */}
-              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-2 md:overflow-visible md:gap-6 lg:grid-cols-3">
-                {feedbackItems.slice(1).map((item, index) => {
+              {/* Secondary cards — tighter rhythm, stronger hover, softer avatar */}
+              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-2 md:overflow-visible md:gap-5 lg:grid-cols-3 lg:gap-6">
+                {feedbackItems.slice(1).map((item) => {
                   const oneLineQuote = item.feedbackText.length > 100 ? `${item.feedbackText.slice(0, 97)}…` : item.feedbackText;
                   return (
                     <article
                       key={item.id}
-                      className="flex min-w-[300px] flex-col overflow-hidden rounded-2xl bg-white/95 shadow-[0_8px_24px_-12px_rgba(70,40,60,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(70,40,60,0.14)] md:min-w-0"
-                      style={{ animationDelay: `${index * 50}ms` }}
+                      className="group flex min-w-[280px] flex-col overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.1)] md:min-w-0"
                     >
-                      <div className="flex flex-1 flex-col p-5 lg:p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-[#f0dae6] bg-[#f8edf4]">
+                      <div className="flex flex-1 flex-col p-3.5 sm:p-4">
+                        <div className="flex items-start gap-2.5">
+                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#f0dae6] bg-[#f8edf4] ring-2 ring-white/90 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06)] transition-transform duration-200 group-hover:scale-105">
                             {item.clientAvatarUrl ? (
                               <Image
                                 src={item.clientAvatarUrl}
                                 alt=""
-                                width={48}
-                                height={48}
+                                width={40}
+                                height={40}
                                 className="h-full w-full object-cover"
                                 unoptimized
                               />
                             ) : (
-                              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#9b7590]">
+                              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-[#9b7590]">
                                 {item.clientName.slice(0, 2).toUpperCase()}
                               </div>
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-[#2f2530]">{item.clientName}</h3>
-                            <div className="mt-1 flex items-center gap-2 flex-wrap">
-                              <div className="flex items-center gap-0.5 text-[#c24d86]" role="img" aria-label={`${item.rating} out of 5`}>
+                            <h3 className="font-semibold text-[14px] text-[#2f2530]">{item.clientName}</h3>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <div className="flex items-center gap-0 text-[#b86b8f]" role="img" aria-label={`${item.rating} out of 5`}>
                                 {Array.from({ length: 5 }).map((_, i) => (
-                                  <span key={i} className="text-xs transition-transform duration-200 hover:scale-110" aria-hidden>
+                                  <span key={i} className="text-[10px] leading-none" aria-hidden>
                                     {i < item.rating ? '★' : '☆'}
                                   </span>
                                 ))}
                               </div>
                               {item.sourceLabel && (
-                                <span className="rounded-full border border-[#ead4e0] bg-[#fdf8fb] px-2 py-0.5 text-[10px] font-medium text-[#7e6376]">
+                                <span className="inline-flex items-center rounded border border-[#e5d2dc] bg-[#fcf8fa] px-1.5 py-0.5 text-[10px] font-medium text-[#6b5768]">
                                   {item.sourceLabel}
                                 </span>
                               )}
                             </div>
                           </div>
                         </div>
-                        <p className="mt-3 text-sm leading-relaxed text-[#5f4c59] line-clamp-2">&ldquo;{oneLineQuote}&rdquo;</p>
+                        <p className="mt-2.5 text-[13px] leading-relaxed text-[#5f4c59] line-clamp-2">&ldquo;{oneLineQuote}&rdquo;</p>
                       </div>
                     </article>
                   );
@@ -2474,37 +2533,44 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 10. AFTERCARE + GIFT CARDS */}
+      {/* 10. AFTERCARE + GIFT CARDS — premium editorial, lifestyle cards */}
       {/* ===================== */}
-      <section className={`bg-white ${sectionClass}`}>
+      <section className={`relative bg-gradient-to-b from-white to-[#faf8f9] ${sectionClass} pb-24 lg:pb-28`} id="aftercare-gifts">
         <div className={contentMax}>
-          <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-[#8a657c]">
-            <span className="rounded-full border border-[#e6cddd] bg-white/80 px-3 py-1">{t('homepage.revenue.offerA')}</span>
-            <span className="rounded-full border border-[#e6cddd] bg-white/80 px-3 py-1">{t('homepage.revenue.offerB')}</span>
-            <span className="rounded-full border border-[#e6cddd] bg-white/80 px-3 py-1">{t('homepage.revenue.offerC')}</span>
-          </div>
-          <div className="grid gap-8 lg:grid-cols-2">
-            <article className={`group overflow-hidden card-premium`}>
-              <Image
-                src={media('aftercare_image') || media('product_fallback_1') || media('hero_main')}
-                alt="Aftercare products"
-                width={1200}
-                height={760}
-                className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-              />
-              <div className="p-6">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#b07a99]">{t('homepage.aftercare.eyebrow')}</p>
-                <h3 className="mt-2 text-2xl font-semibold text-[#2f2530]">{t('homepage.aftercare.title')}</h3>
+          <header className={`text-center ${headerToContent}`}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e]">{t('homepage.revenue.sectionEyebrow')}</p>
+            <h2 className={`font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] ${headerTitleGap}`}>
+              {t('homepage.revenue.sectionTitle')}
+            </h2>
+            <p className={`mx-auto max-w-[32rem] text-[1rem] leading-relaxed text-[#6b5a62] ${headerSubtitleGap}`}>
+              {t('homepage.revenue.sectionIntro')}
+            </p>
+          </header>
+
+          <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+            <article className="group flex flex-col overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-gradient-to-b from-[#fdfafc] to-[#f8f4f7] shadow-[0_8px_24px_-12px_rgba(60,40,52,0.08)] transition-all duration-400 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.12)] hover:scale-[1.01]">
+              <div className="relative overflow-hidden">
+                <Image
+                  src={media('aftercare_image') || media('product_fallback_1') || media('hero_main')}
+                  alt="Aftercare products"
+                  width={1200}
+                  height={760}
+                  className="h-64 w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] sm:h-72 lg:h-80"
+                />
+              </div>
+              <div className="flex flex-1 flex-col p-6 lg:p-7">
+                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#b07a99]">{t('homepage.aftercare.eyebrow')}</p>
+                <h3 className="mt-2 font-brand text-[1.5rem] font-semibold leading-tight text-[#2f2530] lg:text-2xl">{t('homepage.aftercare.title')}</h3>
                 <p className="mt-2 text-sm leading-6 text-[#6f5d6d]">{t('homepage.aftercare.subtitle')}</p>
-                <ul className="mt-4 space-y-1 text-sm text-[#6f5d6d]">
+                <ul className="mt-4 space-y-1.5 text-sm text-[#6f5d6d]">
                   <li>{t('homepage.aftercare.tip1')}</li>
                   <li>{t('homepage.aftercare.tip2')}</li>
                   <li>{t('homepage.aftercare.tip3')}</li>
                 </ul>
-                <div className="mt-5 flex gap-3">
+                <div className="mt-6">
                   <button
                     onClick={() => router.push(localizePath('/shop'))}
-                    className="btn-primary btn-primary-sm"
+                    className="inline-flex items-center justify-center rounded-full bg-[#c24d86] px-6 py-3 text-[0.95rem] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(194,77,134,0.45)] transition-all duration-200 hover:bg-[#b04376] hover:shadow-[0_14px_28px_-8px_rgba(194,77,134,0.5)] hover:-translate-y-0.5 active:scale-[0.99]"
                   >
                     {t('homepage.aftercare.cta')}
                   </button>
@@ -2512,32 +2578,46 @@ export default function Home() {
               </div>
             </article>
 
-            <article className={`group overflow-hidden card-premium`}>
-              <Image
-                src={media('giftcard_image') || media('product_fallback_2') || media('hero_main')}
-                alt="Gift card"
-                width={1200}
-                height={760}
-                className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-              />
-              <div className="p-6">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#b07a99]">{t('homepage.giftcards.eyebrow')}</p>
-                <h3 className="mt-2 text-2xl font-semibold text-[#2f2530]">{t('homepage.giftcards.title')}</h3>
+            <article className="group flex flex-col overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-gradient-to-b from-[#fdfafc] to-[#f8f4f7] shadow-[0_8px_24px_-12px_rgba(60,40,52,0.08)] transition-all duration-400 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.12)] hover:scale-[1.01]">
+              <div className="relative overflow-hidden">
+                <Image
+                  src={media('giftcard_image') || media('product_fallback_2') || media('hero_main')}
+                  alt="Gift card"
+                  width={1200}
+                  height={760}
+                  className="h-64 w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] sm:h-72 lg:h-80"
+                />
+              </div>
+              <div className="flex flex-1 flex-col p-6 lg:p-7">
+                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#b07a99]">{t('homepage.giftcards.eyebrow')}</p>
+                <h3 className="mt-2 font-brand text-[1.5rem] font-semibold leading-tight text-[#2f2530] lg:text-2xl">{t('homepage.giftcards.title')}</h3>
                 <p className="mt-2 text-sm leading-6 text-[#6f5d6d]">{t('homepage.giftcards.subtitle')}</p>
                 <p className="mt-2 text-sm font-medium text-[#8e5f7f]">{t('homepage.giftcards.helper')}</p>
-                <div className="mt-4 flex gap-2">
-                  {[25, 50, 100].map((amount) => (
-                    <span key={amount} className="rounded-full border border-[#e7cadb] bg-[#fff7fc] px-3 py-1 text-xs font-semibold text-[#6b4e65]">
-                      EUR {amount}
-                    </span>
-                  ))}
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {[25, 50, 100].map((amount) => {
+                    const isPopular = amount === 50;
+                    return (
+                      <span
+                        key={amount}
+                        className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                          isPopular
+                            ? 'border-2 border-[#c24d86]/50 bg-[#fff0f6] text-[#9b3d6d] ring-1 ring-[#e8c4d8]/60'
+                            : 'border border-[#e7cadb] bg-[#fff7fc] text-[#6b4e65] hover:border-[#dfbccd] hover:bg-[#fef5fa]'
+                        }`}
+                      >
+                        EUR {amount}
+                      </span>
+                    );
+                  })}
                 </div>
-                <button
-                  className="btn-primary btn-primary-sm"
-                  style={{ backgroundColor: colors.primary }}
-                >
-                  {t('homepage.giftcards.cta')}
-                </button>
+                <div className="mt-6">
+                  <button
+                    className="inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-[1rem] font-semibold text-white shadow-[0_12px_28px_-8px_rgba(194,77,134,0.5)] transition-all duration-200 hover:shadow-[0_16px_32px_-8px_rgba(194,77,134,0.55)] hover:-translate-y-0.5 active:scale-[0.99] sm:w-auto"
+                    style={{ backgroundColor: colors.primary }}
+                  >
+                    {t('homepage.giftcards.cta')}
+                  </button>
+                </div>
               </div>
             </article>
           </div>
@@ -2549,10 +2629,10 @@ export default function Home() {
       {/* ===================== */}
       <section className={`bg-slate-50/50 ${sectionClass}`}>
         <div className={contentMax}>
-          <div className="text-center mb-8 lg:mb-10">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b67f9f]">{t('homepage.flow.eyebrow')}</p>
-            <h2 className="mb-3 text-[2rem] font-medium tracking-[-0.02em] text-[#2A211D] lg:text-[2.35rem]">{t('howItWorks.title')}</h2>
-            <p className="text-[0.98rem] text-[#6f5d53]">{t('howItWorks.subtitle')}</p>
+          <div className={`text-center ${headerToContent}`}>
+            <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[#b67f9f]">{t('homepage.flow.eyebrow')}</p>
+            <h2 className={`font-brand text-[36px] font-semibold tracking-tight text-[#2A211D] ${headerTitleGap}`}>{t('howItWorks.title')}</h2>
+            <p className={`text-[1rem] leading-relaxed text-[#6f5d53] ${headerSubtitleGap}`}>{t('howItWorks.subtitle')}</p>
           </div>
 
           <div className="relative mx-auto max-w-4xl">
@@ -2614,7 +2694,7 @@ export default function Home() {
       {/* Final CTA — split luxury layout: emotional left + conversion card right */}
       <section
         id="final-cta"
-        className={`relative overflow-hidden bg-gradient-to-b from-[#faf8f6] to-[#f5f2ef] py-20 md:py-24 lg:py-28`}
+        className={`relative overflow-hidden bg-gradient-to-b from-[#faf8f6] to-[#f5f2ef] ${sectionClass}`}
         aria-labelledby="final-cta-heading"
       >
         {/* Subtle background glow — decorative only */}
@@ -2624,22 +2704,22 @@ export default function Home() {
         <div className={`relative ${contentMax}`}>
           <div
             data-motion="major-cta"
-            className="grid gap-12 lg:grid-cols-[1fr,auto] lg:gap-16 lg:items-center"
+            className="grid gap-10 lg:grid-cols-[1fr,auto] lg:gap-14 lg:items-center"
           >
             {/* LEFT: emotional content — eyebrow, headline, paragraph, trust rows */}
-            <div className="max-w-[36rem]">
+            <div className="max-w-[32rem]">
               <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">
                 {t('homepage.final.limited')}
               </p>
-              <h2 id="final-cta-heading" className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl lg:text-[2.75rem] lg:leading-tight">
+              <h2 id="final-cta-heading" className="mt-2 font-brand text-[36px] font-semibold leading-tight tracking-tight text-slate-900">
                 {t('finalCta.title')}
               </h2>
-              <p className="mt-5 text-lg leading-relaxed text-slate-600">
+              <p className="mt-4 text-[1rem] leading-relaxed text-slate-600">
                 {t('finalCta.subtitle')}
               </p>
 
               {/* Trust indicators — stacked mini rows, icon + benefit */}
-              <ul className="mt-8 space-y-4" role="list">
+              <ul className="mt-6 space-y-3" role="list">
                 <li className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" aria-hidden />
                   <span className="text-sm font-medium text-slate-700">{t('finalCta.mostClients')}</span>
@@ -2653,15 +2733,14 @@ export default function Home() {
 
             {/* RIGHT: floating conversion card */}
             <div
-              className="relative rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/90 p-8 shadow-[0_24px_48px_-16px_rgba(0,0,0,0.12)] transition-all duration-300 hover:shadow-[0_28px_56px_-14px_rgba(0,0,0,0.14)] hover:-translate-y-1 lg:min-w-[320px]"
-              style={{ boxShadow: '0 24px 48px -16px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)' }}
+              className="relative rounded-2xl border border-slate-200/70 bg-white/95 p-6 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.03)] backdrop-blur-sm transition-all duration-300 hover:shadow-[0_20px_48px_-14px_rgba(0,0,0,0.1)] hover:-translate-y-0.5 lg:min-w-[300px]"
             >
               <p className="text-sm text-slate-600">{t('homepage.final.reassureLine')}</p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row lg:flex-col">
                 <button
                   type="button"
                   onClick={() => router.push(localizePath('/book'))}
-                  className="final-cta-primary inline-flex min-h-[52px] w-full items-center justify-center rounded-xl px-8 text-base font-semibold text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 sm:w-auto"
+                  className="final-cta-primary inline-flex min-h-[48px] w-full items-center justify-center rounded-xl px-6 text-[0.95rem] font-semibold text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 sm:w-auto"
                   style={{
                     backgroundColor: colors.primary,
                     boxShadow: `0 4px 20px -4px ${colors.primary}66`,
@@ -2683,42 +2762,77 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 12. FOOTER - Light Premium */}
+      {/* 12. FOOTER — Premium authority, final conversion safety zone */}
       {/* ===================== */}
-      <footer className="border-t border-slate-200 bg-white py-14">
-        <div className={contentMax}>
-          <div className="grid gap-10 border-b border-[#efe0e9] pb-10 text-center md:grid-cols-3 md:text-left">
-            <div>
-              <span className="font-brand type-navbar-logo leading-none" style={{ color: colors.primary }}>Nailify</span>
-              <p className="mt-3 max-w-[30ch] text-sm leading-6 text-gray-500 md:max-w-none">{t('footer.description')}</p>
-            </div>
-            <div>
-              <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#7c6977]">{t('footer.quickLinks')}</h4>
-              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                <button onClick={() => router.push(localizePath('/book'))} className="rounded-full border border-[#ead7e3] px-3 py-1.5 text-sm text-[#6f5f6f] transition hover:bg-white">{t('nav.bookNow')}</button>
-                <button onClick={() => scrollToSection('services')} className="rounded-full border border-[#ead7e3] px-3 py-1.5 text-sm text-[#6f5f6f] transition hover:bg-white">{t('nav.services')}</button>
-                <button onClick={() => scrollToSection('location')} className="rounded-full border border-[#ead7e3] px-3 py-1.5 text-sm text-[#6f5f6f] transition hover:bg-white">{t('nav.contact')}</button>
+      <footer className={`relative border-t border-[#e5dce2] bg-gradient-to-b from-[#f6f2f4] to-[#efe8ec] ${sectionClass}`}>
+        {/* Subtle top divider: soft shadow fade */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e0d4db] to-transparent" aria-hidden />
+        <div className="pointer-events-none absolute left-0 right-0 top-0 h-12 bg-gradient-to-b from-black/[0.02] to-transparent" aria-hidden />
+
+        <div className={`relative ${contentMax}`}>
+          <div className="grid gap-14 text-center md:grid-cols-12 md:gap-x-10 md:text-left lg:gap-x-12">
+            {/* Brand block — dominant left zone */}
+            <div className="md:col-span-5 lg:col-span-5">
+              <span className="font-brand text-[28px] lg:text-[32px] leading-none tracking-tight" style={{ color: colors.primary }}>Nailify</span>
+              <p className="mt-4 max-w-[36ch] text-[1.05rem] leading-[1.7] text-[#5c4f58] md:max-w-none">
+                {t('footer.description')}
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] font-medium text-[#7d6e78]">
+                <span>{t('trust.rating')}</span>
+                <span className="text-[#d4c4ce]" aria-hidden>·</span>
+                <span>{t('trust.clients')}</span>
+                <span className="text-[#d4c4ce]" aria-hidden>·</span>
+                <span>{t('trust.hygienicTools')}</span>
               </div>
             </div>
-            <div>
-              <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#7c6977]">{t('footer.contact')}</h4>
-              <p className="text-sm text-gray-500">{t('homepage.footer.contactLine1')}</p>
-              <p className="text-sm text-gray-500">{t('homepage.footer.contactLine2')}</p>
-              <p className="text-sm text-gray-500">{t('homepage.footer.contactLine3')}</p>
+
+            {/* Quick links */}
+            <div className="md:col-span-2">
+              <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7c6977]">
+                {t('footer.quickLinks')}
+              </h4>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-2 md:flex-col md:gap-2">
+                <button onClick={() => router.push(localizePath('/book'))} className="text-left text-sm text-[#6b5c65] transition-colors hover:text-[#4a3d44] hover:underline underline-offset-2 md:inline-block">
+                  {t('nav.bookNow')}
+                </button>
+                <button onClick={() => scrollToSection('services')} className="text-left text-sm text-[#6b5c65] transition-colors hover:text-[#4a3d44] hover:underline underline-offset-2 md:inline-block">
+                  {t('nav.services')}
+                </button>
+                <button onClick={() => scrollToSection('location')} className="text-left text-sm text-[#6b5c65] transition-colors hover:text-[#4a3d44] hover:underline underline-offset-2 md:inline-block">
+                  {t('nav.contact')}
+                </button>
+              </div>
+            </div>
+
+            {/* Contact + reassurance */}
+            <div className="md:col-span-3">
+              <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7c6977]">
+                {t('footer.contact')}
+              </h4>
+              <p className="text-sm font-medium text-[#4a3d44]">{t('homepage.footer.contactLine1')}</p>
+              <p className="mt-0.5 text-sm text-[#6b5c65]">{t('homepage.footer.contactLine2')}</p>
+              <p className="text-sm text-[#6b5c65]">{t('homepage.footer.contactLine3')}</p>
               <p className="mt-2 text-sm font-medium" style={{ color: colors.primary }}>hello@nailify.com</p>
-              <p className="mt-2 text-xs text-[#8a7b88]">{t('homepage.footer.hours1Label')}: {t('homepage.footer.hours1Value')}</p>
+              <p className="mt-2 text-xs text-[#7d6e78]">{t('homepage.footer.hours1Label')}: {t('homepage.footer.hours1Value')}</p>
+              <p className="mt-3 text-[11px] text-[#8a7b88]">{t('footer.rescheduleHint')}</p>
+            </div>
+
+            {/* Final CTA zone — booking reinforcement */}
+            <div className="flex flex-col items-center gap-3 md:col-span-12 md:mt-4 md:flex-row md:items-center md:justify-center md:gap-6 lg:col-span-2 lg:col-start-11 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:flex-col lg:items-start lg:justify-center">
+              <div className="w-full sm:w-auto">
+                <p className="text-[13px] font-medium text-[#5c4f58]">{t('footer.ctaLine')}</p>
+                <button
+                  onClick={() => router.push(localizePath('/book'))}
+                  className="mt-2.5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_48%,#a93d71_100%)] px-6 py-3 text-[0.95rem] font-semibold text-white shadow-[0_10px_28px_-10px_rgba(139,51,100,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_-8px_rgba(139,51,100,0.5)] active:scale-[0.99] sm:w-auto"
+                >
+                  {t('footer.bookAppointment')}
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-between gap-3 pt-6 sm:flex-row">
-            <p className="text-gray-400 text-sm">{t('footer.copyright')}</p>
-            <button 
-              onClick={() => router.push(localizePath('/book'))}
-              className="rounded-full px-6 py-2 text-white font-medium transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: colors.primary }}
-            >
-              {t('footer.bookAppointment')}
-            </button>
+          <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-[#e5dce2] pt-8 sm:flex-row">
+            <p className="text-[13px] text-[#8a7b88]">{t('footer.copyright')}</p>
           </div>
         </div>
       </footer>
@@ -2726,28 +2840,28 @@ export default function Home() {
       {/* Mobile Sticky CTA */}
       <StickyBookingCTA hideOnPaths={['/book', '/success']} />
 
-      {/* ===================== */}
-      {/* FLOATING DISCOUNT PILL - Mobile Conversion Trigger */}
-      {/* ===================== */}
+      {/* Discount pill — above sticky CTA, soft style, no overlap (z below CTA + chat) */}
       {showDiscountPill && !discountPillDismissed && (
-        <div className="fixed bottom-24 left-4 right-4 z-40 md:hidden">
-          <div 
+        <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-4 right-14 z-[42] md:hidden">
+          <div
             onClick={() => router.push(localizePath('/book'))}
-            className="bg-gray-900 text-white px-5 py-3 rounded-full shadow-xl flex items-center justify-between cursor-pointer animate-in slide-in-from-bottom-4"
+            className="mx-auto flex max-w-sm cursor-pointer items-center justify-between gap-2 rounded-full border border-[#e8d4e0] bg-white/90 px-3 py-2 shadow-[0_4px_16px_-8px_rgba(90,55,78,0.12)] backdrop-blur-sm transition-all duration-200 active:scale-[0.98]"
           >
-            <div className="flex items-center gap-3">
-              <span className="bg-white text-gray-900 text-xs font-bold px-2 py-1 rounded-full">-15%</span>
-              <span className="text-sm font-medium">{t('discountPill.firstVisit')}</span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-[#fdf2f8] px-2 py-0.5 text-[10px] font-semibold text-[#b04376]">−15%</span>
+              <span className="text-xs font-medium text-[#5c4a54]">{t('discountPill.firstVisit')}</span>
             </div>
-            <button 
+            <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setDiscountPillDismissed(true);
                 setShowDiscountPill(false);
               }}
-              className="text-gray-400 hover:text-white p-1"
+              className="flex h-8 min-h-[44px] w-8 min-w-[44px] items-center justify-center rounded-full text-[#8a6b7e] transition-colors hover:bg-[#faf5f8]"
+              aria-label="Close"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

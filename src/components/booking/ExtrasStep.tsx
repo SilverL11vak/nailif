@@ -20,9 +20,11 @@ export function ExtrasStep() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 text-center">
-        <h2 className="mb-2 text-2xl font-semibold text-[#2f2622]">{t('extras.addExtras')}</h2>
-        <p className="text-[#6f655f]">{t('extras.makeSpecial')}</p>
+      <div className="mb-8 text-center md:mb-10">
+        <h2 className="font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2622] md:text-[1.85rem]">
+          {t('extras.addExtras')}
+        </h2>
+        <p className="mt-2 text-[15px] text-[#6f655f]">{t('extras.makeSpecial')}</p>
       </div>
 
       <div className="mb-5 rounded-2xl border border-[#eadce5] bg-[#fffafe] p-4">
@@ -102,8 +104,10 @@ export function ExtrasStep() {
           {t('extras.skip')}
         </button>
         <button
+          id="booking-sticky-primary-action"
+          type="button"
           onClick={nextStep}
-          className="cta-premium flex-[2] rounded-2xl bg-[#c24d86] py-5 text-base font-semibold text-white shadow-[0_20px_32px_-24px_rgba(116,47,93,0.62)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#a93d71] hover:shadow-[0_24px_36px_-24px_rgba(116,47,93,0.72)] active:scale-[0.99]"
+          className="cta-premium flex-[2] rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] py-4 text-base font-semibold text-white shadow-[0_14px_32px_-14px_rgba(194,77,134,0.5)] transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-12px_rgba(194,77,134,0.45)] active:scale-[0.99]"
         >
           {selectedCount > 0 ? `${t('extras.continue')} (+€${selectedExtrasTotal})` : t('extras.continue')}
         </button>

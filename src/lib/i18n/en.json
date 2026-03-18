@@ -21,7 +21,8 @@
     "mustamaeStudio": "Mustamäe Studio",
     "hygienicTools": "Hygienic Tools",
     "rating": "4.9",
-    "clients": "1,200+ clients"
+    "clients": "1,200+ clients",
+    "weeklyAppointmentsStat": "150+ appointments weekly"
   },
   "services": {
     "title": "Our Services",
@@ -116,7 +117,9 @@
     "openingHours": "Opening Hours",
     "copyright": "© 2026 Nailify. All rights reserved.",
     "bookAppointment": "Book Appointment",
-    "description": "Premium nail artistry in Mustamäe. Expert technicians, lasting results."
+    "description": "Premium nail artistry in Mustamäe. Expert technicians, lasting results.",
+    "ctaLine": "Next slot available this week",
+    "rescheduleHint": "Free reschedule if plans change"
   },
   "discountPill": {
     "firstVisit": "First Visit Offer",
@@ -374,6 +377,11 @@
           "result": "Clean pedicure with durable gel color.",
           "longevity": "Typically lasts 4-6 weeks depending on activity.",
           "suitability": "Ideal for durable and neat foot care."
+        },
+        "nail-art": {
+          "result": "Custom nail art, accents, or chrome detail aligned with your chosen style.",
+          "longevity": "Depends on your base service; touch-ups keep the look fresh.",
+          "suitability": "Perfect when you want a signature accent, pattern, or special finish."
         }
       }
     },
@@ -529,7 +537,10 @@
     "revenue": {
       "offerA": "Add during the same visit",
       "offerB": "Most selected upgrades",
-      "offerC": "Quick mini-upgrade"
+      "offerC": "Quick mini-upgrade",
+      "sectionEyebrow": "Aftercare & gifts",
+      "sectionTitle": "Care at home and give the experience",
+      "sectionIntro": "Curated aftercare essentials and flexible gift cards for every occasion."
     },
     "final": {
       "limited": "Limited slots weekly",

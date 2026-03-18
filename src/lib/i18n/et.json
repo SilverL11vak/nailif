@@ -14,14 +14,15 @@
   },
   "trust": {
     "googleRating": "Google hinnang",
-    "appointmentsThisWeek": "Kohtamist nädalas",
+    "appointmentsThisWeek": "Kohtumisi nädalas",
     "sterileEquipment": "Sterilne varustus",
     "premiumProducts": "Premium tooted",
     "certifiedTechnician": "Sertifitseeritud tehnik",
     "mustamaeStudio": "Mustamäe stuudio",
     "hygienicTools": "Hügieenilised tööriistad",
     "rating": "4.9",
-    "clients": "1,200+ klienti"
+    "clients": "1,200+ klienti",
+    "weeklyAppointmentsStat": "Üle 150 broneeringu nädalas"
   },
   "services": {
     "title": "Meie teenused",
@@ -115,8 +116,10 @@
     "contact": "Kontakt",
     "openingHours": "Lahtiolekuajad",
     "copyright": "© 2026 Nailify. Kõik õigused kaitstud.",
-    "bookAppointment": "Broneeri kohtamine",
-    "description": "Premium küünekunst Mustamäes. Kogenud tehnikud, pikaajalised tulemused."
+    "bookAppointment": "Broneeri aeg",
+    "description": "Premium küünekunst Mustamäes. Kogenud tehnikud, pikaajalised tulemused.",
+    "ctaLine": "Järgmine vaba aeg sel nädalal",
+    "rescheduleHint": "Tasuta ümberbroneerimine"
   },
   "discountPill": {
     "firstVisit": "Esimese külastuse pakkumine",
@@ -374,6 +377,11 @@
           "result": "Puhas pediküür ja vastupidav geellakk.",
           "longevity": "Keskmiselt 4-6 nädalat, olenevalt koormusest.",
           "suitability": "Kui soovid korralikku ja pika kestvusega jalahooldust."
+        },
+        "nail-art": {
+          "result": "Isikupärane küünedisain, detail või kroom, mis sobib sinu valitud stiiliga.",
+          "longevity": "Sõltub baasteenusest; väike korrastus hoiab tulemuse värskena.",
+          "suitability": "Sobib, kui soovid erilist aktsenti, mustrit või efektset viimistlust."
         }
       }
     },
@@ -529,7 +537,10 @@
     "revenue": {
       "offerA": "Lisa teenusele samal visiidil",
       "offerB": "Enim valitud lisad",
-      "offerC": "Kiire mini-upgrade"
+      "offerC": "Kiire mini-upgrade",
+      "sectionEyebrow": "Järelhooldus ja kingid",
+      "sectionTitle": "Hooldus kodus ja kingi kogemus",
+      "sectionIntro": "Valitud järelhooldustooted ja paindlikud kinkekaardid igaks sündmuseks."
     },
     "final": {
       "limited": "Piiratud ajad igal nädalal",

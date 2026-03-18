@@ -51,7 +51,7 @@ interface BookingState {
   // Actions - Selection
   selectService: (service: Service) => void;
   selectDate: (date: Date) => void;
-  selectSlot: (slot: TimeSlot) => void;
+  selectSlot: (slot: TimeSlot | null) => void;
   setContactInfo: (info: ContactInfo) => void;
   setSelectedStyle: (style: NailStyle | null) => void;
   
