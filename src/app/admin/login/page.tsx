@@ -67,7 +67,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg px-4 py-10 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[#fafafa] px-4 py-10 sm:px-6 lg:px-10">
       <div className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-[1.05fr_1fr]">
         <section className="admin-surface-soft p-7">
           <p className="type-overline text-[var(--color-text-muted)]">Nailify Admin</p>

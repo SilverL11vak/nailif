@@ -279,9 +279,9 @@ export default function AdminBookingContentPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[#fafafa] px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <header className="admin-cockpit-shell mb-6 p-6">
+        <header className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="type-overline admin-muted">Broneerimine</p>
@@ -300,7 +300,7 @@ export default function AdminBookingContentPage() {
         {toast ? <div className="fixed right-4 top-6 z-[70] rounded-xl border border-[#edd9e3] bg-white px-4 py-2 text-sm font-medium text-[#6a3b57] shadow-lg">{toast}</div> : null}
         {error ? <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
-        <section className="admin-panel mb-6 p-4">
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white mb-6 p-4 shadow-sm">
           <p className="mb-3 type-small admin-muted">Vali vaade</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <button onClick={() => setActiveSector('texts')} className={`rounded-2xl border px-4 py-3 text-left transition ${activeSector === 'texts' ? 'border-[var(--color-primary)] bg-[#fff2fa]' : 'border-[var(--color-border-card-soft)] bg-white hover:bg-[#fef8fb]'}`}>
@@ -323,7 +323,7 @@ export default function AdminBookingContentPage() {
         </section>
 
         {activeSector === 'texts' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-[#111827]">Bookingu tekstid</h2>
@@ -368,7 +368,7 @@ export default function AdminBookingContentPage() {
         )}
 
         {activeSector === 'loader' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-[#111827]">Loaderi seaded</h2>
               <button onClick={() => void saveContent()} disabled={isSavingContent} className="rounded-full bg-[#111827] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
@@ -416,7 +416,7 @@ export default function AdminBookingContentPage() {
         )}
 
         {activeSector === 'addons' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-xl font-semibold text-[#111827]">Lisateenused</h2>
             <div className="mb-4 overflow-x-auto rounded-2xl border border-[#efe3dc] bg-white">
               <table className="min-w-full text-left text-sm">
@@ -485,7 +485,7 @@ export default function AdminBookingContentPage() {
         )}
 
         {activeSector === 'preview' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-[#111827]">Booking Content Preview</h2>
               <div className="rounded-full border border-[#d1d5db] bg-white p-1 text-xs">

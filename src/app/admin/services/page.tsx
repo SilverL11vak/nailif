@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import type { Service } from '@/store/booking-types';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react';
 
 interface AdminService extends Service {
   nameEt?: string;
@@ -189,9 +190,78 @@ export default function AdminServicesPage() {
     }
   };
 
+  const sortedServices = [...services].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const updateOrder = async (service: AdminService, direction: 'up' | 'down') => {
+    const idx = sortedServices.findIndex((s) => s.id === service.id);
+    if (idx < 0) return;
+    const otherIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (otherIdx < 0 || otherIdx >= sortedServices.length) return;
+    const other = sortedServices[otherIdx];
+    const currentOrder = service.sortOrder ?? 0;
+    const otherOrder = other.sortOrder ?? 0;
+    setError(null);
+    try {
+      const payloadA = { ...toDraft(service), sortOrder: otherOrder };
+      const payloadB = { ...toDraft(other), sortOrder: currentOrder };
+      await fetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: payloadA.id || undefined,
+          nameEt: payloadA.nameEt,
+          nameEn: payloadA.nameEn,
+          descriptionEt: payloadA.descriptionEt,
+          descriptionEn: payloadA.descriptionEn,
+          resultDescriptionEt: payloadA.resultDescriptionEt,
+          resultDescriptionEn: payloadA.resultDescriptionEn,
+          longevityDescriptionEt: payloadA.longevityDescriptionEt,
+          longevityDescriptionEn: payloadA.longevityDescriptionEn,
+          suitabilityNoteEt: payloadA.suitabilityNoteEt,
+          suitabilityNoteEn: payloadA.suitabilityNoteEn,
+          duration: payloadA.duration,
+          price: payloadA.price,
+          category: payloadA.category,
+          imageUrl: payloadA.imageUrl || null,
+          isPopular: payloadA.isPopular,
+          sortOrder: payloadA.sortOrder,
+          active: payloadA.active,
+        }),
+      });
+      await fetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: payloadB.id || undefined,
+          nameEt: payloadB.nameEt,
+          nameEn: payloadB.nameEn,
+          descriptionEt: payloadB.descriptionEt,
+          descriptionEn: payloadB.descriptionEn,
+          resultDescriptionEt: payloadB.resultDescriptionEt,
+          resultDescriptionEn: payloadB.resultDescriptionEn,
+          longevityDescriptionEt: payloadB.longevityDescriptionEt,
+          longevityDescriptionEn: payloadB.longevityDescriptionEn,
+          suitabilityNoteEt: payloadB.suitabilityNoteEt,
+          suitabilityNoteEn: payloadB.suitabilityNoteEn,
+          duration: payloadB.duration,
+          price: payloadB.price,
+          category: payloadB.category,
+          imageUrl: payloadB.imageUrl || null,
+          isPopular: payloadB.isPopular,
+          sortOrder: payloadB.sortOrder,
+          active: payloadB.active,
+        }),
+      });
+      await loadServices();
+      setToast('Järjekord uuendatud');
+    } catch {
+      setError('Järjekord ei uuendatud.');
+    }
+  };
+
   return (
-    <main className="admin-cockpit-bg min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#fafafa]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <AdminPageHeader
           overline="Sisu"
           title="Teenused"
@@ -202,68 +272,99 @@ export default function AdminServicesPage() {
           secondaryLinks={[{ label: 'Tooted', href: '/admin/products' }]}
         />
 
-        {toast && <div className="fixed right-4 top-6 z-[70] rounded-xl border border-[var(--color-border-card-soft)] bg-white px-4 py-2 text-sm font-medium text-[var(--color-primary)] shadow-lg">{toast}</div>}
-        {error && <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        {toast && <div className="fixed right-6 top-6 z-[70] rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-lg">{toast}</div>}
+        {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm text-red-800">{error}</div>}
 
-        <section className="admin-panel overflow-hidden">
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
           {services.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="admin-muted">Teenuseid pole. Lisa esimene teenus.</p>
-              <button type="button" onClick={() => { setDraft(emptyDraft); setIsDrawerOpen(true); }} className="btn-primary btn-primary-md mt-4">
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-sm text-slate-500">Teenuseid pole. Lisa esimene teenus.</p>
+              <button type="button" onClick={() => { setDraft(emptyDraft); setIsDrawerOpen(true); }} className="mt-5 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900">
                 Lisa teenus
               </button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-[var(--color-border-card-soft)] bg-[#fef8fb]/60">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold admin-heading">Teenus</th>
-                    <th className="px-4 py-3 font-semibold admin-heading">Hind</th>
-                    <th className="px-4 py-3 font-semibold admin-heading">Kestus</th>
-                    <th className="px-4 py-3 font-semibold admin-heading">Kategooria</th>
-                    <th className="px-4 py-3 font-semibold admin-heading">Nähtavus</th>
-                    <th className="px-4 py-3 font-semibold admin-heading text-right">Tegevused</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {services.map((service) => (
-                    <tr key={service.id} className="border-b border-[var(--color-border-card-soft)] last:border-0">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[var(--color-border-card-soft)] bg-[#fef8fb]">
-                            {service.imageUrl ? (
-                              <Image src={service.imageUrl} alt={service.nameEt ?? service.name} width={96} height={96} unoptimized className="h-full w-full object-cover" />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-[10px] admin-muted">—</div>
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-medium admin-heading">{service.nameEt ?? service.name}</div>
-                            <div className="text-xs admin-muted">{service.nameEn || service.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 admin-heading">€{service.price}</td>
-                      <td className="px-4 py-3 admin-muted">{service.duration} min</td>
-                      <td className="px-4 py-3 admin-muted">{categoryLabel(service.category)}</td>
-                      <td className="px-4 py-3">
-                        {service.active === false ? (
-                          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">Peidetud</span>
-                        ) : (
-                          <span className="inline-flex rounded-full border border-[var(--color-border-card-soft)] bg-white px-2.5 py-0.5 text-xs font-medium admin-muted">Aktiivne</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button onClick={() => { setDraft(toDraft(service)); setIsDrawerOpen(true); }} className="btn-secondary btn-secondary-sm">Muuda</button>
-                          <button onClick={() => void deleteService(service.id, service.nameEt ?? service.name)} className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100">Kustuta</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {sortedServices.map((service, index) => (
+                <article
+                  key={service.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setDraft(toDraft(service)); setIsDrawerOpen(true); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDraft(toDraft(service)); setIsDrawerOpen(true); } }}
+                  className="group flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-200 cursor-pointer"
+                >
+                  <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
+                    {service.imageUrl ? (
+                      <Image
+                        src={service.imageUrl}
+                        alt={service.nameEt ?? service.name}
+                        width={400}
+                        height={300}
+                        unoptimized
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-slate-400">
+                        <span className="text-4xl font-light text-slate-300">—</span>
+                      </div>
+                    )}
+                    <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-1 shadow-sm">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); updateOrder(service, 'up'); }}
+                        disabled={index === 0}
+                        className="rounded p-0.5 text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                        aria-label="Tõsta üles"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); updateOrder(service, 'down'); }}
+                        disabled={index === sortedServices.length - 1}
+                        className="rounded p-0.5 text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                        aria-label="Tõsta alla"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-base font-semibold text-slate-800">{service.nameEt ?? service.name}</h3>
+                      <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                        {categoryLabel(service.category)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums text-slate-800">€{service.price}</p>
+                    <p className="text-sm text-slate-500">{service.duration} min</p>
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <span className={service.active === false ? 'rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800' : 'rounded-full border border-[#e5e7eb] bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600'}>
+                        {service.active === false ? 'Peidetud' : 'Aktiivne'}
+                      </span>
+                      <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setDraft(toDraft(service)); setIsDrawerOpen(true); }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Muuda
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); void deleteService(service.id, service.nameEt ?? service.name); }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Kustuta
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </section>
@@ -271,122 +372,180 @@ export default function AdminServicesPage() {
 
       {isDrawerOpen && (
         <div className="fixed inset-0 z-[60]">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)} aria-hidden />
-          <aside className="absolute right-0 top-0 flex h-full w-full max-w-2xl flex-col border-l border-[var(--color-border-card-soft)] bg-white shadow-2xl">
-            <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border-card-soft)] bg-[#fef8fb]/80 px-5 py-4">
+          <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={() => setIsDrawerOpen(false)} aria-hidden />
+          <div className="absolute right-0 top-0 flex h-full w-full max-w-5xl flex-col bg-white shadow-xl lg:flex-row">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#e5e7eb] bg-white px-5 py-4 lg:border-b-0 lg:border-r lg:px-6">
               <div>
-                <p className="admin-section-overline">Teenuse haldus</p>
-                <h2 className="type-h4 admin-heading mt-1">{draft.id ? 'Muuda teenust' : 'Lisa teenus'}</h2>
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Teenuse haldus</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-800">{draft.id ? 'Muuda teenust' : 'Lisa teenus'}</h2>
               </div>
-              <button type="button" onClick={() => setIsDrawerOpen(false)} className="btn-secondary btn-secondary-sm" aria-label="Sulge">Sulge</button>
+              <button type="button" onClick={() => setIsDrawerOpen(false)} className="rounded-lg border border-[#e5e7eb] px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50" aria-label="Sulge">Sulge</button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5">
-              <div className="space-y-6">
-                <section className="admin-panel p-4">
-                  <p className="admin-section-overline mb-3">Põhiandmed</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="type-small admin-heading block mb-1">Hind (EUR)</span>
-                      <input type="number" value={draft.price} onChange={(e) => setDraft((p) => ({ ...p, price: Number(e.target.value) }))} className="input-premium" />
-                    </label>
-                    <label className="block">
-                      <span className="type-small admin-heading block mb-1">Kestus (min)</span>
-                      <input type="number" value={draft.duration} onChange={(e) => setDraft((p) => ({ ...p, duration: Number(e.target.value) }))} className="input-premium" />
-                    </label>
-                    <label className="block sm:col-span-2">
-                      <span className="type-small admin-heading block mb-1">Kategooria</span>
-                      <select value={draft.category} onChange={(e) => setDraft((p) => ({ ...p, category: e.target.value as Service['category'] }))} className="input-premium">
-                        <option value="manicure">Manikuur</option>
-                        <option value="pedicure">Pedikuur</option>
-                        <option value="extensions">Pikendused</option>
-                        <option value="nail-art">Nail art</option>
-                      </select>
-                    </label>
-                  </div>
-                </section>
+            <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
+              {/* Left: Main editor card */}
+              <div className="flex-1 overflow-y-auto p-5 lg:p-6">
+                <div className="space-y-6">
+                  {/* 1. Basic Info */}
+                  <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-4">Põhiandmed</p>
+                    <div className="space-y-4">
+                      <label className="block">
+                        <span className="block text-sm font-medium text-slate-700 mb-1">Teenuse nimi (ET)</span>
+                        <input value={draft.nameEt} onChange={(e) => setDraft((p) => ({ ...p, nameEt: e.target.value }))} className="w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Näiteks Geelimaniküür" />
+                      </label>
+                      <label className="block">
+                        <span className="block text-sm font-medium text-slate-700 mb-1">Kategooria</span>
+                        <select value={draft.category} onChange={(e) => setDraft((p) => ({ ...p, category: e.target.value as Service['category'] }))} className="w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200">
+                          <option value="manicure">Manikuur</option>
+                          <option value="pedicure">Pedikuur</option>
+                          <option value="extensions">Pikendused</option>
+                          <option value="nail-art">Nail art</option>
+                        </select>
+                      </label>
+                      <label className="flex items-center gap-3">
+                        <input type="checkbox" checked={draft.active} onChange={(e) => setDraft((p) => ({ ...p, active: e.target.checked }))} className="h-4 w-4 rounded border-[#e5e7eb] text-slate-700" />
+                        <span className="text-sm font-medium text-slate-700">Aktiivne (nähtav broneerimisel)</span>
+                      </label>
+                    </div>
+                  </section>
 
-                <section className="admin-panel p-4">
-                  <p className="admin-section-overline mb-3">Nimetus ja kirjeldused (Eesti / English)</p>
-                  <p className="type-small admin-muted mb-3">Eesti kuvatakse /et, inglise keel /en lehel.</p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-3">
+                  {/* 2. Pricing & Duration */}
+                  <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-4">Hind ja kestus</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
                       <label className="block">
-                        <span className="type-small admin-heading block mb-1">Teenuse nimi (ET)</span>
-                        <input value={draft.nameEt} onChange={(e) => setDraft((p) => ({ ...p, nameEt: e.target.value }))} className="input-premium" placeholder="Näiteks Geelimaniküür" />
+                        <span className="block text-sm font-medium text-slate-700 mb-1">Hind (EUR)</span>
+                        <input type="number" value={draft.price} onChange={(e) => setDraft((p) => ({ ...p, price: Number(e.target.value) }))} className="w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" />
                       </label>
                       <label className="block">
-                        <span className="type-small admin-heading block mb-1">Kirjeldus (ET)</span>
-                        <textarea value={draft.descriptionEt} onChange={(e) => setDraft((p) => ({ ...p, descriptionEt: e.target.value }))} className="input-premium min-h-[100px]" rows={3} />
-                      </label>
-                      <label className="block">
-                        <span className="type-small admin-muted block mb-1">Tulemus, püsivus, sobivus (ET)</span>
-                        <input value={draft.resultDescriptionEt} onChange={(e) => setDraft((p) => ({ ...p, resultDescriptionEt: e.target.value }))} className="input-premium" placeholder="Tulemuse kirjeldus" />
-                        <input value={draft.longevityDescriptionEt} onChange={(e) => setDraft((p) => ({ ...p, longevityDescriptionEt: e.target.value }))} className="input-premium mt-2" placeholder="Püsivus" />
-                        <input value={draft.suitabilityNoteEt} onChange={(e) => setDraft((p) => ({ ...p, suitabilityNoteEt: e.target.value }))} className="input-premium mt-2" placeholder="Sobivus" />
+                        <span className="block text-sm font-medium text-slate-700 mb-1">Kestus (min)</span>
+                        <input type="number" value={draft.duration} onChange={(e) => setDraft((p) => ({ ...p, duration: Number(e.target.value) }))} className="w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" />
                       </label>
                     </div>
-                    <div className="space-y-3">
-                      <label className="block">
-                        <span className="type-small admin-heading block mb-1">Service name (EN)</span>
-                        <div className="flex gap-2">
-                          <input value={draft.nameEn} onChange={(e) => setDraft((p) => ({ ...p, nameEn: e.target.value }))} className="input-premium flex-1" placeholder="e.g. Gel manicure" />
-                          <button type="button" onClick={() => void generateEnglishSuggestion(draft.nameEt, 'nameEn')} className="btn-secondary btn-secondary-sm shrink-0 text-xs">EN</button>
-                        </div>
-                      </label>
-                      <label className="block">
-                        <span className="type-small admin-heading block mb-1">Description (EN)</span>
-                        <textarea value={draft.descriptionEn} onChange={(e) => setDraft((p) => ({ ...p, descriptionEn: e.target.value }))} className="input-premium min-h-[100px]" rows={3} />
-                      </label>
-                      <label className="block">
-                        <span className="type-small admin-muted block mb-1">Result, longevity, suitability (EN)</span>
-                        <input value={draft.resultDescriptionEn} onChange={(e) => setDraft((p) => ({ ...p, resultDescriptionEn: e.target.value }))} className="input-premium" placeholder="Result description" />
-                        <input value={draft.longevityDescriptionEn} onChange={(e) => setDraft((p) => ({ ...p, longevityDescriptionEn: e.target.value }))} className="input-premium mt-2" placeholder="Longevity" />
-                        <input value={draft.suitabilityNoteEn} onChange={(e) => setDraft((p) => ({ ...p, suitabilityNoteEn: e.target.value }))} className="input-premium mt-2" placeholder="Suitability" />
-                      </label>
-                    </div>
-                  </div>
-                </section>
+                  </section>
 
-                <section className="admin-panel p-4">
-                  <p className="admin-section-overline mb-3">Pilt ja nähtavus</p>
-                  <label className="block mb-3">
-                    <span className="type-small admin-heading block mb-1">Pildi URL või lae fail</span>
-                    <div className="flex gap-2">
-                      <input value={draft.imageUrl} onChange={(e) => setDraft((p) => ({ ...p, imageUrl: e.target.value }))} className="input-premium flex-1" placeholder="URL või base64" />
-                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = () => setDraft((p) => ({ ...p, imageUrl: String(reader.result ?? '') }));
-                        reader.readAsDataURL(file);
-                      }} />
-                      <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-secondary btn-secondary-sm">Lae üles</button>
+                  {/* 3. Descriptions */}
+                  <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-4">Kirjeldused (ET / EN)</p>
+                    <div className="space-y-4">
+                      <label className="block">
+                        <span className="block text-sm font-medium text-slate-700 mb-1">Kirjeldus (ET)</span>
+                        <textarea value={draft.descriptionEt} onChange={(e) => setDraft((p) => ({ ...p, descriptionEt: e.target.value }))} className="w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 min-h-[88px] focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" rows={3} />
+                      </label>
+                      <label className="block">
+                        <span className="block text-sm text-slate-500 mb-1">Tulemus (ET)</span>
+                        <input value={draft.resultDescriptionEt} onChange={(e) => setDraft((p) => ({ ...p, resultDescriptionEt: e.target.value }))} className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Tulemuse kirjeldus" />
+                      </label>
+                      <label className="block">
+                        <span className="block text-sm text-slate-500 mb-1">Püsivus (ET)</span>
+                        <input value={draft.longevityDescriptionEt} onChange={(e) => setDraft((p) => ({ ...p, longevityDescriptionEt: e.target.value }))} className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Püsivus" />
+                      </label>
+                      <label className="block">
+                        <span className="block text-sm text-slate-500 mb-1">Sobivus (ET)</span>
+                        <input value={draft.suitabilityNoteEt} onChange={(e) => setDraft((p) => ({ ...p, suitabilityNoteEt: e.target.value }))} className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Sobivus" />
+                      </label>
+                      <div className="border-t border-[#e5e7eb] pt-4">
+                        <label className="block">
+                          <span className="block text-sm font-medium text-slate-700 mb-1">Service name (EN)</span>
+                          <div className="flex gap-2">
+                            <input value={draft.nameEn} onChange={(e) => setDraft((p) => ({ ...p, nameEn: e.target.value }))} className="flex-1 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="e.g. Gel manicure" />
+                            <button type="button" onClick={() => void generateEnglishSuggestion(draft.nameEt, 'nameEn')} className="shrink-0 rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">EN</button>
+                          </div>
+                        </label>
+                        <label className="block mt-3">
+                          <span className="block text-sm font-medium text-slate-700 mb-1">Description (EN)</span>
+                          <textarea value={draft.descriptionEn} onChange={(e) => setDraft((p) => ({ ...p, descriptionEn: e.target.value }))} className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-h-[72px] focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" rows={2} />
+                        </label>
+                        <label className="block mt-2">
+                          <span className="block text-xs text-slate-500 mb-1">Result, longevity, suitability (EN)</span>
+                          <input value={draft.resultDescriptionEn} onChange={(e) => setDraft((p) => ({ ...p, resultDescriptionEn: e.target.value }))} className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Result" />
+                          <input value={draft.longevityDescriptionEn} onChange={(e) => setDraft((p) => ({ ...p, longevityDescriptionEn: e.target.value }))} className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 mt-1.5 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Longevity" />
+                          <input value={draft.suitabilityNoteEn} onChange={(e) => setDraft((p) => ({ ...p, suitabilityNoteEn: e.target.value }))} className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 mt-1.5 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Suitability" />
+                        </label>
+                      </div>
                     </div>
-                  </label>
-                  <div className="flex flex-wrap items-center gap-4">
-                    <label className="flex items-center gap-2 type-small admin-heading">
-                      <input type="checkbox" checked={draft.isPopular} onChange={(e) => setDraft((p) => ({ ...p, isPopular: e.target.checked }))} />
-                      Esiletõstetud avalehel
-                    </label>
-                    <label className="flex items-center gap-2 type-small admin-heading">
-                      <input type="checkbox" checked={draft.active} onChange={(e) => setDraft((p) => ({ ...p, active: e.target.checked }))} />
-                      Aktiivne (nähtav broneerimisel)
-                    </label>
-                  </div>
-                  <label className="mt-3 block">
-                    <span className="type-small admin-muted block mb-1">Järjekord (väiksem = eespool)</span>
-                    <input type="number" value={draft.sortOrder} onChange={(e) => setDraft((p) => ({ ...p, sortOrder: Number(e.target.value) }))} className="input-premium w-24" />
-                  </label>
-                </section>
+                  </section>
+
+                  {/* 4. Image Upload Block */}
+                  <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-4">Pilt</p>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setDraft((p) => ({ ...p, imageUrl: String(reader.result ?? '') }));
+                      reader.readAsDataURL(file);
+                    }} />
+                    <div className="space-y-4">
+                      <div className="relative aspect-[16/10] overflow-hidden rounded-xl border-2 border-dashed border-[#e5e7eb] bg-slate-50">
+                        {draft.imageUrl ? (
+                          <>
+                            <Image src={draft.imageUrl} alt="" fill unoptimized className="object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-900/0 opacity-0 transition hover:opacity-100 hover:bg-slate-900/30">
+                              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                                Asenda
+                              </button>
+                              <button type="button" onClick={() => setDraft((p) => ({ ...p, imageUrl: '' }))} className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                                Eemalda
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 text-slate-500 hover:bg-slate-100/80 hover:text-slate-700" onClick={() => fileInputRef.current?.click()}>
+                            <span className="text-sm font-medium">Lohista pilt siia või klõpsa</span>
+                            <span className="text-xs">või sisesta URL all</span>
+                          </label>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input value={draft.imageUrl} onChange={(e) => setDraft((p) => ({ ...p, imageUrl: e.target.value }))} className="flex-1 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" placeholder="Pildi URL" />
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="shrink-0 rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Lae üles</button>
+                      </div>
+                    </div>
+                  </section>
+                </div>
               </div>
+
+              {/* Right: Context panel */}
+              <aside className="w-full shrink-0 border-t border-[#e5e7eb] bg-slate-50/50 p-5 lg:w-[320px] lg:border-t-0 lg:border-l lg:p-6">
+                <div className="space-y-5">
+                  <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Nähtavus</p>
+                    <label className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium text-slate-700">Aktiivne</span>
+                      <input type="checkbox" checked={draft.active} onChange={(e) => setDraft((p) => ({ ...p, active: e.target.checked }))} className="h-4 w-4 rounded border-[#e5e7eb] text-slate-700" />
+                    </label>
+                    <label className="mt-3 flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium text-slate-700">Esiletõstetud avalehel</span>
+                      <input type="checkbox" checked={draft.isPopular} onChange={(e) => setDraft((p) => ({ ...p, isPopular: e.target.checked }))} className="h-4 w-4 rounded border-[#e5e7eb] text-slate-700" />
+                    </label>
+                  </div>
+                  <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                    <label className="block">
+                      <span className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">Järjekord</span>
+                      <input type="number" value={draft.sortOrder} onChange={(e) => setDraft((p) => ({ ...p, sortOrder: Number(e.target.value) }))} className="w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200" />
+                    </label>
+                    <p className="mt-1.5 text-[11px] text-slate-500">Väiksem number = eespool nimekirjas</p>
+                  </div>
+                  <button onClick={() => void saveService()} disabled={!draft.nameEt?.trim() || isSaving} className="w-full rounded-xl bg-slate-800 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50">
+                    {isSaving ? 'Salvestan...' : 'Salvesta muudatused'}
+                  </button>
+                  <button type="button" onClick={() => setIsDrawerOpen(false)} className="w-full rounded-xl border border-[#e5e7eb] bg-white py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                    Tühista
+                  </button>
+                  {draft.id && (
+                    <button type="button" onClick={() => draft.id && void deleteService(draft.id, draft.nameEt || 'Teenus').then(() => { setIsDrawerOpen(false); setDraft(emptyDraft); }).catch(() => {})} className="w-full rounded-xl border border-red-200 bg-white py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
+                      Kustuta teenus
+                    </button>
+                  )}
+                  <div className="rounded-xl border border-[#e5e7eb] bg-slate-50/80 p-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Broneerimine</p>
+                    <p className="mt-1 text-xs text-slate-600">Aktiivsed teenused on valitavad broneerimise lehel. Järjekord määrab kuvamise.</p>
+                  </div>
+                </div>
+              </aside>
             </div>
-            <div className="shrink-0 border-t border-[var(--color-border-card-soft)] bg-[#fef8fb]/60 px-5 py-4 flex flex-wrap items-center gap-3">
-              <button onClick={() => void saveService()} disabled={!draft.nameEt || isSaving} className="btn-primary btn-primary-md disabled:opacity-50">
-                {isSaving ? 'Salvestan...' : 'Salvesta teenus'}
-              </button>
-              <button type="button" onClick={() => setIsDrawerOpen(false)} className="btn-secondary btn-secondary-md">Tühista</button>
-            </div>
-          </aside>
+          </div>
         </div>
       )}
     </main>

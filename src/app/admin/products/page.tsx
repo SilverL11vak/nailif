@@ -214,8 +214,8 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#fafafa]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <AdminPageHeader
           overline="Sisu"
           title="Tooted"
@@ -229,23 +229,23 @@ export default function AdminProductsPage() {
           ]}
         />
 
-        {/* Search and filters */}
-        <section className="admin-panel mb-6 p-4">
+        {/* Horizontal context: search + filters */}
+        <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 admin-muted" aria-hidden />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Otsi toote nime või kategooria järgi..."
-              className="input-premium pl-10"
+              className="w-full rounded-xl border border-[#e5e7eb] bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="input-premium w-auto min-w-[140px]"
+              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[140px]"
             >
               <option value="all">Kõik kategooriad</option>
               {categories.map((c) => (
@@ -255,7 +255,7 @@ export default function AdminProductsPage() {
             <select
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
-              className="input-premium w-auto min-w-[120px]"
+              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[120px]"
             >
               <option value="all">Kõik</option>
               <option value="active">Aktiivsed</option>
@@ -264,7 +264,7 @@ export default function AdminProductsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="input-premium w-auto min-w-[160px]"
+              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[160px]"
             >
               <option value="name">Nimi A–Ü</option>
               <option value="nameDesc">Nimi Ü–A</option>
@@ -275,53 +275,58 @@ export default function AdminProductsPage() {
             <button
               type="button"
               onClick={() => setHelpCollapsed(!helpCollapsed)}
-              className="btn-secondary btn-secondary-sm flex items-center gap-1"
+              className="inline-flex items-center gap-1 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
             >
               {helpCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               Abi
             </button>
           </div>
           {!helpCollapsed && (
-            <div className="mt-3 rounded-xl border border-[var(--color-border-card-soft)] bg-[#fef8fb]/50 px-4 py-3 type-small admin-muted">
-              <p className="font-medium admin-heading mb-1">Kuidas tooteid hallata</p>
+            <div className="mt-3 rounded-xl border border-[#e5e7eb] bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+              <p className="font-medium text-slate-800 mb-1">Kuidas tooteid hallata</p>
               <ol className="list-decimal space-y-0.5 pl-4"> <li>Sisesta toote nimi, hind ja kirjeldus.</li><li>Lisa pilt ja laoseis.</li><li>Vajuta „Salvesta toode”.</li></ol>
             </div>
           )}
         </section>
 
         {toast && (
-          <div className="fixed right-4 top-6 z-[70] rounded-xl border border-[#edd9e3] bg-white px-4 py-2 text-sm font-medium text-[#6a3b57] shadow-lg">
+          <div className="fixed right-6 top-6 z-[70] rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-lg">
             {toast}
           </div>
         )}
         {error && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm text-red-800">{error}</div>
         )}
 
-        {/* Product list */}
-        <section className="admin-panel p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="type-h4 admin-heading">Toodete nimekiri</h2>
-            <p className="type-small admin-muted">
+        {/* Main content card: product list */}
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-800">Toodete nimekiri</h2>
+            <p className="text-sm text-slate-500">
               {filteredAndSortedProducts.length} toodet
               {(searchQuery || categoryFilter !== 'all' || activeFilter !== 'all') && ' (filtreeritud)'}
             </p>
           </div>
 
           {filteredAndSortedProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="h-12 w-12 admin-muted opacity-50" />
-              <p className="admin-muted mt-3">Tooteid ei leitud.</p>
-              <button type="button" onClick={openNewProduct} className="btn-primary btn-primary-md mt-4">Lisa toode</button>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <Package className="h-7 w-7" />
+              </div>
+              <p className="mt-4 text-sm text-slate-500">Tooteid ei leitud.</p>
+              <p className="mt-1 text-xs text-slate-400">Lisa toode või muuda filtreid.</p>
+              <button type="button" onClick={openNewProduct} className="mt-5 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900">
+                Lisa toode
+              </button>
             </div>
           ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filteredAndSortedProducts.map((product) => (
               <article
                 key={product.id}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-[#efe4eb] bg-white shadow-[0_12px_28px_-16px_rgba(90,55,78,0.2)] transition-all duration-200 hover:border-[#e0d0d9] hover:shadow-[0_20px_40px_-16px_rgba(90,55,78,0.25)]"
+                className="group flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-200"
               >
-                <div className="relative aspect-[4/3] overflow-hidden bg-[#f8edf4]">
+                <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
                   {product.imageUrl ? (
                     <Image
                       src={product.imageUrl}
@@ -332,48 +337,48 @@ export default function AdminProductsPage() {
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-[#9d7a90]">
-                      <Package className="h-12 w-12 opacity-50" />
+                    <div className="flex h-full items-center justify-center text-slate-400">
+                      <Package className="h-12 w-12" />
                     </div>
                   )}
                   <div className="absolute right-2 top-2 flex flex-col gap-1">
                     {!product.active && (
-                      <span className="rounded-lg bg-black/60 px-2 py-1 text-[10px] font-medium text-white">
+                      <span className="rounded-md bg-slate-800/80 px-2 py-0.5 text-[10px] font-medium text-white">
                         Peidetud
                       </span>
                     )}
                     {product.isFeatured && (
-                      <span className="rounded-lg bg-[#c24d86]/90 px-2 py-1 text-[10px] font-medium text-white">
+                      <span className="rounded-md bg-amber-500/90 px-2 py-0.5 text-[10px] font-medium text-white">
                         Soovitatud
                       </span>
                     )}
                   </div>
                 </div>
                 <div className="flex flex-1 flex-col p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-[#9a7788]">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
                     {product.categoryEt ?? product.category}
                   </p>
-                  <h3 className="mt-1 text-base font-semibold text-[#111827]">{product.nameEt ?? product.name}</h3>
-                  <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-[#6b7280]">
+                  <h3 className="mt-1 text-base font-semibold text-slate-800">{product.nameEt ?? product.name}</h3>
+                  <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-slate-500">
                     {product.descriptionEt ?? product.description}
                   </p>
-                  <div className="mt-4 flex items-center justify-between border-t border-[#f2e6ed] pt-3">
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                     <div>
-                      <span className="text-lg font-semibold text-[#111827]">EUR {product.price}</span>
-                      <span className="ml-2 text-sm text-[#6b7280]">Laos: {product.stock}</span>
+                      <span className="text-lg font-semibold text-slate-800">EUR {product.price}</span>
+                      <span className="ml-2 text-xs text-slate-500">Laos: {product.stock}</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         type="button"
                         onClick={() => openEditProduct(product)}
-                        className="rounded-lg border border-[#e0d5dc] bg-white px-3 py-1.5 text-xs font-medium text-[#4b5563] hover:bg-[#fdf8fb]"
+                        className="rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                       >
                         Muuda
                       </button>
                       <button
                         type="button"
                         onClick={() => void deleteProduct(product.id, product.nameEt ?? product.name)}
-                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                        className="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                       >
                         Kustuta
                       </button>
@@ -391,17 +396,17 @@ export default function AdminProductsPage() {
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50">
           <div
-            className="absolute inset-0 bg-[#281a25]/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
             onClick={() => setIsDrawerOpen(false)}
             aria-hidden
           />
-          <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[#e9dce5] bg-[linear-gradient(180deg,#fff_0%,#fff8fc_100%)] shadow-[-24px_0_48px_-24px_rgba(38,20,31,0.35)]">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#f0e2eb] bg-white/95 px-6 py-4 backdrop-blur-sm">
-              <h2 className="text-lg font-semibold text-[#111827]">{draft.id ? 'Muuda toodet' : 'Lisa toode'}</h2>
+          <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[#e5e7eb] bg-white shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-6 py-4">
+              <h2 className="text-lg font-semibold text-slate-800">{draft.id ? 'Muuda toodet' : 'Lisa toode'}</h2>
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="rounded-lg border border-[#e0d5dc] px-3 py-1.5 text-sm text-[#4b5563] hover:bg-[#f9fafb]"
+                className="rounded-lg border border-[#e5e7eb] px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
               >
                 Sulge
               </button>
@@ -411,15 +416,15 @@ export default function AdminProductsPage() {
               <p className="text-xs text-[#6b7280]">Eesti keel (/et) · English (/en)</p>
 
               {/* Basic info */}
-              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
-                <legend className="px-2 text-sm font-semibold text-[#374151]">Põhiandmed (eesti)</legend>
+              <fieldset className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
+                <legend className="px-2 text-sm font-semibold text-slate-800">Põhiandmed (eesti)</legend>
                 <div className="mt-3 space-y-4">
                   <label className="block">
-                    <span className="block text-sm font-medium text-[#4f3f46]">Toote nimi</span>
+                    <span className="block text-sm font-medium text-slate-600">Toote nimi</span>
                     <input
                       value={draft.nameEt}
                       onChange={(e) => setDraft((p) => ({ ...p, nameEt: e.target.value }))}
-                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none focus:ring-1 focus:ring-[#c24d86]/20"
+                      className="mt-1 w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                     />
                   </label>
                   <label className="block">
@@ -604,26 +609,26 @@ export default function AdminProductsPage() {
                 </div>
               </fieldset>
 
-              <div className="flex flex-wrap items-center gap-3 border-t border-[#f0e2eb] pt-5">
+              <div className="flex flex-wrap items-center gap-3 border-t border-[#e5e7eb] pt-5">
                 <button
                   type="button"
                   onClick={() => void saveProduct()}
                   disabled={!draft.nameEt.trim() || isSaving}
-                  className="rounded-xl bg-[#111827] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                  className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
                 >
                   {isSaving ? 'Salvestan...' : 'Salvesta toode'}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setDraft(emptyDraft); }}
-                  className="rounded-xl border border-[#e0d5dc] bg-white px-4 py-2.5 text-sm font-medium text-[#4b5563] hover:bg-[#f9fafb]"
+                  className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
                 >
                   Tühjenda
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsDrawerOpen(false)}
-                  className="rounded-xl border border-[#e0d5dc] bg-white px-4 py-2.5 text-sm text-[#4b5563] hover:bg-[#f9fafb]"
+                  className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
                 >
                   Sulge
                 </button>

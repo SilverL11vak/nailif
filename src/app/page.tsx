@@ -85,6 +85,7 @@ export default function Home() {
   const previousFocusedElementRef = useRef<HTMLElement | null>(null);
   const media = (key: string) => homepageMedia[key]?.trim() ?? '';
   const [feedbackItems, setFeedbackItems] = useState<Array<{ id: string; clientName: string; clientAvatarUrl: string | null; rating: number; feedbackText: string; sourceLabel: string | null }>>([]);
+  const [homepageAddOns, setHomepageAddOns] = useState<Array<{ id: string; name: string; duration: number; price: number }>>([]);
   // Products: Only use API data - no hardcoded fallback
   // If API returns empty, the section will show an empty state
   const productSource = products;
@@ -106,11 +107,10 @@ export default function Home() {
       try {
         const response = await fetch('/api/slots?upcoming=1&limit=1');
         if (!response.ok) throw new Error('Failed to load next slot');
-        const data = (await response.json()) as { slots?: Array<{ date: string; time: string }> };
+        const data = (await response.json()) as { slots?: Array<{ date: string; time: string; available?: boolean }> };
         const slot = data.slots?.[0];
         if (!mounted) return;
-
-        if (!slot) {
+        if (!slot || slot.available === false) {
           setNextAvailable('');
           return;
         }
@@ -281,6 +281,24 @@ export default function Home() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadAddOns = async () => {
+      try {
+        const response = await fetch(`/api/booking-addons?lang=${language}`);
+        if (!response.ok) return;
+        const data = (await response.json()) as { addOns?: Array<{ id: string; name: string; duration: number; price: number }> };
+        if (mounted && Array.isArray(data.addOns)) {
+          setHomepageAddOns(data.addOns);
+        }
+      } catch {
+        if (mounted) setHomepageAddOns([]);
+      }
+    };
+    void loadAddOns();
+    return () => { mounted = false; };
+  }, [language]);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -461,6 +479,12 @@ export default function Home() {
   const getI18nTextOrFallback = (key: string, fallback: string) => {
     const localized = t(key);
     return localized === key ? fallback : localized;
+  };
+  // Avoid leaking translation keys when service-specific fallback is missing (use generic fallback)
+  const getServiceFallback = (serviceId: string, kind: 'result' | 'suitability' | 'longevity', genericFallback: string) => {
+    const key = `homepage.serviceDecision.fallback.${serviceId}.${kind}`;
+    const localized = t(key);
+    return localized === key ? genericFallback : localized;
   };
 
   // Services: Only use API data - no mockServices fallback
@@ -984,260 +1008,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===================== */}
-      {/* 4. POPULAR SERVICES - CONVERSION OPTIMIZED */}
-      {/* ===================== */}
-      <section
-        id="services-media"
-        className="hidden"
-        style={{
-          background:
-            'radial-gradient(circle at 15% 0%, rgba(242, 203, 224, 0.34), transparent 36%), radial-gradient(circle at 85% 18%, rgba(244, 224, 236, 0.46), transparent 42%), linear-gradient(180deg, #fffdfd 0%, #fff8fc 48%, #fffdfc 100%)',
-        }}
-      >
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.16]"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(181,129,153,0.16) 0.6px, transparent 0.6px)',
-            backgroundSize: '14px 14px',
-          }}
-        />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center lg:mb-16" />
-
-
-          <div className="space-y-8 lg:space-y-10">
-            {featuredService && (
-              <article
-                onClick={() => router.push('/book')}
-                className="service-featured group relative cursor-pointer overflow-hidden rounded-[2rem] border border-white/80 bg-white/68 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[6px]"
-              >
-                <div className="pointer-events-none absolute -inset-8 rounded-[2.6rem] bg-[radial-gradient(circle_at_30%_12%,rgba(223,157,190,0.32),transparent_55%)] animate-[serviceHalo_4.2s_ease-in-out_infinite]" />
-                <div className="grid lg:grid-cols-12">
-                  <div className="relative h-[21rem] overflow-hidden lg:col-span-6 lg:h-full lg:min-h-[24.5rem]">
-                    <div className="absolute left-5 top-5 z-20 rounded-full bg-white/92 px-3.5 py-1.5 text-[11px] font-semibold text-[#7f4f69] shadow-[0_10px_20px_-18px_rgba(98,56,84,0.75)] animate-[serviceBadgeFloat_3.6s_ease-in-out_infinite]">
-                      {t('homepage.featuredService.badge')}
-                    </div>
-            {(featuredService.imageUrl || '') ? (
-              <Image
-                src={featuredService.imageUrl || ''}
-                alt={featuredService.name}
-                        width={1080}
-                        height={1400}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center bg-[#f7edf4] text-6xl text-[#9f7c91]">MN</div>
-                    )}
-                  </div>
-                  <div className="relative z-10 flex flex-col justify-between p-6 lg:col-span-6 lg:p-9">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[#a27189]">{t('homepage.servicesUi.featuredTitle')}</p>
-                      <h3 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#2f2530]">{featuredService.name}</h3>
-                      <p className="mt-3 text-[1.02rem] leading-7 text-[#594858]">
-                        {featuredService.resultDescription || t(`homepage.serviceDecision.fallback.${featuredService.id}.result`)}
-                      </p>
-                      <p className="mt-2 text-sm text-[#6a5668]">{t('homepage.servicesUi.trustTag1')} • {t('homepage.servicesUi.trustTag2')}</p>
-                      <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#fff1f8] px-3.5 py-1.5 text-xs text-[#6d4e63]">
-                        <svg className="h-4 w-4 text-[#9a6b84]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {featuredService.duration} {t('common.minutes')}
-                      </div>
-                    </div>
-                    <div className="mt-7 flex items-end justify-between gap-4">
-                      <div>
-                        <p className="text-[11px] uppercase tracking-[0.14em] text-[#9d7a90]">{t('homepage.servicesUi.priceLabel')}</p>
-                        <p className="mt-1 text-[2rem] font-semibold leading-none text-[#2f2530]">EUR {featuredService.price}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          goToBooking();
-                        }}
-                        className="btn-primary btn-primary-md"
-                      >
-                        {t('homepage.featuredService.cta')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            )}
-
-            <div className="hidden lg:grid lg:grid-cols-12 lg:gap-7">
-              {staggeredLeftService && (
-                <article
-                  onClick={() => router.push('/book')}
-                  className="group relative col-span-5 cursor-pointer overflow-hidden rounded-[1.9rem] border border-white/80 bg-white/70 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[6px]"
-                >
-                  <div className="relative h-full min-h-[27rem]">
-                    <Image
-                      src={staggeredLeftService.imageUrl || galleryUrls[0] || ''}
-                      alt={staggeredLeftService.name}
-                      width={900}
-                      height={1200}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    />
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                    <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-                      <h3 className="text-2xl font-semibold tracking-[-0.02em]">{staggeredLeftService.name}</h3>
-                      <p className="mt-1 text-sm text-white/90">
-                        {staggeredLeftService.resultDescription || t(`homepage.serviceDecision.fallback.${staggeredLeftService.id}.result`)}
-                      </p>
-                      <p className="mt-2 text-xs text-white/85">{t('homepage.servicesUi.trustTag1')} • {t('homepage.servicesUi.trustTag2')}</p>
-                      <div className="mt-4 flex items-end justify-between gap-3">
-                        <span className="text-sm text-white/90">{staggeredLeftService.duration} {t('common.minutes')}</span>
-                        <p className="text-2xl font-semibold leading-none">EUR {staggeredLeftService.price}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          goToBooking();
-                        }}
-                        className="btn-primary btn-primary-sm"
-                      >
-                        {t('homepage.servicesUi.cardCta')}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              )}
-
-              <div className="col-span-7 space-y-7">
-                {staggeredStackServices.map((service) => (
-                  <article
-                    key={service.id}
-                    onClick={() => router.push('/book')}
-                    className="group relative cursor-pointer overflow-hidden rounded-[1.8rem] border border-white/80 bg-white/72 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[6px]"
-                  >
-                    <div className="relative min-h-[12.75rem]">
-                      <Image
-                        src={service.imageUrl || galleryUrls[1] || galleryUrls[0] || ''}
-                        alt={service.name}
-                        width={1200}
-                        height={700}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                      <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                        <h3 className="text-xl font-semibold tracking-[-0.01em]">{service.name}</h3>
-                        <p className="mt-1 text-sm text-white/90">
-                          {service.resultDescription || t(`homepage.serviceDecision.fallback.${service.id}.result`)}
-                        </p>
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <span className="text-xs text-white/85">{service.duration} {t('common.minutes')}</span>
-                          <p className="text-xl font-semibold">EUR {service.price}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            goToBooking();
-                          }}
-                          className="btn-primary btn-primary-sm mt-3"
-                        >
-                          {t('homepage.servicesUi.cardCta')}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            {centeredWideService && (
-              <div className="hidden lg:flex lg:justify-center">
-                <article
-                  onClick={() => router.push('/book')}
-                  className="group relative w-full max-w-4xl cursor-pointer overflow-hidden rounded-[1.95rem] border border-white/80 bg-white/72 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[6px]"
-                >
-                  <div className="relative min-h-[18rem]">
-                    <Image
-                      src={centeredWideService.imageUrl || galleryUrls[2] || galleryUrls[0] || ''}
-                      alt={centeredWideService.name}
-                      width={1400}
-                      height={780}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    />
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                    <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-                      <h3 className="text-2xl font-semibold tracking-[-0.02em]">{centeredWideService.name}</h3>
-                      <p className="mt-1 text-sm text-white/90">
-                        {centeredWideService.resultDescription || t(`homepage.serviceDecision.fallback.${centeredWideService.id}.result`)}
-                      </p>
-                      <div className="mt-4 flex items-end justify-between gap-4">
-                        <div>
-                          <p className="text-xs text-white/85">{centeredWideService.duration} {t('common.minutes')}</p>
-                          <p className="mt-1 text-2xl font-semibold">EUR {centeredWideService.price}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            goToBooking();
-                          }}
-                          className="rounded-full px-6 py-3 text-sm font-semibold text-white transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_12px_30px_rgba(220,120,160,0.25)]"
-                          style={{ background: 'linear-gradient(135deg,#d978a7 0%,#c24d86 65%,#ac3d72 100%)' }}
-                        >
-                          {t('homepage.servicesUi.cardCta')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              </div>
-            )}
-
-            <div className="lg:hidden">
-              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {regularServices.map((service) => (
-                  <article
-                    key={`mobile-${service.id}`}
-                    onClick={() => router.push('/book')}
-                    className="group relative min-w-[82%] cursor-pointer overflow-hidden rounded-[1.7rem] border border-white/80 bg-white/72 shadow-[0_20px_60px_rgba(0,0,0,0.06)] backdrop-blur-[6px]"
-                  >
-                    <div className="relative h-[21rem]">
-                      <Image
-                        src={service.imageUrl || galleryUrls[0] || ''}
-                        alt={service.name}
-                        width={860}
-                        height={1100}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(0,0,0,0.45)_100%)]" />
-                      <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                        <h3 className="text-xl font-semibold tracking-[-0.01em]">{service.name}</h3>
-                        <p className="mt-1 text-sm text-white/90">
-                          {service.resultDescription || t(`homepage.serviceDecision.fallback.${service.id}.result`)}
-                        </p>
-                        <div className="mt-3 flex items-center justify-between">
-                          <p className="text-sm text-white/90">{service.duration} {t('common.minutes')}</p>
-                          <p className="text-xl font-semibold">EUR {service.price}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            goToBooking();
-                          }}
-                          className="btn-primary btn-primary-sm mt-3"
-                          style={{ background: 'linear-gradient(135deg,#d978a7 0%,#c24d86 65%,#ac3d72 100%)' }}
-                        >
-                          {t('homepage.servicesUi.cardCta')}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="services" className="relative border-t border-[#efe0e8] py-24 lg:py-28" style={{ background: 'linear-gradient(180deg, #fef9fc 0%, #fdf3f8 35%, #fef9fc 100%)' }}>
         <div className="absolute inset-0 pointer-events-none opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(200,140,170,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(220,160,190,0.06) 0%, transparent 45%)' }} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1274,11 +1044,11 @@ export default function Home() {
                     <div>
                       <h3 className="font-brand text-3xl font-semibold tracking-[-0.02em] text-[#2f2530] lg:text-4xl">{featuredService.name}</h3>
                       <p className="mt-5 text-[1.05rem] leading-[1.7] text-[#564553]">
-                        {featuredService.resultDescription || t(`homepage.serviceDecision.fallback.${featuredService.id}.result`)}
+                        {featuredService.resultDescription || getServiceFallback(featuredService.id, 'result', language === 'en' ? 'Professional result.' : 'Professionaalne tulemus.')}
                       </p>
                       <p className="mt-4 text-sm text-[#675463]">
                         <span className="font-semibold text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
-                        {featuredService.suitabilityNote || t(`homepage.serviceDecision.fallback.${featuredService.id}.suitability`)}
+                        {featuredService.suitabilityNote || getServiceFallback(featuredService.id, 'suitability', language === 'en' ? 'Suitable for everyone.' : 'Sobib kõigile.')}
                       </p>
                       <p className="mt-3 text-sm leading-relaxed text-[#6e5a68]">{featuredService.description}</p>
 
@@ -1358,11 +1128,11 @@ export default function Home() {
                   <div className="flex flex-1 flex-col p-6">
                     <h3 className="font-brand text-xl font-semibold tracking-[-0.01em] text-[#2f2530] lg:text-2xl">{service.name}</h3>
                     <p className="mt-3 line-clamp-2 text-[0.95rem] leading-[1.6] text-[#5f4c59]">
-                      {service.resultDescription || t(`homepage.serviceDecision.fallback.${service.id}.result`)}
+                      {service.resultDescription || getServiceFallback(service.id, 'result', language === 'en' ? 'Professional result.' : 'Professionaalne tulemus.')}
                     </p>
                     <p className="mt-2.5 text-sm text-[#665465]">
                       <span className="font-semibold text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
-                      {service.suitabilityNote || t(`homepage.serviceDecision.fallback.${service.id}.suitability`)}
+                      {service.suitabilityNote || getServiceFallback(service.id, 'suitability', language === 'en' ? 'Suitable for everyone.' : 'Sobib kõigile.')}
                     </p>
 
                     <div className="mt-5 flex flex-wrap gap-2">
@@ -1376,7 +1146,7 @@ export default function Home() {
                         <svg className="h-3.5 w-3.5 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" />
                         </svg>
-                        {service.longevityDescription || t(`homepage.serviceDecision.fallback.${service.id}.longevity`)}
+                        {service.longevityDescription || getServiceFallback(service.id, 'longevity', language === 'en' ? 'Long-lasting with care.' : 'Püsiv hoolitsusega.')}
                       </span>
                     </div>
 
@@ -1608,23 +1378,29 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-3">
-            {[
-              { label: t('homepage.addons.items.nailArt'), price: '+EUR 12', time: '+15 min', icon: 'NA' },
-              { label: t('homepage.addons.items.repair'), price: '+EUR 8', time: '+10 min', icon: 'RP' },
-              { label: t('homepage.addons.items.chromeFinish'), price: '+EUR 10', time: '+10 min', icon: 'CH' },
-              { label: t('homepage.addons.items.frenchUpgrade'), price: '+EUR 9', time: '+10 min', icon: 'FR' },
-            ].map((item) => (
+            {homepageAddOns.length > 0 ? (
+              homepageAddOns.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => router.push('/book')}
+                  className="inline-flex items-center gap-3 rounded-full border border-[#e8cfdd] bg-white/90 px-4 py-2 text-left text-[#5f4d5d] shadow-[0_14px_22px_-20px_rgba(101,65,90,0.45)] transition hover:-translate-y-0.5 hover:border-[#d9b4c8] hover:bg-white"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fff2fb] text-xs font-semibold text-[#7f4668]">
+                    {item.name.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="text-sm font-medium">{item.name}</span>
+                  <span className="text-xs text-[#9a6e87]">+€{item.price}</span>
+                  <span className="text-xs text-[#ad88a0]">+{item.duration} min</span>
+                </button>
+              ))
+            ) : (
               <button
-                key={item.label}
                 onClick={() => router.push('/book')}
-                className="inline-flex items-center gap-3 rounded-full border border-[#e8cfdd] bg-white/90 px-4 py-2 text-left text-[#5f4d5d] shadow-[0_14px_22px_-20px_rgba(101,65,90,0.45)] transition hover:-translate-y-0.5 hover:border-[#d9b4c8] hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-full border border-[#e8cfdd] bg-white/90 px-4 py-2.5 text-sm font-medium text-[#5f4d5d] shadow-[0_14px_22px_-20px_rgba(101,65,90,0.45)] transition hover:-translate-y-0.5 hover:border-[#d9b4c8] hover:bg-white"
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fff2fb] text-xs font-semibold text-[#7f4668]">{item.icon}</span>
-                <span className="text-sm font-medium">{item.label}</span>
-                <span className="text-xs text-[#9a6e87]">{item.price}</span>
-                <span className="text-xs text-[#ad88a0]">{item.time}</span>
+                {language === 'en' ? 'Add-ons available when you book' : 'Lisateenused broneerimisel'}
               </button>
-            ))}
+            )}
           </div>
         </div>
       </section>

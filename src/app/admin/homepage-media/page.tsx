@@ -260,9 +260,9 @@ export default function AdminHomepageMediaPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[#fafafa] px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
+        <header className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
@@ -282,7 +282,7 @@ export default function AdminHomepageMediaPage() {
         {error && <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         {success && <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div>}
 
-        <section className="admin-panel mb-5 rounded-3xl p-5">
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white mb-5 p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-[#111827]">Lisa uus Hero meedia</h2>
           <p className="mt-1 text-sm text-[#4b5563]">Saad lisada eraldi hero pildi voi video ning seada selle loop reziimi.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
@@ -348,11 +348,11 @@ export default function AdminHomepageMediaPage() {
         </div>
 
         {loading ? (
-          <section className="admin-panel rounded-3xl p-6 text-sm text-[#6b7280]">Laen avalehe meediat...</section>
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 text-sm text-slate-500 shadow-sm">Laen avalehe meediat...</section>
         ) : (
           <div className="space-y-6">
             {Object.entries(grouped).map(([section, sectionItems]) => (
-              <section key={section} className="admin-panel rounded-3xl p-5">
+              <section key={section} className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-[#111827]">{section}</h2>
                   <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#4b5563]">

@@ -100,8 +100,8 @@ export default function AdminGalleryPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#fafafa]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <AdminPageHeader
           overline="Sisu"
           title="Galerii (Meie töö)"
@@ -110,29 +110,29 @@ export default function AdminGalleryPage() {
           backLabel="Halduspaneel"
         />
 
-        {error && <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm text-red-800">{error}</div>}
 
-        <section className="admin-panel mb-6 p-5">
-          <p className="admin-section-overline mb-3">Lisa uus pilt</p>
+        <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Lisa uus pilt</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <input
               value={imageUrl}
               onChange={(event) => setImageUrl(event.target.value)}
               placeholder="Pildi URL või base64"
-              className="input-premium"
+              className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
             />
             <input
               value={caption}
               onChange={(event) => setCaption(event.target.value)}
               placeholder="Kirjeldus (valikuline)"
-              className="input-premium"
+              className="w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
             />
             <label className="flex flex-col">
-              <span className="type-small admin-muted mb-1">Või lae fail</span>
+              <span className="text-sm text-slate-500 mb-1">Või lae fail</span>
               <input
                 type="file"
                 accept="image/*"
-                className="block w-full text-sm"
+                className="block w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-600"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void uploadFromFile(file);
@@ -141,30 +141,30 @@ export default function AdminGalleryPage() {
             </label>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <label className="inline-flex items-center gap-2 type-small admin-heading">
-              <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} />
+            <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input type="checkbox" checked={isFeatured} onChange={(event) => setIsFeatured(event.target.checked)} className="rounded border-[#e5e7eb] text-slate-700" />
               Esiletõstetud (esimene avalehel)
             </label>
-            <button onClick={saveImage} disabled={isSaving} className="btn-primary btn-primary-md disabled:opacity-60">
+            <button onClick={saveImage} disabled={isSaving} className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-60">
               {isSaving ? 'Salvestan...' : 'Salvesta pilt'}
             </button>
           </div>
         </section>
 
-        <section className="admin-panel p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="type-h4 admin-heading">Pildid</h2>
-            <p className="type-small admin-muted">{images.length} pilti</p>
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-800">Pildid</h2>
+            <p className="text-sm text-slate-500">{images.length} pilti</p>
           </div>
           {images.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="admin-muted">Galeriis pole pilte. Lisa esimene pilt ülal.</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-sm text-slate-500">Galeriis pole pilte. Lisa esimene pilt ülal.</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {images.map((image, index) => (
-                <article key={image.id} className="admin-action-tile overflow-hidden">
-                  <div className="relative aspect-[4/3] overflow-hidden bg-[#fef8fb]">
+                <article key={image.id} className="group overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-200">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
                     <Image
                       src={image.imageUrl}
                       alt={image.caption || 'Galerii pilt'}
@@ -174,20 +174,25 @@ export default function AdminGalleryPage() {
                       className="h-full w-full object-cover"
                     />
                     {image.isFeatured && (
-                      <span className="absolute left-2 top-2 rounded-full bg-[var(--color-primary)] px-2.5 py-1 text-[10px] font-semibold text-white">
+                      <span className="absolute left-2 top-2 rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-semibold text-white">
                         Esiletõstetud
                       </span>
                     )}
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-900/0 opacity-0 transition group-hover:opacity-100 group-hover:bg-slate-900/40">
+                      <button onClick={() => void deleteImage(image.id, image.caption)} className="rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-white">
+                        Kustuta
+                      </button>
+                    </div>
                   </div>
                   <div className="p-4">
-                    <p className="type-small admin-heading line-clamp-2">{image.caption || 'Ilma kirjelduseta'}</p>
+                    <p className="text-sm font-medium text-slate-800 line-clamp-2">{image.caption || 'Ilma kirjelduseta'}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button onClick={() => moveImage(index, -1)} className="btn-secondary btn-secondary-sm text-xs">↑</button>
-                      <button onClick={() => moveImage(index, 1)} className="btn-secondary btn-secondary-sm text-xs">↓</button>
+                      <button onClick={() => moveImage(index, -1)} className="rounded-lg border border-[#e5e7eb] bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">↑</button>
+                      <button onClick={() => moveImage(index, 1)} className="rounded-lg border border-[#e5e7eb] bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">↓</button>
                       {!image.isFeatured && (
-                        <button onClick={() => setFeatured(image.id)} className="btn-secondary btn-secondary-sm text-xs">Esiletõstetud</button>
+                        <button onClick={() => setFeatured(image.id)} className="rounded-lg border border-[#e5e7eb] bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">Esiletõstetud</button>
                       )}
-                      <button onClick={() => void deleteImage(image.id, image.caption)} className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100">Kustuta</button>
+                      <button onClick={() => void deleteImage(image.id, image.caption)} className="rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">Kustuta</button>
                     </div>
                   </div>
                 </article>

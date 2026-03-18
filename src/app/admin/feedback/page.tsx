@@ -140,8 +140,8 @@ export default function AdminFeedbackPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-[#fafafa]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <AdminPageHeader
           overline="Sisu"
           title="Kliendi tagasiside"
@@ -158,46 +158,46 @@ export default function AdminFeedbackPage() {
         />
 
         {toast && (
-          <div className="fixed right-4 top-6 z-[70] rounded-xl border border-[#edd9e3] bg-white px-4 py-2 text-sm font-medium text-[#6a3b57] shadow-lg">
+          <div className="fixed right-6 top-6 z-[70] rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-lg">
             {toast}
           </div>
         )}
         {error && (
-          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm text-red-800">
             {error}
           </div>
         )}
 
-        <section className="admin-panel overflow-hidden">
-          <div className="mb-4 flex items-center justify-between px-1">
-            <h2 className="type-h4 admin-heading">Tagasiside nimekiri</h2>
-            <p className="type-small admin-muted">{items.length} kirjet</p>
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white shadow-sm overflow-hidden">
+          <div className="mb-4 flex items-center justify-between px-5 pt-5">
+            <h2 className="text-lg font-semibold text-slate-800">Tagasiside nimekiri</h2>
+            <p className="text-sm text-slate-500">{items.length} kirjet</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[var(--color-border-card-soft)] bg-[#fef8fb]/60">
+              <thead className="border-b border-[#e5e7eb] bg-slate-50/80">
                 <tr>
-                  <th className="px-4 py-3 font-semibold admin-heading">Pilt / Nimi</th>
-                  <th className="px-4 py-3 font-semibold admin-heading">Hinnang</th>
-                  <th className="px-4 py-3 font-semibold admin-heading">Tsitaat</th>
-                  <th className="px-4 py-3 font-semibold admin-heading">Järjekord</th>
-                  <th className="px-4 py-3 font-semibold admin-heading">Nähtavus</th>
-                  <th className="px-4 py-3 font-semibold admin-heading text-right">Tegevused</th>
+                  <th className="px-5 py-3 font-semibold text-slate-800">Pilt / Nimi</th>
+                  <th className="px-5 py-3 font-semibold text-slate-800">Hinnang</th>
+                  <th className="px-5 py-3 font-semibold text-slate-800">Tsitaat</th>
+                  <th className="px-5 py-3 font-semibold text-slate-800">Järjekord</th>
+                  <th className="px-5 py-3 font-semibold text-slate-800">Nähtavus</th>
+                  <th className="px-5 py-3 font-semibold text-slate-800 text-right">Tegevused</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center admin-muted">
+                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-500">
                       Tagasisidet pole. Lisa esimene avalehe testimoniaal.
                     </td>
                   </tr>
                 ) : (
                   items.map((item) => (
-                    <tr key={item.id} className="border-t border-[var(--color-border-card-soft)]">
-                      <td className="px-4 py-3">
+                    <tr key={item.id} className="border-t border-[#e5e7eb] hover:bg-slate-50/50">
+                      <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 overflow-hidden rounded-xl border border-[#efdfeb] bg-[#f8eef5]">
+                          <div className="h-12 w-12 overflow-hidden rounded-xl border border-[#e5e7eb] bg-slate-100">
                             {item.clientAvatarUrl ? (
                               <Image
                                 src={item.clientAvatarUrl}
@@ -208,53 +208,53 @@ export default function AdminFeedbackPage() {
                                 className="h-full w-full object-cover"
                               />
                             ) : (
-                              <div className="flex h-full items-center justify-center text-[10px] font-medium text-[#8e7683]">
+                              <div className="flex h-full items-center justify-center text-[10px] font-medium text-slate-500">
                                 {item.clientName.slice(0, 2).toUpperCase()}
                               </div>
                             )}
                           </div>
                           <div>
-                            <div className="admin-heading font-medium">{item.clientName}</div>
+                            <div className="font-medium text-slate-800">{item.clientName}</div>
                             {item.sourceLabel && (
-                              <div className="type-small admin-muted">{item.sourceLabel}</div>
+                              <div className="text-xs text-slate-500">{item.sourceLabel}</div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="text-[var(--color-primary)]">★</span> {item.rating}/5
+                      <td className="px-5 py-3">
+                        <span className="text-amber-500">★</span> {item.rating}/5
                       </td>
-                      <td className="px-4 py-3 max-w-[220px]">
-                        <span className="line-clamp-2 admin-muted">
+                      <td className="px-5 py-3 max-w-[220px]">
+                        <span className="line-clamp-2 text-slate-500">
                           &ldquo;{item.feedbackText.slice(0, 80)}
                           {item.feedbackText.length > 80 ? '…' : ''}&rdquo;
                         </span>
                       </td>
-                      <td className="px-4 py-3 admin-muted">{item.sortOrder}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3 text-slate-500">{item.sortOrder}</td>
+                      <td className="px-5 py-3">
                         {item.isVisible ? (
-                          <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">Nähtav</span>
+                          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Nähtav</span>
                         ) : (
-                          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">Peidetud</span>
+                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">Peidetud</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-5 py-3 text-right">
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => toggleVisibility(item.id, item.isVisible)}
-                            className="btn-secondary btn-secondary-sm"
+                            className="rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                           >
                             {item.isVisible ? 'Peida' : 'Näita'}
                           </button>
                           <button
                             onClick={() => { setDraft(toDraft(item)); setIsDrawerOpen(true); }}
-                            className="btn-secondary btn-secondary-sm"
+                            className="rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                           >
                             Muuda
                           </button>
                           <button
                             onClick={() => void deleteFeedback(item.id, item.clientName)}
-                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                            className="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
                           >
                             Kustuta
                           </button>
@@ -272,105 +272,106 @@ export default function AdminFeedbackPage() {
       {isDrawerOpen && (
         <div className="fixed inset-0 z-[60]">
           <div
-            className="absolute inset-0 bg-[#281a25]/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
             onClick={() => setIsDrawerOpen(false)}
             aria-hidden
           />
-          <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[#e9dce5] bg-[linear-gradient(180deg,#fff_0%,#fff8fc_100%)] shadow-[-24px_0_48px_-24px_rgba(38,20,31,0.35)]">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#f0e2eb] bg-white/95 px-6 py-4 backdrop-blur-sm">
-              <h2 className="type-h4 admin-heading">{draft.id ? 'Muuda tagasisidet' : 'Lisa tagasiside'}</h2>
-              <button type="button" onClick={() => setIsDrawerOpen(false)} className="btn-secondary btn-secondary-sm">
+          <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[#e5e7eb] bg-white shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-6 py-4">
+              <h2 className="text-lg font-semibold text-slate-800">{draft.id ? 'Muuda tagasisidet' : 'Lisa tagasiside'}</h2>
+              <button type="button" onClick={() => setIsDrawerOpen(false)} className="rounded-lg border border-[#e5e7eb] px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
                 Sulge
               </button>
             </div>
 
             <div className="space-y-6 p-6">
-              <section className="admin-panel p-5">
-                <p className="admin-section-overline mb-3">Kliendi andmed</p>
+              <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Kliendi andmed</p>
                 <div className="space-y-4">
                   <label className="block">
-                    <span className="block text-sm font-medium admin-heading">Kliendi nimi</span>
+                    <span className="block text-sm font-medium text-slate-700">Kliendi nimi</span>
                     <input
                       value={draft.clientName}
                       onChange={(e) => setDraft((p) => ({ ...p, clientName: e.target.value }))}
-                      className="input-premium mt-1"
+                      className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                       placeholder="nt Maria K."
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-sm font-medium admin-heading">Avatar / pildi URL (valikuline)</span>
+                    <span className="block text-sm font-medium text-slate-700">Avatar / pildi URL (valikuline)</span>
                     <input
                       value={draft.clientAvatarUrl}
                       onChange={(e) => setDraft((p) => ({ ...p, clientAvatarUrl: e.target.value }))}
-                      className="input-premium mt-1"
+                      className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                       placeholder="https://..."
                     />
                   </label>
                 </div>
               </section>
 
-              <section className="admin-panel p-5">
-                <p className="admin-section-overline mb-3">Tagasiside ja hinnang</p>
+              <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Tagasiside ja hinnang</p>
                 <div className="space-y-4">
                   <label className="block">
-                    <span className="block text-sm font-medium admin-heading">Hinnang (1–5)</span>
+                    <span className="block text-sm font-medium text-slate-700">Hinnang (1–5)</span>
                     <input
                       type="number"
                       min={1}
                       max={5}
                       value={draft.rating}
                       onChange={(e) => setDraft((p) => ({ ...p, rating: Number(e.target.value) || 5 }))}
-                      className="input-premium mt-1 w-20"
+                      className="mt-1 w-20 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-sm font-medium admin-heading">Tsitaat / tagasiside</span>
+                    <span className="block text-sm font-medium text-slate-700">Tsitaat / tagasiside</span>
                     <textarea
                       value={draft.feedbackText}
                       onChange={(e) => setDraft((p) => ({ ...p, feedbackText: e.target.value }))}
-                      className="input-premium mt-1 min-h-24 w-full"
+                      className="mt-1 min-h-24 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                       placeholder="Klienti tsitaat..."
                       rows={4}
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-sm font-medium admin-heading">Allikas (valikuline)</span>
+                    <span className="block text-sm font-medium text-slate-700">Allikas (valikuline)</span>
                     <input
                       value={draft.sourceLabel}
                       onChange={(e) => setDraft((p) => ({ ...p, sourceLabel: e.target.value }))}
-                      className="input-premium mt-1"
+                      className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                       placeholder="Facebook, Google"
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-sm font-medium admin-heading">Teenuse ID (valikuline)</span>
+                    <span className="block text-sm font-medium text-slate-700">Teenuse ID (valikuline)</span>
                     <input
                       value={draft.serviceId}
                       onChange={(e) => setDraft((p) => ({ ...p, serviceId: e.target.value }))}
-                      className="input-premium mt-1"
+                      className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                       placeholder="gel-manicure"
                     />
                   </label>
                 </div>
               </section>
 
-              <section className="admin-panel p-5">
-                <p className="admin-section-overline mb-3">Järjekord ja nähtavus</p>
+              <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Järjekord ja nähtavus</p>
                 <div className="flex flex-wrap items-center gap-6">
                   <label className="block">
-                    <span className="block text-sm font-medium admin-heading">Järjekord</span>
+                    <span className="block text-sm font-medium text-slate-700">Järjekord</span>
                     <input
                       type="number"
                       value={draft.sortOrder}
                       onChange={(e) => setDraft((p) => ({ ...p, sortOrder: Number(e.target.value) || 0 }))}
-                      className="input-premium mt-1 w-24"
+                      className="mt-1 w-24 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                     />
                   </label>
-                  <label className="flex items-center gap-2 pt-6 text-sm admin-heading">
+                  <label className="flex items-center gap-2 pt-6 text-sm font-medium text-slate-700">
                     <input
                       type="checkbox"
                       checked={draft.isVisible}
                       onChange={(e) => setDraft((p) => ({ ...p, isVisible: e.target.checked }))}
+                      className="rounded border-[#e5e7eb] text-slate-700"
                     />
                     Nähtav avalehel
                   </label>
@@ -378,16 +379,16 @@ export default function AdminFeedbackPage() {
               </section>
             </div>
 
-            <div className="sticky bottom-0 border-t border-[#f0e2eb] bg-white/95 px-6 py-4 backdrop-blur-sm">
+            <div className="sticky bottom-0 border-t border-[#e5e7eb] bg-white px-6 py-4">
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => void saveFeedback()}
                   disabled={!draft.clientName.trim() || isSaving}
-                  className="btn-primary btn-primary-md disabled:opacity-50"
+                  className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
                 >
                   {isSaving ? 'Salvestan...' : 'Salvesta tagasiside'}
                 </button>
-                <button type="button" onClick={() => setIsDrawerOpen(false)} className="btn-secondary btn-secondary-md">
+                <button type="button" onClick={() => setIsDrawerOpen(false)} className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
                   Tühista
                 </button>
               </div>

@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { AdminQuickActions } from '@/components/admin/AdminQuickActions';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { Calendar, Clock, Pencil, CheckCircle, XCircle, Plus, Phone } from 'lucide-react';
 
 interface Booking {
   id: string;
@@ -136,6 +137,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function AdminBookingsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -381,6 +383,10 @@ export default function AdminBookingsPage() {
       today: activeBookings.filter((b) => b.slotDate === todayIso).length,
       upcoming: activeBookings.filter((b) => b.slotDate >= todayIso).length,
       cancelled: cancelledBookings.length,
+      completed: activeBookings.filter((b) => b.status === 'completed').length,
+      todayRevenue: activeBookings
+        .filter((b) => b.slotDate === todayIso && (b.status === 'completed' || b.paymentStatus === 'paid'))
+        .reduce((sum, b) => sum + (b.totalPrice ?? 0), 0),
     }),
     [activeBookings, cancelledBookings, todayIso]
   );
@@ -393,78 +399,97 @@ export default function AdminBookingsPage() {
   ];
 
   return (
-    <main className="admin-cockpit-bg min-h-screen px-4 py-8 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-[1400px]">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Broneeringud</h1>
-              <p className="mt-2 text-sm text-[#4b5563]">Halda broneeringuid ja vaata detaile.</p>
-            </div>
-            <div className="flex gap-2 text-sm">
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563] hover:bg-[#f9fafb]" href="/admin">
-                Halduspaneel
-              </Link>
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563] hover:bg-[#f9fafb]" href="/admin/slots">
-                Vabad ajad
-              </Link>
-            </div>
-          </div>
-        </header>
-
-        <AdminQuickActions />
+    <main className="min-h-screen bg-[#fafafa]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <AdminPageHeader
+          overline="Nailify Haldus"
+          title="Broneeringud"
+          subtitle="Haldage tänaseid ja tulevasi broneeringuid"
+          backHref="/admin"
+          backLabel="Halduspaneel"
+          primaryAction={{ label: '+ Uus broneering', onClick: () => router.push('/book') }}
+          secondaryLinks={[{ label: 'Vabad ajad', href: '/admin/slots' }]}
+        />
 
         {error && (
-          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm text-red-800">
             {error}
           </div>
         )}
 
         {loading && (
-          <div className="rounded-2xl bg-white p-6 text-sm text-[#4b5563]">Laen broneeringuid...</div>
+          <div className="rounded-2xl border border-[#e5e7eb] bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+            Laen broneeringuid...
+          </div>
         )}
 
         {!loading && (
           <>
-            <section className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
+            {/* KPI summary row */}
+            <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Tänased broneeringud</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{summaryCounts.today}</p>
+              </div>
+              <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Tulevased</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{summaryCounts.upcoming}</p>
+              </div>
+              <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Lõpetatud</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{summaryCounts.completed}</p>
+              </div>
+              <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Tühistatud</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{summaryCounts.cancelled}</p>
+              </div>
+              <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:col-span-2 lg:col-span-1">
+                <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Päeva käive</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">€{summaryCounts.todayRevenue}</p>
+              </div>
+            </section>
+
+            {/* Segmented filter bar */}
+            <section className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex overflow-x-auto rounded-xl border border-[#e5e7eb] bg-white p-1 shadow-sm scrollbar-thin">
                 {viewTabs.map((tab) => (
                   <button
                     key={tab.key}
+                    type="button"
                     onClick={() => {
                       setView(tab.key);
                       setSelectedBookingIds(new Set());
                     }}
-                    className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+                    className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
                       view === tab.key
-                        ? 'bg-[#111827] text-white'
-                        : 'bg-white text-[#4b5563] border border-[#d1d5db] hover:bg-[#f9fafb]'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
                     }`}
                   >
                     <span>{tab.label}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${
-                      view === tab.key ? 'bg-white/20 text-white' : 'bg-[#f3f4f6] text-[#6b7280]'
+                    <span className={`min-w-[1.25rem] rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${
+                      view === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                     }`}>
                       {tab.count}
                     </span>
                   </button>
                 ))}
               </div>
-
               {view === 'cancelled' && selectedBookingIds.size > 0 && (
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={bulkRestore}
                     disabled={actionLoading !== null}
-                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 disabled:opacity-60"
+                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60"
                   >
                     {actionLoading === 'bulk-restore' ? 'Taastan...' : `Taasta ${selectedBookingIds.size}`}
                   </button>
                   <button
+                    type="button"
                     onClick={bulkDelete}
                     disabled={actionLoading !== null}
-                    className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 disabled:opacity-60"
+                    className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
                   >
                     {actionLoading === 'bulk-delete' ? 'Kustutan...' : `Kustuta ${selectedBookingIds.size}`}
                   </button>
@@ -472,86 +497,151 @@ export default function AdminBookingsPage() {
               )}
             </section>
 
-            {!loading && displayedBookings.length === 0 && (
-              <div className="rounded-2xl bg-white p-6 text-sm text-[#4b5563]">
-                {view === 'cancelled' ? 'Tühistatud broneeringuid ei ole.' : 'Selles vaates broneeringuid ei ole.'}
-              </div>
+            {/* Empty state */}
+            {displayedBookings.length === 0 && (
+              <section className="flex flex-col items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white py-16 px-6 shadow-sm">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                  <Calendar className="h-8 w-8" strokeWidth={1.5} />
+                </div>
+                <p className="mt-4 text-center text-base font-medium text-slate-700">
+                  {view === 'today' ? 'Täna pole broneeringuid' : view === 'cancelled' ? 'Tühistatud broneeringuid ei ole' : 'Selles vaates broneeringuid ei ole'}
+                </p>
+                <p className="mt-1 text-center text-sm text-slate-500">
+                  {view === 'today' ? 'Lisa uus broneering või vaata tulevasi.' : 'Muuda filtreid või lisa broneering.'}
+                </p>
+                {view !== 'cancelled' && (
+                  <button
+                    type="button"
+                    onClick={() => router.push('/book')}
+                    className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Loo uus broneering
+                  </button>
+                )}
+              </section>
             )}
 
-            {!loading && displayedBookings.length > 0 && (
-              <section className="grid gap-5 xl:grid-cols-[1fr_380px]">
-                <article className="admin-panel rounded-3xl p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-[#111827]">
-                      {view === 'cancelled' ? 'Tühistatud broneeringud' : 'Broneeringute nimekiri'}
-                    </h2>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-[#6b7280]">
-                      <input
-                        type="checkbox"
-                        checked={selectedBookingIds.size === displayedBookings.length && displayedBookings.length > 0}
-                        onChange={toggleSelectAll}
-                        className="h-4 w-4 rounded border-[#d1d5db] text-[#111827]"
-                      />
-                      <span>Vali kõik</span>
-                    </label>
-                  </div>
-                  <div className="space-y-2">
-                    {displayedBookings.map((booking) => {
+            {/* Timeline list + detail panel */}
+            {displayedBookings.length > 0 && (
+              <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
+                {/* Timeline booking cards */}
+                <article className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                  {view === 'cancelled' && (
+                    <div className="mb-4 flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-slate-800">Tühistatud broneeringud</h2>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={selectedBookingIds.size === displayedBookings.length && displayedBookings.length > 0}
+                          onChange={toggleSelectAll}
+                          className="h-4 w-4 rounded border-[#e5e7eb] text-slate-900"
+                        />
+                        <span>Vali kõik</span>
+                      </label>
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    {displayedBookings.map((booking, idx) => {
                       const isSelected = selectedBookingIds.has(booking.id);
+                      const prev = displayedBookings[idx - 1];
+                      const showTimeDivider = !prev || prev.slotTime.slice(0, 2) !== booking.slotTime.slice(0, 2);
                       return (
-                        <div
-                          key={booking.id}
-                          onClick={() => toggleSelection(booking.id)}
-                          className={`cursor-pointer rounded-2xl border p-3 transition ${
-                            isSelected
-                              ? 'border-[#111827] bg-[#f9fafb] shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15)]'
-                              : 'border-[#e5e7eb] bg-white hover:bg-[#fbfbfc]'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleSelection(booking.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="mt-1 h-4 w-4 flex-shrink-0 rounded border-[#d1d5db] text-[#111827]"
-                            />
+                        <div key={booking.id}>
+                          {showTimeDivider && view !== 'cancelled' && (
+                            <div className="flex items-center gap-3 py-2">
+                              <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                                {booking.slotTime.slice(0, 5)}
+                              </span>
+                              <div className="h-px flex-1 bg-[#e5e7eb]" />
+                            </div>
+                          )}
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => toggleSelection(booking.id)}
+                            onKeyDown={(e) => e.key === 'Enter' && toggleSelection(booking.id)}
+                            className={`flex cursor-pointer flex-wrap items-center gap-4 rounded-xl border p-4 transition-all duration-200 hover:shadow-md ${
+                              isSelected
+                                ? 'border-slate-900 bg-slate-50 shadow-sm ring-2 ring-slate-900/10'
+                                : 'border-[#e5e7eb] bg-white hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex shrink-0 flex-col items-center text-center">
+                              <span className="text-lg font-semibold tabular-nums text-slate-900">{booking.slotTime.slice(0, 5)}</span>
+                              <span className="text-xs text-slate-500">{booking.serviceDuration} min</span>
+                            </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="text-sm font-semibold text-[#111827]">
-                                    {booking.contactFirstName} {booking.contactLastName ?? ''}
-                                  </p>
-                                  <p className="text-xs text-[#4b5563]">
-                                    {formatDate(booking.slotDate)} kell {booking.slotTime}
-                                  </p>
-                                  <p className="mt-1 text-xs text-[#6b7280]">{booking.serviceName}</p>
-                                </div>
-                                <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${statusUi(booking.status)}`}>
+                              <p className="font-semibold text-slate-900">
+                                {booking.contactFirstName} {booking.contactLastName ?? ''}
+                              </p>
+                              <p className="text-sm text-slate-600">{booking.serviceName}</p>
+                              {booking.addOns && booking.addOns.length > 0 && (
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                  + {booking.addOns.map((a) => a.name).join(', ')}
+                                </p>
+                              )}
+                              <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                                <Phone className="h-3.5 w-3.5" />
+                                {booking.contactPhone}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-2">
+                              <div className="flex flex-wrap items-center justify-end gap-2">
+                                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusUi(booking.status)}`}>
                                   {statusLabel(booking.status)}
                                 </span>
+                                <span className="rounded-full border border-[#e5e7eb] bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
+                                  {paymentLabel(booking.paymentStatus)}
+                                </span>
                               </div>
-                              {view === 'cancelled' && (
-                                <div className="mt-2 flex gap-2">
+                              {view !== 'cancelled' ? (
+                                <div className="flex flex-wrap gap-2">
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      void patchBooking(booking.id, { status: 'confirmed' });
-                                    }}
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); openEdit(booking); }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    Muuda
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); void patchBooking(booking.id, { status: 'completed', paymentStatus: 'paid' }); }}
                                     disabled={savingId === booking.id}
-                                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 disabled:opacity-60"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-60"
+                                  >
+                                    <CheckCircle className="h-3.5 w-3.5" />
+                                    Lõpeta
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); void patchBooking(booking.id, { status: 'cancelled' }); }}
+                                    disabled={savingId === booking.id}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                    Tühista
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); void patchBooking(booking.id, { status: 'confirmed' }); }}
+                                    disabled={savingId === booking.id}
+                                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
                                   >
                                     Taasta
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (confirm('Kustuta broneering lõplikult?')) {
-                                        void deleteBooking(booking.id);
-                                      }
+                                      if (confirm('Kustuta broneering lõplikult?')) void deleteBooking(booking.id);
                                     }}
                                     disabled={actionLoading === booking.id}
-                                    className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 disabled:opacity-60"
+                                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                                   >
                                     Kustuta
                                   </button>
@@ -565,144 +655,171 @@ export default function AdminBookingsPage() {
                   </div>
                 </article>
 
+                {/* Detail panel (right side / slide-over on mobile) */}
                 {selectedBooking && view !== 'cancelled' && (
-                  <article className="admin-panel sticky top-6 h-fit rounded-3xl p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Broneeringu detailid</p>
-                        <h2 className="mt-1 text-xl font-semibold text-[#111827]">
-                          {selectedBooking.contactFirstName} {selectedBooking.contactLastName ?? ''}
-                        </h2>
-                        <p className="text-sm text-[#4b5563]">{selectedBooking.contactPhone}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusUi(selectedBooking.status)}`}>
-                          {statusLabel(selectedBooking.status)}
-                        </span>
-                        <span className="rounded-full border border-[#d1d5db] bg-[#f9fafb] px-2.5 py-1 text-xs text-[#4b5563]">
-                          {paymentLabel(selectedBooking.paymentStatus)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-2xl border border-[#e5e7eb] bg-white p-3 text-sm text-[#374151]">
-                        <p className="mb-1 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Aeg ja teenus</p>
-                        <p>{formatDate(selectedBooking.slotDate)} kell {selectedBooking.slotTime}</p>
-                        <p>{selectedBooking.serviceName}</p>
-                        <p>{selectedBooking.serviceDuration} min</p>
-                      </div>
-                      <div className="rounded-2xl border border-[#e5e7eb] bg-white p-3 text-sm text-[#374151]">
-                        <p className="mb-1 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Makse info</p>
-                        <p>Teenuse hind: EUR {selectedBooking.servicePrice ?? selectedBooking.totalPrice}</p>
-                        <p>Kokku: EUR {selectedBooking.totalPrice}</p>
-                        <p>Ettemaks: EUR {selectedBooking.depositAmount ?? 0}</p>
-                      </div>
-                    </div>
-
-                    {(selectedBooking.contactNotes || selectedBooking.inspirationNote) && (
-                      <div className="mt-3 grid gap-3 md:grid-cols-2">
-                        {selectedBooking.contactNotes && (
-                          <div className="rounded-2xl border border-[#e5e7eb] bg-white p-3">
-                            <p className="mb-1 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Kliendi märkused</p>
-                            <p className="text-sm text-[#374151]">{selectedBooking.contactNotes}</p>
+                  <>
+                    <div className="fixed inset-0 z-40 bg-slate-900/20 xl:hidden" aria-hidden onClick={() => setSelectedBookingIds(new Set())} />
+                    <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-md flex flex-col rounded-l-2xl border border-[#e5e7eb] border-r-0 bg-white shadow-xl xl:static xl:inset-auto xl:max-w-none xl:rounded-2xl xl:border-r xl:shadow-sm xl:sticky xl:top-6 xl:h-fit xl:self-start">
+                      <button type="button" onClick={() => setSelectedBookingIds(new Set())} className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 xl:hidden" aria-label="Sulge">
+                        <XCircle className="h-5 w-5" />
+                      </button>
+                    <div className="flex flex-col max-h-[calc(100vh-8rem)] xl:max-h-[calc(100vh-10rem)]">
+                      <div className="overflow-y-auto p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Broneeringu detailid</p>
+                            <h2 className="mt-1 text-xl font-semibold text-slate-900">
+                              {selectedBooking.contactFirstName} {selectedBooking.contactLastName ?? ''}
+                            </h2>
                           </div>
-                        )}
-                        {selectedBooking.inspirationNote && (
-                          <div className="rounded-2xl border border-[#e5e7eb] bg-white p-3">
-                            <p className="mb-1 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Inspiratsiooni märkus</p>
-                            <p className="text-sm text-[#374151]">{selectedBooking.inspirationNote}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {(selectedBooking.inspirationImage || selectedBooking.currentNailImage) && (
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        {selectedBooking.inspirationImage && (
-                          <button
-                            onClick={() => setFullscreenImage({ src: selectedBooking.inspirationImage!, alt: 'Inspiratsioonifoto' })}
-                            className="rounded-2xl border border-[#e5e7eb] bg-white p-2 text-left transition hover:border-[#9ca3af]"
-                          >
-                            <p className="mb-2 text-xs text-[#6b7280]">Inspiratsioonifoto</p>
-                            <div className="relative h-32 w-full cursor-zoom-in overflow-hidden rounded-xl">
-                              <Image src={selectedBooking.inspirationImage} alt="Inspiratsioonifoto" fill className="object-cover" unoptimized />
-                            </div>
-                          </button>
-                        )}
-                        {selectedBooking.currentNailImage && (
-                          <button
-                            onClick={() => setFullscreenImage({ src: selectedBooking.currentNailImage!, alt: 'Praeguste küünte foto' })}
-                            className="rounded-2xl border border-[#e5e7eb] bg-white p-2 text-left transition hover:border-[#9ca3af]"
-                          >
-                            <p className="mb-2 text-xs text-[#6b7280]">Praeguste küünte foto</p>
-                            <div className="relative h-32 w-full cursor-zoom-in overflow-hidden rounded-xl">
-                              <Image src={selectedBooking.currentNailImage} alt="Praeguste küünte foto" fill className="object-cover" unoptimized />
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {selectedBooking.addOns && selectedBooking.addOns.length > 0 && (
-                      <div className="mt-3 rounded-2xl border border-[#e5e7eb] bg-white p-3">
-                        <p className="mb-2 text-xs uppercase tracking-[0.12em] text-[#6b7280]">Lisateenused</p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedBooking.addOns.map((addOn, index) => (
-                            <span key={`${selectedBooking.id}-addon-${addOn.id ?? index}`} className="rounded-full border border-[#d1d5db] bg-[#f9fafb] px-3 py-1 text-xs text-[#374151]">
-                              {addOn.name} (+EUR {addOn.price}
-                              {addOn.duration ? `, ${addOn.duration} min` : ''})
+                          <div className="flex gap-2">
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusUi(selectedBooking.status)}`}>
+                              {statusLabel(selectedBooking.status)}
                             </span>
-                          ))}
+                            <span className="rounded-full border border-[#e5e7eb] bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
+                              {paymentLabel(selectedBooking.paymentStatus)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <section className="mt-5 rounded-xl border border-[#e5e7eb] bg-slate-50/50 p-4">
+                          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Kliendile</p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {selectedBooking.contactFirstName} {selectedBooking.contactLastName ?? ''}
+                          </p>
+                          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+                            <Phone className="h-4 w-4 shrink-0" />
+                            {selectedBooking.contactPhone}
+                          </p>
+                        </section>
+
+                        <section className="mt-4 rounded-xl border border-[#e5e7eb] bg-slate-50/50 p-4">
+                          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Aeg ja teenus</p>
+                          <p className="mt-1 text-sm text-slate-800">{formatDate(selectedBooking.slotDate)} kell {selectedBooking.slotTime}</p>
+                          <p className="mt-1 text-sm font-medium text-slate-900">{selectedBooking.serviceName}</p>
+                          <p className="text-sm text-slate-500">{selectedBooking.serviceDuration} min</p>
+                        </section>
+
+                        <section className="mt-4 rounded-xl border border-[#e5e7eb] bg-slate-50/50 p-4">
+                          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Makse</p>
+                          <p className="mt-1 text-sm text-slate-800">Kokku: €{selectedBooking.totalPrice}</p>
+                          <p className="text-sm text-slate-600">Ettemaks: €{selectedBooking.depositAmount ?? 0}</p>
+                          <p className="mt-1 text-xs text-slate-500">{paymentLabel(selectedBooking.paymentStatus)}</p>
+                        </section>
+
+                        {selectedBooking.addOns && selectedBooking.addOns.length > 0 && (
+                          <section className="mt-4 rounded-xl border border-[#e5e7eb] bg-slate-50/50 p-4">
+                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Lisateenused</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {selectedBooking.addOns.map((addOn, index) => (
+                                <span key={`${selectedBooking.id}-addon-${addOn.id ?? index}`} className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
+                                  {addOn.name} (+€{addOn.price}{addOn.duration ? `, ${addOn.duration} min` : ''})
+                                </span>
+                              ))}
+                            </div>
+                          </section>
+                        )}
+
+                        {(selectedBooking.contactNotes || selectedBooking.inspirationNote) && (
+                          <section className="mt-4 rounded-xl border border-[#e5e7eb] bg-slate-50/50 p-4">
+                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Märkused</p>
+                            {selectedBooking.contactNotes && <p className="mt-2 text-sm text-slate-700">{selectedBooking.contactNotes}</p>}
+                            {selectedBooking.inspirationNote && <p className="mt-2 text-sm text-slate-600 italic">{selectedBooking.inspirationNote}</p>}
+                          </section>
+                        )}
+
+                        {(selectedBooking.inspirationImage || selectedBooking.currentNailImage) && (
+                          <section className="mt-4">
+                            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-400">Pildid</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              {selectedBooking.inspirationImage && (
+                                <button
+                                  type="button"
+                                  onClick={() => setFullscreenImage({ src: selectedBooking.inspirationImage!, alt: 'Inspiratsioonifoto' })}
+                                  className="relative aspect-[4/3] overflow-hidden rounded-xl border border-[#e5e7eb] bg-slate-100 transition hover:border-slate-300"
+                                >
+                                  <Image src={selectedBooking.inspirationImage!} alt="Inspiratsioonifoto" fill className="object-cover" unoptimized />
+                                  <span className="absolute bottom-1 left-1 rounded bg-black/50 px-2 py-0.5 text-[10px] text-white">Inspiratsioon</span>
+                                </button>
+                              )}
+                              {selectedBooking.currentNailImage && (
+                                <button
+                                  type="button"
+                                  onClick={() => setFullscreenImage({ src: selectedBooking.currentNailImage!, alt: 'Praeguste küünte foto' })}
+                                  className="relative aspect-[4/3] overflow-hidden rounded-xl border border-[#e5e7eb] bg-slate-100 transition hover:border-slate-300"
+                                >
+                                  <Image src={selectedBooking.currentNailImage!} alt="Praeguste küünte foto" fill className="object-cover" unoptimized />
+                                  <span className="absolute bottom-1 left-1 rounded bg-black/50 px-2 py-0.5 text-[10px] text-white">Praegused küüned</span>
+                                </button>
+                              )}
+                            </div>
+                          </section>
+                        )}
+                      </div>
+
+                      <div className="border-t border-[#e5e7eb] bg-white p-4">
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(selectedBooking)}
+                            disabled={savingId === selectedBooking.id}
+                            className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
+                          >
+                            Muuda
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingId === selectedBooking.id}
+                            onClick={() => void patchBooking(selectedBooking.id, { status: 'confirmed' })}
+                            className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60"
+                          >
+                            Kinnita
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingId === selectedBooking.id}
+                            onClick={() => void patchBooking(selectedBooking.id, { status: 'completed', paymentStatus: 'paid' })}
+                            className="w-full rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100 disabled:opacity-60"
+                          >
+                            Märgi lõpetatuks
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingId === selectedBooking.id}
+                            onClick={() => void patchBooking(selectedBooking.id, { status: 'cancelled' })}
+                            className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                          >
+                            Tühista
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingId === selectedBooking.id}
+                            onClick={() => void patchBooking(selectedBooking.id, { paymentStatus: selectedBooking.paymentStatus === 'paid' ? 'unpaid' : 'paid' })}
+                            className="w-full rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                          >
+                            {selectedBooking.paymentStatus === 'paid' ? 'Märgi tasumata' : 'Märgi makstuks'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm('Kustuta broneering lõplikult?')) void deleteBooking(selectedBooking.id);
+                            }}
+                            disabled={actionLoading === selectedBooking.id}
+                            className="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
+                          >
+                            Kustuta
+                          </button>
                         </div>
                       </div>
-                    )}
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        disabled={savingId === selectedBooking.id}
-                        onClick={() => void patchBooking(selectedBooking.id, { status: 'confirmed' })}
-                        className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 disabled:opacity-60"
-                      >
-                        Kinnita
-                      </button>
-                      <button
-                        disabled={savingId === selectedBooking.id}
-                        onClick={() => void patchBooking(selectedBooking.id, { status: 'completed', paymentStatus: 'paid' })}
-                        className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 disabled:opacity-60"
-                      >
-                        Märgi lõpetatuks
-                      </button>
-                      <button
-                        disabled={savingId === selectedBooking.id}
-                        onClick={() => void patchBooking(selectedBooking.id, { status: 'cancelled' })}
-                        className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-60"
-                      >
-                        Tühistatud
-                      </button>
-                      <button
-                        disabled={savingId === selectedBooking.id}
-                        onClick={() => void patchBooking(selectedBooking.id, { paymentStatus: selectedBooking.paymentStatus === 'paid' ? 'unpaid' : 'paid' })}
-                        className="rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-sm font-medium text-[#374151] disabled:opacity-60"
-                      >
-                        {selectedBooking.paymentStatus === 'paid' ? 'Märgi tasumata' : 'Märgi makstuks'}
-                      </button>
-                      <button
-                        onClick={() => openEdit(selectedBooking)}
-                        className="rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-sm font-medium text-[#374151]"
-                      >
-                        Muuda
-                      </button>
                     </div>
-                  </article>
+                  </aside>
+                  </>
                 )}
 
-                {view === 'cancelled' && selectedBookingIds.size === 0 && (
-                  <article className="admin-panel sticky top-6 h-fit rounded-3xl p-5">
-                    <div className="text-center text-sm text-[#6b7280]">
-                      <p>Vali broneering nimekirjast, et näha detaile või taastada/kustutada.</p>
-                    </div>
-                  </article>
+                {view === 'cancelled' && selectedBookingIds.size === 0 && displayedBookings.length > 0 && (
+                  <aside className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+                    <p className="text-center text-sm text-slate-500">Vali broneering nimekirjast, et taastada või kustutada.</p>
+                  </aside>
                 )}
               </section>
             )}
