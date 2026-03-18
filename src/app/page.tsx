@@ -877,16 +877,6 @@ export default function Home() {
                 </button>
               </div>
                
-              {nextAvailable && (
-                <div className="type-navbar-utility hidden lg:flex items-center gap-1.5 text-[#7a6978]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span>
-                    {getI18nTextOrFallback('homepage.nav.nextTimeCompact', language === 'en' ? 'Next slot' : 'Järgmine aeg')}{' '}
-                    <span className="font-semibold text-[#73556a]">{nextAvailable}</span>
-                  </span>
-                </div>
-              )}
-              
               {/* Book Now — lg+ only (.btn-primary display would otherwise override hidden on mobile) */}
               <button
                 type="button"
