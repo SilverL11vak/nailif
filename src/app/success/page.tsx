@@ -39,7 +39,8 @@ function SuccessPageContent() {
 
   const locale: LocaleCode = getLocaleFromPathname(pathname ?? '') ?? 'et';
   const L = (path: string) => withLocale(path, locale);
-  const en = language === 'en';
+  // Localization rule: derive from current locale (/en vs /et).
+  const en = locale === 'en';
 
   const copy = useMemo(
     () =>
@@ -56,7 +57,27 @@ function SuccessPageContent() {
             specialist: 'Sandra',
             headline: 'Your appointment is confirmed',
             subtext: "We've reserved your time with Sandra. We're excited to see you.",
+            heroHeadline: 'Your time is confirmed ✨',
+            heroSubtext: "We’re waiting for you with Sandra — your beauty moment is now certain.",
+            heroMicroLine: 'Most clients already feel the excitement of their new result right now.',
             refLabel: 'Reference',
+            summaryDurationLabel: 'Duration',
+            summaryStudioLabel: 'Studio',
+            summaryTechnicianLabel: 'Technician',
+            breakdownServiceTotalLabel: 'Service total',
+            breakdownDepositPaidLabel: 'Deposit paid',
+            breakdownPayAtSalonLabel: 'Pay at salon',
+            depositTrustNote: 'Your deposit protects your time and prevents last-minute cancellations.',
+            calendarHelper: 'You’ll get an automatic reminder before your visit.',
+            secondaryProductsCta: 'View care products',
+            secondaryBookNewCta: 'Book a new time',
+            inspirationTitle: 'Inspiration for your next visit',
+            retentionTitle: 'Plan your next visit',
+            retentionBody:
+              'The best results last 3–4 weeks. Most clients book their next appointment today.',
+            retentionPrimary: 'Book your next appointment',
+            retentionSecondary: 'Not now',
+            footerQuestions: 'Questions? hello@nailify.com',
             nextTitle: 'What happens next',
             next1: 'Confirmation sent to you by email',
             next2: 'Flexible reschedule if plans change',
@@ -89,7 +110,27 @@ function SuccessPageContent() {
             specialist: 'Sandra',
             headline: 'Sinu aeg on kinnitatud',
             subtext: 'Oleme sulle aja broneerinud Sandraga. Ootame sind!',
+            heroHeadline: 'Sinu aeg on kinnitatud ✨',
+            heroSubtext: 'Ootame sind Sandraga — sinu iluhetk on nüüd kindel.',
+            heroMicroLine: 'Enamus kliente tunneb juba praegu elevust oma uue tulemuse üle.',
             refLabel: 'Viide',
+            summaryDurationLabel: 'Kestus',
+            summaryStudioLabel: 'Stuudio',
+            summaryTechnicianLabel: 'Tehnik',
+            breakdownServiceTotalLabel: 'Teenuse koguhind',
+            breakdownDepositPaidLabel: 'Ettemaks tasutud',
+            breakdownPayAtSalonLabel: 'Maksta salongis',
+            depositTrustNote: 'Ettemaks kaitseb sinu aega ja väldib viimase hetke tühistamisi.',
+            calendarHelper: 'Saad automaatse meeldetuletuse enne visiiti.',
+            secondaryProductsCta: 'Vaata hooldustooteid',
+            secondaryBookNewCta: 'Broneeri uus aeg',
+            inspirationTitle: 'Inspiratsioon sinu järgmiseks külastuseks',
+            retentionTitle: 'Planeeri järgmine külastus',
+            retentionBody:
+              'Parim tulemus püsib 3–4 nädalat. Enamus kliente broneerib järgmise aja juba täna.',
+            retentionPrimary: 'Broneeri järgmine aeg',
+            retentionSecondary: 'Mitte praegu',
+            footerQuestions: 'Küsimused? hello@nailify.com',
             nextTitle: 'Mis edasi saab',
             next1: 'Saadame kinnituse e-postile',
             next2: 'Vajadusel saad aega paindlikult muuta',
@@ -272,6 +313,14 @@ function SuccessPageContent() {
     router.push(`${L('/book')}?${params.toString()}`);
   };
 
+  const handleInspirationTap = () => {
+    if (recommendedMaintenanceSlots[0]) {
+      handleRecommendedMaintenance(recommendedMaintenanceSlots[0]);
+      return;
+    }
+    handleNextBooking();
+  };
+
   const calendarUrl = useMemo(() => {
     if (!selectedSlot || !selectedService) return '';
     const start = new Date(`${selectedSlot.date}T${selectedSlot.time}:00`);
@@ -304,6 +353,14 @@ function SuccessPageContent() {
         year: 'numeric',
       })} · ${selectedSlot.time}`
     : '';
+
+  const serviceDisplayName = selectedService
+    ? en
+      ? selectedService.nameEn ?? selectedService.name
+      : selectedService.nameEt ?? selectedService.name
+    : '';
+
+  const durationDisplayMin = totalDuration || selectedService?.duration || 0;
 
   if (paymentStatus === 'error') {
     return (
@@ -375,155 +432,161 @@ function SuccessPageContent() {
           </svg>
         </div>
 
-        <h1 className="text-center font-brand text-[1.75rem] font-semibold leading-tight tracking-tight text-[#2a2228] sm:text-[2rem]">
-          {isBookingView ? copy.headline : copy.orderHeadline}
+        <h1 className="success-stagger-1 text-center font-brand text-[1.75rem] font-semibold leading-tight tracking-tight text-[#2a2228] sm:text-[2rem] sm:text-[2.15rem]">
+          {isBookingView ? copy.heroHeadline : copy.orderHeadline}
         </h1>
-        <p className="mx-auto mt-3 max-w-[28ch] text-center text-[15px] leading-relaxed text-[#6d6268]">
-          {isBookingView ? copy.subtext : copy.orderSub}
+        <p className="success-stagger-2 mx-auto mt-3 max-w-[34ch] text-center text-[15px] leading-relaxed text-[#6d6268]">
+          {isBookingView ? copy.heroSubtext : copy.orderSub}
         </p>
-        <p className="mt-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-[#c9aeb8]">
-          {copy.refLabel} · {bookingRef}
-        </p>
+        {isBookingView ? (
+          <p className="success-stagger-3 mt-4 text-center text-[14px] font-medium text-[#7a6d74]">
+            {copy.heroMicroLine}
+          </p>
+        ) : (
+          <p className="mt-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-[#c9aeb8]">
+            {copy.refLabel} · {bookingRef}
+          </p>
+        )}
 
         {isBookingView && selectedService && (
           <>
-            <section className="mt-10 w-full rounded-[22px] border border-[#ebe6e3] bg-white p-5 shadow-[0_20px_48px_-32px_rgba(45,35,40,0.12)] sm:p-6">
+            <section className="success-stagger-4 mt-10 w-full rounded-[22px] border border-[#ebe6e3] bg-white p-5 shadow-[0_20px_48px_-32px_rgba(45,35,40,0.12)] sm:p-6">
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between gap-4">
-                  <span className="text-[#8a7d82]">{en ? 'Service' : 'Teenus'}</span>
-                  <span className="text-right font-semibold text-[#2f282c]">{selectedService.name}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-[#8a7d82]">{en ? 'Specialist' : 'Spetsialist'}</span>
-                  <span className="font-medium text-[#3d3539]">{copy.specialist}</span>
-                </div>
-                {selectedSlot && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-[#8a7d82]">{en ? 'Date & time' : 'Kuupäev ja aeg'}</span>
-                    <span className="max-w-[60%] text-right text-[13px] font-medium leading-snug text-[#3d3539]">
-                      {dateTimeLine}
-                    </span>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">
+                      {en ? 'Booking summary' : 'Broneeringu kokkuvõte'}
+                    </p>
+                    <p className="mt-2 text-[16px] font-semibold text-[#2f282c]">{serviceDisplayName}</p>
+                    {selectedSlot && (
+                      <p className="mt-1 text-[14px] font-medium text-[#7a6d74]">
+                        {new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}{' '}
+                        · {selectedSlot.time}
+                      </p>
+                    )}
                   </div>
-                )}
-                <div className="flex justify-between gap-4">
-                  <span className="text-[#8a7d82]">{en ? 'Studio' : 'Stuudio'}</span>
-                  <span className="text-right text-[13px] text-[#5d5258]">{copy.studio}</span>
+                </div>
+
+                <div className="mt-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#a8989e]">{copy.summaryDurationLabel}</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#2f282c]">{durationDisplayMin} min</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#a8989e]">{copy.summaryStudioLabel}</p>
+                    <p className="mt-1 text-[13px] font-medium text-[#5d5258]">{copy.studio}</p>
+                  </div>
+                </div>
+
+                <p className="mt-1 text-[13px] font-medium text-[#3d3539]">
+                  {copy.summaryTechnicianLabel}: {copy.specialist}
+                </p>
+              </div>
+
+              <div className="my-5 h-px bg-[#efeae7]" />
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#6d6268]">{copy.breakdownServiceTotalLabel}</span>
+                  <span className="font-semibold tabular-nums text-[#2f282c]">
+                    €{typeof totalPrice === 'number' ? totalPrice : selectedService.price}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#6d6268]">{copy.breakdownDepositPaidLabel}</span>
+                  <span className="font-semibold tabular-nums text-[#b04b80]">€{DEPOSIT_EUROS}</span>
+                </div>
+
+                <div className="rounded-xl border border-[#f0d6e3] bg-[#fff4fb] px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-semibold text-[#6a3b57]">{copy.breakdownPayAtSalonLabel}</span>
+                    <span className="text-[15px] font-bold tabular-nums text-[#b04b80]">€{remainingStudio}</span>
+                  </div>
                 </div>
               </div>
-              <div className="my-5 h-px bg-[#efeae7]" />
-              <div className="flex justify-between text-sm">
-                <span className="text-[#6d6268]">{copy.depositPaid}</span>
-                <span className="font-semibold tabular-nums text-[#b04b80]">€{DEPOSIT_EUROS}</span>
-              </div>
-              <div className="mt-2 flex justify-between text-sm">
-                <span className="text-[#6d6268]">{copy.remainingStudio}</span>
-                <span className="font-medium tabular-nums text-[#3d3539]">€{remainingStudio}</span>
+
+              <p className="mt-3 text-xs font-medium leading-relaxed text-[#7a6d74]">{copy.depositTrustNote}</p>
+            </section>
+
+            <section className="success-stagger-5 mt-8 w-full">
+              <a
+                href={calendarUrl || '#'}
+                target="_blank"
+                rel="noreferrer"
+                className={`block w-full rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] py-4 text-center text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.4)] ${
+                  !calendarUrl ? 'pointer-events-none opacity-40' : ''
+                }`}
+              >
+                {copy.addCalendar}
+              </a>
+              <p className="mt-2 text-center text-xs font-medium text-[#a8989e]">{copy.calendarHelper}</p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => router.push(L('/shop'))}
+                  className="rounded-full border-2 border-[#e0d5d9] bg-white py-3.5 text-[15px] font-semibold text-[#5d4a56] hover:bg-[#fff7fc] transition-colors duration-200"
+                >
+                  {copy.secondaryProductsCta}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextBooking}
+                  className="rounded-full border border-[#eadce5] bg-[#fffcfb] py-3.5 text-[15px] font-semibold text-[#8b5c72] hover:bg-[#fff5f8] transition-colors duration-200"
+                >
+                  {copy.secondaryBookNewCta}
+                </button>
               </div>
             </section>
 
-            <section className="mt-8 w-full">
-              <h2 className="text-center text-[13px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">
-                {copy.nextTitle}
+            <section className="success-stagger-6 mt-10 w-full">
+              <h2 className="text-left text-[13px] font-semibold tracking-tight text-[#2f282c]">
+                {copy.inspirationTitle}
               </h2>
-              <ul className="mt-4 space-y-3 text-center text-[15px] leading-relaxed text-[#5d545a] sm:text-left">
-                <li className="flex gap-3 sm:items-start">
-                  <span className="text-[#c9aeb8]">•</span>
-                  <span>{copy.next1}</span>
-                </li>
-                <li className="flex gap-3 sm:items-start">
-                  <span className="text-[#c9aeb8]">•</span>
-                  <span>{copy.next2}</span>
-                </li>
-                <li className="flex gap-3 sm:items-start">
-                  <span className="text-[#c9aeb8]">•</span>
-                  <span>{copy.next3}</span>
-                </li>
-              </ul>
-            </section>
-
-            <div className="mt-8 w-full rounded-2xl border border-[#ecd4dc]/60 bg-[#fdf8fa] px-4 py-4 sm:px-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#b87a95]">{copy.tipLabel}</p>
-              <p className="mt-2 text-[14px] leading-relaxed text-[#5d4f55]">{copy.tipBody}</p>
-            </div>
-
-            <section className="mt-10 w-full">
-              <p className="text-center text-xs font-medium text-[#9a8a94]">{copy.resultsCaption}</p>
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
-                {galleryUrls.slice(0, 3).map((url, i) => (
-                  <div
+              <div className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 success-inspiration-strip">
+                {galleryUrls.map((url, i) => (
+                  <button
                     key={`${url}-${i}`}
-                    className="relative aspect-[4/5] overflow-hidden rounded-xl border border-[#ebe6e3] bg-[#f5f0ed]"
+                    type="button"
+                    onClick={handleInspirationTap}
+                    className="success-inspiration-card group relative h-[128px] w-[168px] shrink-0 snap-start overflow-hidden rounded-2xl border border-[#ebe6e3] bg-[#f5f0ed] transition-shadow duration-200 hover:shadow-[0_18px_44px_-24px_rgba(194,77,134,0.35)]"
+                    aria-label={en ? 'Open related service' : 'Ava seotud teenus'}
                   >
                     <Image
                       src={url}
                       alt=""
                       fill
                       unoptimized
-                      className="object-cover"
-                      sizes="(max-width:640px) 30vw, 120px"
+                      className="object-cover transition-transform duration-300 group-hover:scale-[1.06]"
+                      sizes="168px"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             </section>
 
-            <div className="mt-10 hidden w-full flex-col gap-3 sm:flex">
-              <a
-                href={calendarUrl || '#'}
-                target="_blank"
-                rel="noreferrer"
-                className={`block w-full rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] py-4 text-center text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.4)] ${!calendarUrl ? 'pointer-events-none opacity-40' : ''}`}
-              >
-                {copy.addCalendar}
-              </a>
-              <button
-                type="button"
-                onClick={() => router.push(L('/shop'))}
-                className="w-full rounded-full border-2 border-[#e0d5d9] bg-white py-3.5 text-[15px] font-semibold text-[#5d4a56]"
-              >
-                {copy.exploreShop}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push(L('/book'))}
-                className="w-full py-2 text-center text-sm font-medium text-[#9d7a8a] underline underline-offset-2"
-              >
-                {copy.bookAnother}
-              </button>
-            </div>
-
             {showRepeatOffer && (
-              <section className="mt-8 w-full rounded-2xl border border-[#ebe6e3] bg-[#fffcfb] p-5 sm:mt-10">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#b898a4]">{copy.maintenanceTitle}</p>
-                <p className="mt-1 text-sm text-[#6d6268]">{copy.maintenanceHelper}</p>
-                <p className="mt-2 text-xs text-[#8a7c82]">{nextBookingSuggestion.label}</p>
-                {recommendedMaintenanceSlots.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {recommendedMaintenanceSlots.map((slot) => (
-                      <button
-                        key={`future-${slot.id}`}
-                        type="button"
-                        onClick={() => handleRecommendedMaintenance(slot)}
-                        className="rounded-full border border-[#e8dde2] bg-white px-3 py-1.5 text-xs font-medium text-[#6d525e] hover:bg-[#fff5f8]"
-                      >
-                        {new Date(`${slot.date}T00:00:00`).toLocaleDateString(en ? 'en-GB' : 'et-EE', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}{' '}
-                        {slot.time}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <section className="success-stagger-7 mt-10 w-full rounded-2xl border border-[#ebe6e3] bg-[#fffcfb] px-5 py-5">
+                <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#b898a4]">{copy.retentionTitle}</h2>
+                <p className="mt-2 text-sm text-[#6d6268]">{copy.retentionBody}</p>
+
                 <button
                   type="button"
                   onClick={handleNextBooking}
-                  className="mt-4 w-full rounded-full border border-[#d4b8c4] bg-white py-2.5 text-sm font-semibold text-[#8b5c72] hover:bg-[#fff8fa]"
+                  className="mt-4 w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.4)] hover:shadow-[0_20px_46px_-18px_rgba(194,77,134,0.35)] transition-shadow duration-200"
                 >
-                  {copy.bookNext}
+                  {copy.retentionPrimary}
                 </button>
-                <button type="button" onClick={() => setShowRepeatOffer(false)} className="mt-2 w-full text-xs text-[#a8989e]">
-                  {copy.skip}
+                <button
+                  type="button"
+                  onClick={() => setShowRepeatOffer(false)}
+                  className="mt-2 w-full text-center text-xs font-semibold text-[#a8989e] hover:text-[#8a7a88] transition-colors duration-200"
+                >
+                  {copy.retentionSecondary}
                 </button>
               </section>
             )}
@@ -542,35 +605,8 @@ function SuccessPageContent() {
           </div>
         )}
 
-        <p className="mt-12 text-center text-xs text-[#b5a8ad]">{copy.helpFooter}</p>
+        <p className="mt-12 text-center text-xs text-[#b5a8ad]">{copy.footerQuestions}</p>
       </div>
-
-      {isBookingView && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#ebe6e3] bg-[#fffcfc]/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:hidden">
-          <a
-            href={calendarUrl || '#'}
-            target="_blank"
-            rel="noreferrer"
-            className={`mb-2 block w-full rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] py-3.5 text-center text-[15px] font-semibold text-white shadow-[0_12px_28px_-12px_rgba(194,77,134,0.35)] ${!calendarUrl ? 'pointer-events-none opacity-40' : ''}`}
-          >
-            {copy.addCalendar}
-          </a>
-          <button
-            type="button"
-            onClick={() => router.push(L('/shop'))}
-            className="w-full rounded-full border border-[#dcd4d6] bg-white py-3 text-[14px] font-semibold text-[#5d4a56]"
-          >
-            {copy.exploreShop}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(L('/book'))}
-            className="mt-2 w-full py-1.5 text-center text-xs font-medium text-[#9d7a8a]"
-          >
-            {copy.bookAnother}
-          </button>
-        </div>
-      )}
 
       <style jsx>{successStyles}</style>
     </div>
@@ -578,23 +614,84 @@ function SuccessPageContent() {
 }
 
 const successStyles = `
-  @keyframes success-check-pop {
+  @keyframes success-check-pulse {
     0% {
-      transform: scale(0.88);
-      opacity: 0.75;
+      transform: scale(0.8);
+      opacity: 0;
+      filter: saturate(0.9);
+    }
+    45% {
+      transform: scale(1.08);
+      opacity: 1;
     }
     100% {
       transform: scale(1);
       opacity: 1;
+      filter: saturate(1);
     }
   }
+
   .success-check-icon {
-    animation: success-check-pop 0.65s cubic-bezier(0.22, 0.8, 0.22, 1) both;
+    animation: success-check-pulse 0.85s cubic-bezier(0.22, 0.8, 0.22, 1) both;
   }
+
+  @keyframes success-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .success-stagger-1 {
+    animation: success-fade-up 520ms ease-out both;
+  }
+  .success-stagger-2 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 80ms;
+  }
+  .success-stagger-3 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 140ms;
+  }
+  .success-stagger-4 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 220ms;
+  }
+  .success-stagger-5 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 280ms;
+  }
+  .success-stagger-6 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 340ms;
+  }
+  .success-stagger-7 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 410ms;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .success-check-icon {
       animation: none;
     }
+    .success-stagger-1,
+    .success-stagger-2,
+    .success-stagger-3,
+    .success-stagger-4,
+    .success-stagger-5,
+    .success-stagger-6,
+    .success-stagger-7 {
+      animation: none;
+    }
+  }
+
+  .success-inspiration-strip {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
 `;
 

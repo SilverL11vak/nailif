@@ -17,20 +17,26 @@ const servicesInFlight = new Map<string, Promise<ApiService[]>>();
 async function fetchServices(language: string): Promise<ApiService[]> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 4500);
-  let response: Response;
   try {
-    response = await fetch(`/api/services?lang=${language}`, { signal: controller.signal });
+    const response = await fetch(`/api/services?lang=${language}`, { signal: controller.signal });
+    if (!response.ok) {
+      return mockServices;
+    }
+
+    const data = (await response.json()) as { services?: ApiService[] };
+    if (!Array.isArray(data.services) || data.services.length === 0) {
+      return mockServices;
+    }
+    return data.services;
+  } catch (err) {
+    // AbortController timeouts are expected during route transitions; treat them as a soft fallback.
+    const name = (err as any)?.name;
+    const code = (err as any)?.code;
+    if (name === 'AbortError' || code === 'ABORT_ERR') return mockServices;
+    return mockServices;
   } finally {
     window.clearTimeout(timeout);
   }
-  if (!response.ok) {
-    return mockServices;
-  }
-  const data = (await response.json()) as { services?: ApiService[] };
-  if (!Array.isArray(data.services) || data.services.length === 0) {
-    return mockServices;
-  }
-  return data.services;
 }
 
 export function useServices() {
@@ -59,6 +65,9 @@ export function useServices() {
         try {
           const result = await existingRequest;
           if (isMounted) setServices(result);
+        } catch {
+          // If the shared request was aborted, fall back to cached/mock services without throwing.
+          if (isMounted) setServices(mockServices);
         } finally {
           if (isMounted) setLoading(false);
         }
@@ -82,7 +91,11 @@ export function useServices() {
       }
     };
 
-    void load();
+    void load().catch(() => {
+      // Safety net: ensure no unhandled promise rejection leaks to the console.
+      if (isMounted) setServices(mockServices);
+      if (isMounted) setLoading(false);
+    });
 
     return () => {
       isMounted = false;

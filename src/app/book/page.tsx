@@ -507,7 +507,7 @@ function BookingContent() {
             </div>
           </section>
 
-          <aside className={currentStep === 2 ? 'hidden' : 'hidden xl:block'}>
+          <aside className={currentStep === 2 || currentStep === 5 ? 'hidden' : 'hidden xl:block'}>
             <div className="sticky top-24 rounded-2xl bg-white/75 p-6 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.18)] backdrop-blur-xl">
               <div className="mb-5 flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-xs font-bold text-white">

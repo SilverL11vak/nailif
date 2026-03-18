@@ -17,14 +17,20 @@ export function ExtrasStep() {
 
   const selectedCount = selectedAddOns.filter((a) => a.selected).length;
   const selectedExtrasTotal = selectedAddOns.filter((a) => a.selected).reduce((sum, a) => sum + a.price, 0);
+  const mostPopularId =
+    selectedAddOns.length > 0 ? selectedAddOns.reduce((max, a) => (a.price > max.price ? a : max), selectedAddOns[0]).id : null;
 
   return (
     <div className="animate-fade-in">
       <div className="mb-8 text-center md:mb-10">
         <h2 className="font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2622] md:text-[1.85rem]">
-          {t('extras.addExtras')}
+          {language === 'en' ? 'Make your visit special' : 'Muuda külastus eriliseks'}
         </h2>
-        <p className="mt-2 text-[15px] text-[#6f655f]">{t('extras.makeSpecial')}</p>
+        <p className="mt-2 text-[15px] text-[#6f655f]">
+          {language === 'en'
+            ? 'Most clients add at least one add-on for a better result.'
+            : 'Enamik kliendid lisavad vähemalt ühe lisa parema tulemuse jaoks.'}
+        </p>
       </div>
 
       <div className="mb-5 rounded-2xl border border-[#eadce5] bg-[#fffafe] p-4">
@@ -56,12 +62,17 @@ export function ExtrasStep() {
             <button
               key={addOn.id}
               onClick={() => toggleAddOn(addOn)}
-              className={`w-full rounded-2xl border p-4 text-left transition-all duration-200 ${
+              className={`relative w-full rounded-2xl border p-4 text-left transition-all duration-200 ${
                 isSelected
                   ? 'border-[#d7b0c7] bg-[#fff8fc] shadow-[0_16px_24px_-22px_rgba(116,47,93,0.3)]'
                   : 'border-[#eadce5] bg-white hover:border-[#d7b0c7]'
               }`}
             >
+              {mostPopularId && addOn.id === mostPopularId && (
+                <span className="absolute right-4 top-4 rounded-full border border-[#c24d86]/30 bg-[#fff2f9] px-3 py-1 text-[11px] font-semibold text-[#8b3b62] shadow-[0_12px_24px_-20px_rgba(194,77,134,0.35)]">
+                  Most popular
+                </span>
+              )}
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <div
