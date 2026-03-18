@@ -69,7 +69,6 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [allSlots, setAllSlots] = useState<TimeSlot[]>([]);
-  const [recommendedSlots, setRecommendedSlots] = useState<TimeSlot[]>([]);
   const [slotsByDate, setSlotsByDate] = useState<Record<string, TimeSlot[]>>({});
   const [weekOffset, setWeekOffset] = useState(0);
   const [summaryBump, setSummaryBump] = useState(0);
@@ -144,7 +143,6 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
         const data = (await response.json()) as { slots?: TimeSlot[]; recommendedTimes?: TimeSlot[] };
         const loaded = data.slots ?? [];
-        const recommended = (data.recommendedTimes ?? []).filter((slot) => slot.available).slice(0, 3);
         const map: Record<string, TimeSlot[]> = {};
 
         for (const slot of loaded) {
@@ -154,7 +152,6 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
         if (!mounted) return;
         setAllSlots(loaded);
-        setRecommendedSlots(recommended);
         setSlotsByDate(map);
 
         const initialDate = initialSelectedDateRef.current ?? new Date();
@@ -174,7 +171,6 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
         console.error('DateTimeStep slots load error:', error);
         if (mounted) {
           setAllSlots([]);
-          setRecommendedSlots([]);
           setSlotsByDate({});
         }
       } finally {
