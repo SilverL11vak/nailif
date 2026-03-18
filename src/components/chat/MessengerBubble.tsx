@@ -16,6 +16,13 @@ export function MessengerBubble() {
   const isHome = pathname === '/' || pathname === '/en' || pathname === '/et';
   const isBookingFlow = pathname.includes('/book');
   const canRender = !isAdmin && Boolean(pageId);
+
+  const [isConfirmStep, setIsConfirmStep] = useState(() => {
+    if (!isBookingFlow) return false;
+    if (typeof document === 'undefined') return false;
+    return Boolean(document.getElementById('confirm-step-cta-anchor'));
+  });
+
   const [isAllowedToRender, setIsAllowedToRender] = useState(() => {
     if (!canRender) return false;
     // On booking pages we delay the bubble until CTA area is reached.
@@ -35,6 +42,7 @@ export function MessengerBubble() {
     if (isBookingFlow) {
       setIsAllowedToRender(false);
       const anchor = document.getElementById('confirm-step-cta-anchor');
+        setIsConfirmStep(Boolean(anchor));
       if (!anchor) {
         const timeout = window.setTimeout(() => setIsAllowedToRender(window.scrollY > 420), 250);
         return () => window.clearTimeout(timeout);
@@ -99,7 +107,9 @@ export function MessengerBubble() {
   const messengerUrl = `https://m.me/${pageId}`;
 
   const containerClasses = isBookingFlow
-    ? 'fixed bottom-[calc(4.6rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
+    ? isConfirmStep
+      ? 'fixed bottom-[calc(10rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
+      : 'fixed bottom-[calc(4.6rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
     : 'fixed bottom-[calc(5.85rem+env(safe-area-inset-bottom))] right-3 z-[45] md:bottom-6 md:right-6';
 
   return (

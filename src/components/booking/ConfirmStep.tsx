@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import type { ContactInfo } from '@/store/booking-types';
 import { useTranslation } from '@/lib/i18n';
-import { Check, CheckCircle2, Eye, Lock, RefreshCw, ShieldCheck, Star, UploadCloud } from 'lucide-react';
+import { CheckCircle2, Lock, RefreshCw, ShieldCheck, Star, UploadCloud } from 'lucide-react';
 import { clearBookingSession, trackEvent, touchBookingActivity } from '@/lib/analytics-client';
 import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
@@ -272,7 +272,6 @@ export function ConfirmStep() {
 
   const canPay = firstNameValid && phoneValid && emailValid && remainingSec > 0 && lockReady && !isLoading;
 
-  const [ctaPressed, setCtaPressed] = useState(false);
   const [ctaGlowOnce, setCtaGlowOnce] = useState(false);
   const [inspirationUploading, setInspirationUploading] = useState(false);
 
@@ -340,13 +339,6 @@ export function ConfirmStep() {
     );
   }
 
-  const dateLong = new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-
   const dateShort = new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
     day: 'numeric',
     month: 'short',
@@ -356,17 +348,11 @@ export function ConfirmStep() {
   const durationMin = totalDuration || selectedService.duration || 0;
   const totalPriceDisplay = totalPrice || selectedService.price || 0;
 
-  const technicianName = 'Sandra';
-  const studioLocation = 'Mustamäe tee 55, Tallinn';
-
   const lockLine = `${copy.locked} — ${formatLockMmSs(remainingSec)}`;
-
-  const viewedToday = 3;
 
   const handleSubmit = async () => {
     setTouched({ firstName: true, phone: true, email: true, notes: true, inspiration: true });
     if (!validateForm()) {
-      setCtaPressed(false);
       setCtaGlowOnce(false);
       return;
     }
@@ -383,85 +369,9 @@ export function ConfirmStep() {
     setContactInfo(payloadContact);
     const ok = await handleConfirm(payloadContact);
     if (!ok) {
-      setCtaPressed(false);
       setCtaGlowOnce(false);
     }
   };
-
-  const BookingSummaryPremiumCard = ({ className }: { className?: string }) => (
-    <div
-      className={[
-        'booking-summary-premium relative overflow-hidden rounded-[26px] border border-[#f0e8ed] bg-[radial-gradient(ellipse_at_top,_rgba(194,77,134,0.14)_0%,_rgba(255,250,252,0.95)_50%,_rgba(255,255,255,1)_100%)] p-5 shadow-[0_26px_66px_-40px_rgba(57,33,52,0.22)] ring-1 ring-[#f3e8f0]/40 transition-all duration-300 hover:shadow-[0_40px_92px_-60px_rgba(194,77,134,0.18)]',
-        className ?? '',
-      ].join(' ')}
-    >
-      {ctaPressed && <div className="booking-summary-shimmer" aria-hidden />}
-
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a898a8]">{en ? 'Your appointment' : 'Sinu broneering'}</p>
-          <p className="mt-2 font-brand text-lg font-semibold leading-tight text-[#2f2530]">{selectedService.name}</p>
-            <p className="mt-1 text-xs font-medium text-[#8a7a88]">
-            {dateShort} · {selectedSlot.time}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Total' : 'Kokku'}</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-[#c24d86]">€{totalPriceDisplay}</p>
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Date' : 'Kuupäev'}</p>
-          <p className="mt-0.5 font-medium text-[#3d2f38]">{dateLong}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Time' : 'Aeg'}</p>
-          <p className="mt-0.5 font-semibold text-[#8a7a88]">{selectedSlot.time}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Duration' : 'Kestus'}</p>
-          <p className="mt-0.5 font-medium text-[#3d2f38]">{durationMin} min</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Price' : 'Hind'}</p>
-          <p className="mt-0.5 font-semibold text-[#2f2530]">€{totalPriceDisplay}</p>
-        </div>
-        <div className="col-span-2">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Technician & studio' : 'Tehnik ja stuudio'}</p>
-          <p className="mt-0.5 font-medium text-[#3d2f38]">
-            {technicianName} · {studioLocation}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {[
-          { label: copy.trustChip1 },
-          { label: copy.trustChip2 },
-          { label: copy.trustChip3 },
-        ].map((chip, i) => (
-          <span
-            key={chip.label}
-            className="booking-trust-chip-anim relative inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-[#5d4a56]"
-            style={{ animationDelay: `${i * 140}ms` }}
-          >
-            <Check
-              className={[
-                'h-4 w-4',
-                ctaPressed ? 'text-[#2d8a5e] booking-benefit-tick-ok' : 'text-[#c24d86]',
-              ].join(' ')}
-              style={ctaPressed ? { animationDelay: `${i * 140}ms` } : undefined}
-              strokeWidth={2.4}
-              aria-hidden
-            />
-            {chip.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <div className="animate-fade-in mx-auto w-full max-w-[640px] pb-40 lg:pb-10">
@@ -474,24 +384,17 @@ export function ConfirmStep() {
         </div>
       )}
 
-      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_390px] xl:gap-10">
+      <div className="flex flex-col">
         {/* LEFT: emotional confirmation + form */}
         <div className="flex flex-col">
-          <header className="order-2 mb-5 text-center">
-            <h1 className="font-brand text-[28px] font-medium leading-[1.25] tracking-tight text-[#1f171d]">
-              {copy.title}
+          <header className="mb-4 text-center">
+            <h1 className="font-brand text-[28px] font-medium leading-[1.2] tracking-tight text-[#1f171d]">
+              {en ? 'Your details' : 'Teie andmed'}
             </h1>
-            <p className="mt-2 text-[15px] leading-[1.65] font-medium text-[#5d4a56]">{copy.subtitle}</p>
+            <p className="mt-2 text-[15px] leading-[1.55] font-medium text-[#5d4a56]">
+              {en ? "We'll send your confirmation here" : 'Saadame kinnituse siia'}
+            </p>
 
-            {/* Loss framing bar (desktop only) */}
-            <div className="hidden xl:flex mx-auto mt-4 flex max-w-[560px] items-start gap-3 rounded-[22px] border-l-4 border-l-[#c24d86]/30 border border-[#f0d6e3] bg-[#fff4fb]/90 px-4 py-3 shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)]">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#f0e6ec] text-[#c24d86]">
-                <Lock className="h-5 w-5" strokeWidth={2} aria-hidden />
-              </div>
-              <p className="pt-0.5 text-left text-sm font-medium text-[#6a3b57]">{copy.timerHint}</p>
-            </div>
-
-            {/* Animated countdown badge (desktop only) */}
             <div
               className={`hidden xl:mx-auto xl:mt-3 xl:inline-flex items-center gap-2 rounded-full border border-[#efe0e8] bg-white/80 px-4 py-2 text-sm font-semibold text-[#6a3b57] shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)] backdrop-blur-sm ${
                 lockPulse ? 'booking-countdown-badge-pulse' : ''
@@ -504,83 +407,36 @@ export function ConfirmStep() {
             </div>
           </header>
 
-          {/* Mobile: booking summary strip */}
-          <div className="xl:hidden order-1 mb-4">
-            <div className="rounded-[22px] border border-[#f0e8ed] bg-white/75 px-4 py-3 shadow-[0_12px_26px_-20px_rgba(57,33,52,0.16)]">
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">
-                    {en ? 'Booking summary' : 'Broneeringu kokkuvõte'}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-[14px] leading-[1.25] font-semibold text-[#2f2530]">
-                    {selectedService.name}
-                  </p>
-                  <p className="mt-0.5 text-[12px] font-medium text-[#8a7a88]">
-                    {dateShort} · {selectedSlot.time}
-                    <span className="ml-2 text-[#a89a9f]">{durationMin ? `· ${durationMin} min` : ''}</span>
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">
-                    {en ? 'Total' : 'Kokku'}
-                  </p>
-                  <p className="mt-1 text-[22px] font-semibold tabular-nums text-[#c24d86]">€{totalPriceDisplay}</p>
-                </div>
+          {/* Booking summary strip */}
+          <div className="mb-5 rounded-[22px] border border-[#f0e8ed] bg-[linear-gradient(180deg,rgba(255,244,251,0.92)_0%,rgba(255,255,255,0.98)_100%)] px-4 py-3 shadow-[0_12px_26px_-20px_rgba(194,77,134,0.18)]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">
+                  {en ? 'My booking' : 'Minu broneering'}
+                </p>
+                <p className="mt-1 line-clamp-1 text-[15px] leading-[1.25] font-semibold text-[#2f2530]">
+                  {selectedService.name}
+                </p>
+                <p className="mt-0.5 text-[12px] font-medium text-[#8a7a88]">
+                  {dateShort} · {selectedSlot.time}
+                  {durationMin ? <span className="ml-2 text-[#a89a9f]">· {durationMin} min</span> : null}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">
+                  {en ? 'Total' : 'Kokku'}
+                </p>
+                <p className="mt-1 text-[22px] font-semibold tabular-nums text-[#c24d86]">
+                  €{totalPriceDisplay}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Hero -> next section transition (subtle blur line) */}
           <div
-            className="hidden xl:block mb-5 h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(194,77,134,0.28)_50%,transparent_100%)] blur-[0.2px]"
+            className="hidden xl:block mb-4 h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(194,77,134,0.25)_50%,transparent_100%)] blur-[0.2px]"
             aria-hidden
           />
-
-          {/* Deposit framing */}
-          <section className="mb-5 hidden xl:block rounded-[22px] border border-[#ead6e2] bg-[linear-gradient(180deg,#fff7fb_0%,#fffafd_60%,#ffffff_100%)] p-5 shadow-[0_18px_44px_-36px_rgba(194,77,134,0.35)]">
-            <div className="min-w-0">
-              <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">{en ? 'Deposit' : 'Ettemaks'}</p>
-              <p className="mt-2 font-brand text-[20px] font-semibold text-[#2f2530]">{copy.depositTitle}</p>
-              <p className="mt-2 text-sm font-medium text-[#7a6a72]">{copy.depositSub}</p>
-
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/70 px-3 py-1 text-[12px] font-semibold text-[#5d4a56]">
-                <Lock className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                {en ? 'Secure Stripe checkout' : 'Turvaline Stripe makse'}
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <span className="booking-deposit-chip inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-[#5d4a56]">
-                  <Lock className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                  {copy.depositChipStripe}
-                </span>
-                <span className="booking-deposit-chip inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-[#5d4a56]">
-                  <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2} aria-hidden />
-                  {copy.depositChipEncrypted}
-                </span>
-                <span className="booking-deposit-chip inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-[#5d4a56]">
-                  <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={2} aria-hidden />
-                  {copy.depositChipCancel}
-                </span>
-                <span className="booking-deposit-chip inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-[#5d4a56]">
-                  <CheckCircle2 className="h-4 w-4 text-[#2d8a5e]" strokeWidth={2} aria-hidden />
-                  {copy.depositChipEmail}
-                </span>
-              </div>
-
-              {/* Payment method mini logos */}
-              <div className="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-[#ead6e2] bg-white/60 px-3 py-2">
-                <span className="inline-flex items-center justify-center rounded-xl border border-[#ead6e2] bg-white px-3 py-1 text-[12px] font-bold text-[#244b7a]">
-                  VISA
-                </span>
-                <span className="inline-flex items-center justify-center rounded-xl border border-[#ead6e2] bg-white px-3 py-1 text-[12px] font-bold text-[#5d4a56]">
-                  Mastercard
-                </span>
-                <span className="inline-flex items-center justify-center rounded-xl border border-[#ead6e2] bg-[linear-gradient(135deg,#a93d71_0%,#c24d86_50%,#b03d6f_100%)] px-3 py-1 text-[12px] font-bold text-white">
-                  Stripe
-                </span>
-              </div>
-            </div>
-          </section>
 
           {/* Client details form */}
           <form
@@ -600,23 +456,19 @@ export function ConfirmStep() {
               )}
             </div>
 
-            {/* Compact trust chips for mobile */}
-            <div className="mb-4 grid grid-cols-2 gap-x-2 gap-y-2 xl:hidden">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
-                <Lock className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                {copy.depositChipStripe}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
-                <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2} aria-hidden />
-                {copy.depositChipEncrypted}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
+            {/* Trust chips (compact, premium) */}
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/75 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
                 <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={2} aria-hidden />
-                {copy.depositChipCancel}
+                {en ? 'Free rescheduling' : 'Tasuta ümberbroneerimine'}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/75 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
                 <CheckCircle2 className="h-4 w-4 text-[#2d8a5e]" strokeWidth={2} aria-hidden />
-                {copy.depositChipEmail}
+                {en ? 'Instant confirmation' : 'Kiire kinnitus'}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/75 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
+                <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2} aria-hidden />
+                {en ? 'Certified nail technician' : 'Sertifitseeritud küünetehnik'}
               </span>
             </div>
 
@@ -673,7 +525,9 @@ export function ConfirmStep() {
                       : 'border-[#e3dbd4] focus-within:border-[#c24d86]/60 focus-within:ring-2 focus-within:ring-[#c24d86]/20'
                   }`}
                 >
-                  <span className="text-[16px] font-semibold text-[#443630]">{phonePrefix}</span>
+                  <span className="flex h-full items-center text-[16px] font-semibold text-[#443630]">
+                    {phonePrefix}
+                  </span>
                   <input
                     type="tel"
                     name="phone"
@@ -751,8 +605,8 @@ export function ConfirmStep() {
               <div>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[13px] font-medium text-[#443630]">{en ? 'Inspiration photos' : 'Inspiratsioon'}</p>
-                    <p className="mt-1 text-[12px] font-medium text-[#7d6275]">
+                    <p className="text-[12px] font-medium text-[#443630]">{en ? 'Inspiration photos' : 'Inspiratsioon'}</p>
+                    <p className="mt-1 text-[11px] font-medium text-[#7d6275]">
                       {en ? 'Optional — helps us prepare.' : 'Valikuline — aitab meil ette valmistada.'}
                     </p>
                   </div>
@@ -774,28 +628,32 @@ export function ConfirmStep() {
                     type="button"
                     onClick={() => inspirationInputRef.current?.click()}
                     disabled={inspirationUploading}
-                    className="group flex flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/60 px-3 py-3 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
+                    className="group flex h-[72px] flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/70 px-2 py-2 text-center transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
                     aria-busy={inspirationUploading}
                   >
-                    <UploadCloud className="h-5 w-5 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                    <span className="text-[13px] font-semibold text-[#6f5d69]">{en ? 'Upload inspiration photo' : 'Lisa inspiratsioonipilt'}</span>
+                    <UploadCloud className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
+                    <span className="text-[12px] font-semibold text-[#6f5d69]">
+                      {en ? 'Inspiration photo' : 'Inspiratsioonipilt'}
+                    </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => inspirationInputRef.current?.click()}
                     disabled={inspirationUploading}
-                    className="group flex flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/60 px-3 py-3 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
+                    className="group flex h-[72px] flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/70 px-2 py-2 text-center transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
                     aria-busy={inspirationUploading}
                   >
-                    <UploadCloud className="h-5 w-5 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                    <span className="text-[13px] font-semibold text-[#6f5d69]">{en ? 'Upload current nails photo' : 'Lisa pilt praegustest küüntest'}</span>
+                    <UploadCloud className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
+                    <span className="text-[12px] font-semibold text-[#6f5d69]">
+                      {en ? 'Current nails photo' : 'Praegused küüned'}
+                    </span>
                   </button>
                 </div>
 
                 {form.inspirationImage ? (
                   <div className="mt-3">
-                    <div className="relative aspect-[16/10] overflow-hidden rounded-[14px] border border-[#eadce5] bg-white">
+                    <div className="relative aspect-[16/9] overflow-hidden rounded-[14px] border border-[#eadce5] bg-white">
                       <Image
                         src={form.inspirationImage}
                         alt={en ? 'Inspiration preview' : 'Inspiratsiooni eelvaade'}
@@ -808,14 +666,14 @@ export function ConfirmStep() {
                       <button
                         type="button"
                         onClick={() => inspirationInputRef.current?.click()}
-                        className="text-[13px] font-semibold text-[#c24d86] underline decoration-[#c24d86]/30 underline-offset-4 transition hover:decoration-[#c24d86]"
+                        className="text-[12px] font-semibold text-[#c24d86] underline decoration-[#c24d86]/30 underline-offset-4 transition hover:decoration-[#c24d86]"
                       >
                         {en ? 'Replace' : 'Asenda'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setForm((prev) => ({ ...prev, inspirationImage: '' }))}
-                        className="text-[13px] font-semibold text-[#d24f61] underline decoration-[#d24f61]/30 underline-offset-4 transition hover:decoration-[#d24f61]"
+                        className="text-[12px] font-semibold text-[#d24f61] underline decoration-[#d24f61]/30 underline-offset-4 transition hover:decoration-[#d24f61]"
                       >
                         {en ? 'Remove' : 'Eemalda'}
                       </button>
@@ -823,7 +681,7 @@ export function ConfirmStep() {
                   </div>
                 ) : (
                   inspirationUploading ? (
-                    <p className="mt-2 text-[13px] font-medium text-[#7d6275]">
+                    <p className="mt-2 text-[12px] font-medium text-[#7d6275]">
                       {en ? 'Uploading…' : 'Laen üles…'}
                     </p>
                   ) : null
@@ -843,7 +701,6 @@ export function ConfirmStep() {
               type="button"
               onClick={() => {
                 if (!canPay || isLoading) return;
-                setCtaPressed(true);
                 setCtaGlowOnce(true);
                 window.setTimeout(() => setCtaGlowOnce(false), 1100);
                 void handleSubmit();
@@ -856,65 +713,32 @@ export function ConfirmStep() {
               {isLoading ? copy.ctaLoading : copy.cta}
             </button>
             {/* Trust micro block under CTA */}
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
                 <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
                 {en ? '⭐ 4.9 rating' : '⭐ 4.9 hinnang'}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
                 <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
                 {en ? '🧼 Medical level hygiene' : '🧼 Meditsiiniline hügieen'}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
                 <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
                 {en ? '🔁 Free rescheduling' : '🔁 Tasuta ümberbroneerimine'}
               </span>
             </div>
-            <p className="mt-3 text-center text-xs font-medium text-[#9a8a94]">{copy.ctaSub}</p>
+            <p className="mt-2 text-center text-xs font-medium text-[#9a8a94]">{copy.ctaSub}</p>
           </div>
         </div>
-
-        {/* RIGHT: sticky booking summary + urgency/trust */}
-        <aside className="hidden xl:block xl:sticky xl:top-[120px] self-start">
-          <div className="rounded-[28px] border border-[#f0e8ed] bg-white/75 p-5 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.14)] backdrop-blur-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-[#5d4a56]">
-                  <Lock className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                  {en ? 'Reserved for you — expires soon' : 'Broneeritud sinu jaoks — aeg lõpeb varsti'}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-[#2f2530]">{selectedService.name}</p>
-                <p className="mt-1 text-xs font-medium text-[#8a7a88]">
-                  {dateShort} · {selectedSlot.time}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Deposit' : 'Ettemaks'}</p>
-                <p className="mt-1 text-sm font-semibold text-[#c24d86]">€{DEPOSIT_EUROS}</p>
-                <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Total' : 'Kokku'}</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-[#c24d86]">€{totalPriceDisplay}</p>
-              </div>
-            </div>
-
-            <div className="mt-4 booking-summary-float">
-              <BookingSummaryPremiumCard />
-            </div>
-
-            <div className="mt-3 flex items-center gap-2 text-xs font-medium text-[#8a7a88]">
-              <Eye className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-              {en ? `${viewedToday} people viewed this slot today` : '3 inimest vaatas seda aega täna'}
-            </div>
-          </div>
-        </aside>
       </div>
 
       {/* Mobile sticky CTA */}
-      <div ref={ctaAnchorRef} id="confirm-step-cta-anchor" className="h-px lg:hidden" aria-hidden />
+      <div ref={ctaAnchorRef} id="confirm-step-cta-anchor" className="h-px" aria-hidden />
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[50] h-32 bg-[linear-gradient(180deg,transparent_0%,#fff9fb_55%,#fff5f9_100%)] lg:hidden" />
 
       <div className="fixed inset-x-0 bottom-0 z-[55] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
-        <div className="mx-auto w-full max-w-lg rounded-[22px] border border-white/80 bg-white/90 p-4 shadow-[0_16px_48px_-20px_rgba(57,33,52,0.28)] backdrop-blur-xl">
-          <div className="mb-3 flex items-center justify-between gap-3 border-b border-[#f0eaee] pb-3">
+        <div className="mx-auto w-full max-w-lg rounded-[22px] border border-white/80 bg-white/90 p-3 shadow-[0_16px_48px_-20px_rgba(57,33,52,0.28)] backdrop-blur-xl">
+          <div className="mb-2 flex items-center justify-between gap-3 border-b border-[#f0eaee] pb-2">
             <div className="flex min-w-0 items-center gap-2">
               <Lock className="h-4 w-4 shrink-0 text-[#9d7a8f]" strokeWidth={2} aria-hidden />
               <span className="truncate text-xs font-medium text-[#6d5a66]">{lockLine}</span>
@@ -923,7 +747,7 @@ export function ConfirmStep() {
           </div>
 
           <p className="mb-1 truncate text-[13px] font-semibold text-[#2f2530]">{selectedService.name}</p>
-          <p className="mb-3 truncate text-xs text-[#8a7a88]">
+          <p className="mb-2 truncate text-xs text-[#8a7a88]">
             {dateShort} · {selectedSlot.time}
           </p>
 
@@ -931,7 +755,6 @@ export function ConfirmStep() {
             type="button"
             onClick={() => {
               if (!canPay || isLoading) return;
-              setCtaPressed(true);
               setCtaGlowOnce(true);
               window.setTimeout(() => setCtaGlowOnce(false), 1100);
               void handleSubmit();
@@ -944,21 +767,21 @@ export function ConfirmStep() {
             {isLoading ? copy.ctaLoading : copy.cta}
           </button>
           {/* Trust micro block under CTA */}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1 text-[10px] font-semibold text-[#5d4a56]">
               <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
               {en ? '⭐ 4.9 rating' : '⭐ 4.9 hinnang'}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1 text-[10px] font-semibold text-[#5d4a56]">
               <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
               {en ? '🧼 Medical level hygiene' : '🧼 Meditsiiniline hügieen'}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1 text-[10px] font-semibold text-[#5d4a56]">
               <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
               {en ? '🔁 Free rescheduling' : '🔁 Tasuta ümberbroneerimine'}
             </span>
           </div>
-          <p className="mt-2 text-center text-[12px] font-medium text-[#9a8a94]">{copy.ctaSub}</p>
+          <p className="mt-1 text-center text-[11px] font-medium text-[#9a8a94]">{copy.ctaSub}</p>
         </div>
       </div>
       <style jsx global>{`

@@ -470,14 +470,14 @@ function BookingContent() {
       <header className="sticky top-0 z-40 border-b border-[#f0e6ec]/80 bg-white/80 backdrop-blur-xl">
         <div
           className={`mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 ${
-            currentStep === 3 ? 'py-2.5' : 'py-3'
+            currentStep === 3 || currentStep === 5 ? 'py-2.5' : 'py-3'
           } sm:px-6`}
         >
           <button
             type="button"
             onClick={handleBack}
             className={`inline-flex shrink-0 items-center gap-2 rounded-full border border-[#ecdbe5] bg-white px-3 ${
-              currentStep === 3 ? 'py-1.5' : 'py-2'
+              currentStep === 3 || currentStep === 5 ? 'py-1.5' : 'py-2'
             } text-sm font-medium text-[#634f5f] transition-[background-color,transform] duration-[180ms] hover:bg-[#fff8fc] active:scale-[0.98]`}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -488,14 +488,14 @@ function BookingContent() {
           <div className="min-w-0 text-center">
             <p
               className={`${
-                currentStep === 3 ? 'whitespace-normal break-words leading-tight' : 'truncate'
+                currentStep === 3 || currentStep === 5 ? 'whitespace-normal break-words leading-tight' : 'truncate'
               } text-[11px] font-semibold uppercase tracking-[0.22em] text-[#c24d86]`}
             >
               {copy.progressTitle} · {copy.stepLabel} {funnelStep} / 3
             </p>
             <p
               className={`${
-                currentStep === 3 ? 'whitespace-normal break-words leading-tight text-[12px]' : 'truncate text-xs'
+                currentStep === 3 || currentStep === 5 ? 'whitespace-normal break-words leading-tight text-[12px]' : 'truncate text-xs'
               } text-[#8a7a88]`}
             >
               {copy.header}
@@ -527,18 +527,18 @@ function BookingContent() {
             </div>
 
             <div
-              className={`border-b border-[#f5eaef] px-4 ${currentStep === 3 ? 'py-4' : 'py-5'} sm:px-6 md:px-8 md:py-8`}
+              className={`border-b border-[#f5eaef] px-4 ${currentStep === 3 || currentStep === 5 ? 'py-3' : 'py-5'} sm:px-6 md:px-8 md:py-8`}
             >
               <p
-                className={`mb-4 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-[#b8a0ae] ${
-                  currentStep === 3 ? 'mb-3' : ''
+                className={`mb-3 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-[#b8a0ae] ${
+                  currentStep === 3 || currentStep === 5 ? 'mb-2' : ''
                 }`}
               >
                 {copy.helper}
               </p>
               <div
                 className={`grid ${
-                  currentStep === 3 ? 'grid-cols-3 gap-2' : 'grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4'
+                  currentStep === 3 || currentStep === 5 ? 'grid-cols-3 gap-1.5' : 'grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4'
                 }`}
               >
                 {funnelSteps.map(({ n, title }) => {
@@ -556,8 +556,8 @@ function BookingContent() {
                         if (canJumpBack) handleFunnelStepClick(n);
                       }}
                       className={`transition-all duration-[180ms] ${
-                        currentStep === 3
-                          ? 'rounded-xl px-3 py-2 text-center sm:py-2.5'
+                        currentStep === 3 || currentStep === 5
+                          ? 'rounded-xl px-2.5 py-1.5 text-center sm:py-2'
                           : 'rounded-2xl px-4 py-2.5 text-left sm:py-3'
                       } ${
                         isActive
@@ -569,7 +569,9 @@ function BookingContent() {
                     >
                       <span
                         className={`block font-bold uppercase tracking-[0.14em] text-[#c24d86] ${
-                          currentStep === 3 ? 'text-[10px] leading-none whitespace-nowrap overflow-hidden text-ellipsis' : 'text-[11px]'
+                          currentStep === 3 || currentStep === 5
+                            ? 'text-[10px] leading-[1.1] whitespace-nowrap overflow-hidden text-ellipsis'
+                            : 'text-[11px]'
                         }`}
                       >
                         {language === 'en' ? `STEP ${n}` : `${copy.stepLabel} ${n}`} —{' '}
