@@ -10,15 +10,19 @@ function sanitizePageId(raw: string) {
 export function MessengerBubble() {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith('/admin');
-  if (isAdmin) return null;
 
   const pageId = sanitizePageId(process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID ?? '');
-  if (!pageId) return null;
 
   const isHome = pathname === '/' || pathname === '/en' || pathname === '/et';
-  const [isAllowedToRender, setIsAllowedToRender] = useState(!isHome);
+  const canRender = !isAdmin && Boolean(pageId);
+  const [isAllowedToRender, setIsAllowedToRender] = useState(() => (!isHome ? canRender : false));
 
   useEffect(() => {
+    if (!canRender) {
+      setIsAllowedToRender(false);
+      return;
+    }
+
     if (!isHome) {
       setIsAllowedToRender(true);
       return;
@@ -56,9 +60,9 @@ export function MessengerBubble() {
     if (testimonialsEl) observer.observe(testimonialsEl);
 
     return () => observer.disconnect();
-  }, [isHome]);
+  }, [canRender, isHome]);
 
-  if (!isAllowedToRender) return null;
+  if (!canRender || !isAllowedToRender) return null;
 
   const messengerUrl = `https://m.me/${pageId}`;
 
