@@ -1,9 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { AdminQuickActions } from '@/components/admin/AdminQuickActions';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { Search, ChevronDown, ChevronRight, Package, Sparkles } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -22,6 +22,7 @@ interface Product {
   stock: number;
   active: boolean;
   isFeatured: boolean;
+  sortOrder?: number;
   updatedAt: string;
 }
 
@@ -39,6 +40,7 @@ interface ProductDraft {
   stock: number;
   active: boolean;
   isFeatured: boolean;
+  sortOrder: number;
 }
 
 const emptyDraft: ProductDraft = {
@@ -55,9 +57,12 @@ const emptyDraft: ProductDraft = {
   stock: 20,
   active: true,
   isFeatured: false,
+  sortOrder: 0,
 };
 
 function toDraft(product: Product): ProductDraft {
+  const images = Array.isArray(product.images) ? product.images.filter(Boolean) : [];
+  const mainImage = (product.imageUrl ?? images[0] ?? '').trim();
   return {
     id: product.id,
     nameEt: product.nameEt ?? product.name ?? '',
@@ -65,22 +70,29 @@ function toDraft(product: Product): ProductDraft {
     descriptionEt: product.descriptionEt ?? product.description ?? '',
     descriptionEn: product.descriptionEn ?? '',
     price: product.price,
-    imageUrl: product.imageUrl ?? '',
-    images: product.images?.length ? product.images : product.imageUrl ? [product.imageUrl] : [],
+    imageUrl: mainImage,
+    images: mainImage ? [mainImage, ...images.filter((value) => value !== mainImage)] : images,
     categoryEt: product.categoryEt ?? product.category ?? 'Hooldus',
     categoryEn: product.categoryEn ?? '',
     stock: product.stock,
     active: product.active,
     isFeatured: product.isFeatured ?? false,
+    sortOrder: product.sortOrder ?? 0,
   };
 }
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'nameDesc' | 'price' | 'priceDesc' | 'newest'>('name');
+  const [helpCollapsed, setHelpCollapsed] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadProducts = async () => {
@@ -100,6 +112,36 @@ export default function AdminProductsPage() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => set.add(p.categoryEt ?? p.category ?? ''));
+    return Array.from(set).filter(Boolean).sort();
+  }, [products]);
+
+  const filteredAndSortedProducts = useMemo(() => {
+    let list = products;
+    const q = searchQuery.toLowerCase().trim();
+    if (q) {
+      list = list.filter(
+        (p) =>
+          (p.nameEt ?? p.name ?? '').toLowerCase().includes(q) ||
+          (p.nameEn ?? '').toLowerCase().includes(q) ||
+          (p.categoryEt ?? p.category ?? '').toLowerCase().includes(q)
+      );
+    }
+    if (categoryFilter !== 'all') {
+      list = list.filter((p) => (p.categoryEt ?? p.category) === categoryFilter);
+    }
+    if (activeFilter === 'active') list = list.filter((p) => p.active);
+    if (activeFilter === 'inactive') list = list.filter((p) => !p.active);
+    if (sortBy === 'name') list = [...list].sort((a, b) => (a.nameEt ?? a.name ?? '').localeCompare(b.nameEt ?? b.name ?? ''));
+    if (sortBy === 'nameDesc') list = [...list].sort((a, b) => (b.nameEt ?? b.name ?? '').localeCompare(a.nameEt ?? a.name ?? ''));
+    if (sortBy === 'price') list = [...list].sort((a, b) => a.price - b.price);
+    if (sortBy === 'priceDesc') list = [...list].sort((a, b) => b.price - a.price);
+    if (sortBy === 'newest') list = [...list].sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
+    return list;
+  }, [products, searchQuery, categoryFilter, activeFilter, sortBy]);
+
   const generateEnglishSuggestion = async (source: string, field: 'nameEn' | 'descriptionEn' | 'categoryEn') => {
     if (!source.trim()) return;
     const response = await fetch('/api/admin/translate-suggestion', {
@@ -118,6 +160,29 @@ export default function AdminProductsPage() {
     setIsSaving(true);
     setError(null);
     try {
+      const normalizedImages = (draft.images ?? [])
+        .map((value) => value.trim())
+        .filter((value) => Boolean(value));
+      const normalizedImageUrl = (draft.imageUrl ?? '').trim();
+
+      // Important: base64 `data:` images are not persisted to the public shop (they're sanitized out).
+      // Require a hosted URL so the image actually shows on the homepage/shop.
+      const hasDataUrl =
+        normalizedImageUrl.startsWith('data:') || normalizedImages.some((value) => value.startsWith('data:'));
+      if (hasDataUrl) {
+        setError('Pildi üleslaadimine (data URL) ei salvestu. Palun kasuta pildi URL-i (https://...).');
+        setIsSaving(false);
+        return;
+      }
+
+      const safeImages = normalizedImages.filter((value) => !value.startsWith('data:'));
+      const safeImageUrl =
+        (normalizedImageUrl && !normalizedImageUrl.startsWith('data:') ? normalizedImageUrl : safeImages[0]) ?? null;
+      const orderedImages = [
+        ...(safeImageUrl ? [safeImageUrl] : []),
+        ...safeImages.filter((value) => value !== safeImageUrl),
+      ];
+
       const response = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,21 +193,33 @@ export default function AdminProductsPage() {
           descriptionEt: draft.descriptionEt,
           descriptionEn: draft.descriptionEn,
           price: draft.price,
-          imageUrl: draft.images[0] ?? draft.imageUrl ?? null,
-          images: draft.images,
+          imageUrl: safeImageUrl,
+          images: orderedImages,
           categoryEt: draft.categoryEt,
           categoryEn: draft.categoryEn,
           stock: draft.stock,
           active: draft.active,
           isFeatured: draft.isFeatured,
+          sortOrder: draft.sortOrder,
         }),
       });
-      if (!response.ok) throw new Error('Salvestamine ebaonnestus');
+      if (!response.ok) {
+        let message = 'Salvestamine ebaonnestus';
+        try {
+          const data = (await response.json()) as { error?: string };
+          if (data?.error) message = data.error;
+        } catch {
+          // ignore JSON parse errors
+        }
+        if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
+        throw new Error(message);
+      }
       await loadProducts();
+      setIsDrawerOpen(false);
       setDraft(emptyDraft);
       setToast('Toode salvestatud');
-    } catch {
-      setError('Toote salvestamine ebaonnestus.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Toote salvestamine ebaonnestus.');
     } finally {
       setIsSaving(false);
     }
@@ -151,7 +228,6 @@ export default function AdminProductsPage() {
   const deleteProduct = async (id: string, productName: string) => {
     const isConfirmed = window.confirm(`Kas kustutada toode "${productName}"? Seda tegevust ei saa tagasi votta.`);
     if (!isConfirmed) return;
-
     try {
       const response = await fetch(`/api/products?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Kustutamine ebaonnestus');
@@ -162,148 +238,518 @@ export default function AdminProductsPage() {
     }
   };
 
+  const openNewProduct = () => {
+    setDraft(emptyDraft);
+    setIsDrawerOpen(true);
+  };
+
+  const openEditProduct = (product: Product) => {
+    setDraft(toDraft(product));
+    setIsDrawerOpen(true);
+  };
+
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-7xl">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Tooted</h1>
-            </div>
-            <div className="flex gap-2 text-sm">
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563]" href="/admin">Halduspaneel</Link>
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563]" href="/admin/services">Teenused</Link>
-              <Link className="rounded-full bg-[#111827] px-4 py-2 text-white" href="/shop">Ava pood</Link>
-            </div>
+    <main className="min-h-screen bg-[#fafafa]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <AdminPageHeader
+          overline="Sisu"
+          title="Tooted"
+          subtitle="Poe tooted ja laoseis. Otsi, filtreeri või lisa uus toode."
+          backHref="/admin"
+          backLabel="Halduspaneel"
+          primaryAction={{ label: 'Lisa toode', onClick: openNewProduct }}
+          secondaryLinks={[
+            { label: 'Teenused', href: '/admin/services' },
+            { label: 'Ava pood', href: '/shop' },
+          ]}
+        />
+
+        {/* Horizontal context: search + filters */}
+        <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Otsi toote nime või kategooria järgi..."
+              className="w-full rounded-xl border border-[#e5e7eb] bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
+            />
           </div>
-        </header>
-
-        <AdminQuickActions />
-
-        <section className="admin-surface-soft mb-6 rounded-3xl p-4">
-          <h2 className="text-lg font-semibold text-[#111827]">Kuidas tooteid hallata</h2>
-          <div className="mt-2 grid gap-2 text-sm text-[#4b5563] md:grid-cols-3">
-            <p className="rounded-xl bg-white px-3 py-2">1. Sisesta toote nimi, hind ja kirjeldus.</p>
-            <p className="rounded-xl bg-white px-3 py-2">2. Lisa pilt ja laoseis.</p>
-            <p className="rounded-xl bg-white px-3 py-2">3. Vajuta &quot;Salvesta toode&quot;.</p>
-          </div>
-        </section>
-
-        {toast && <div className="fixed right-4 top-6 z-[70] rounded-xl border border-[#edd9e3] bg-white px-4 py-2 text-sm font-medium text-[#6a3b57] shadow-lg">{toast}</div>}
-        {error && <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-
-        <section className="admin-surface-soft mb-6 rounded-3xl p-5">
-          <div className="mb-3 grid gap-2 text-xs text-[#7f6670] md:grid-cols-2">
-            <p>Eesti tekst kuvatakse /et lehel.</p>
-            <p>Inglise tekst kuvatakse /en lehel.</p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-[0.14em] text-[#7f6670]">Eesti keel</p>
-              <label className="block text-sm font-medium text-[#4f3f46]">Toote nimi
-                <input value={draft.nameEt} onChange={(e) => setDraft((p) => ({ ...p, nameEt: e.target.value }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-              </label>
-              <label className="mt-3 block text-sm font-medium text-[#4f3f46]">Kirjeldus
-                <textarea value={draft.descriptionEt} onChange={(e) => setDraft((p) => ({ ...p, descriptionEt: e.target.value }))} className="mt-1 min-h-24 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-              </label>
-              <label className="mt-3 block text-sm font-medium text-[#4f3f46]">Kategooria
-                <input value={draft.categoryEt} onChange={(e) => setDraft((p) => ({ ...p, categoryEt: e.target.value }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-              </label>
-            </div>
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-[0.14em] text-[#7f6670]">English version</p>
-              <label className="block text-sm font-medium text-[#4f3f46]">Product name
-                <div className="mt-1 flex gap-2">
-                  <input value={draft.nameEn} onChange={(e) => setDraft((p) => ({ ...p, nameEn: e.target.value }))} className="w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                  <button type="button" onClick={() => void generateEnglishSuggestion(draft.nameEt, 'nameEn')} className="rounded-xl border border-[#e5ddd3] px-2 py-1 text-xs text-[#4b5563]">Generate English suggestion</button>
-                </div>
-              </label>
-              <label className="mt-3 block text-sm font-medium text-[#4f3f46]">Description
-                <div className="mt-1 flex gap-2">
-                  <textarea value={draft.descriptionEn} onChange={(e) => setDraft((p) => ({ ...p, descriptionEn: e.target.value }))} className="min-h-24 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                  <button type="button" onClick={() => void generateEnglishSuggestion(draft.descriptionEt, 'descriptionEn')} className="h-fit rounded-xl border border-[#e5ddd3] px-2 py-1 text-xs text-[#4b5563]">Generate English suggestion</button>
-                </div>
-              </label>
-              <label className="mt-3 block text-sm font-medium text-[#4f3f46]">Category
-                <div className="mt-1 flex gap-2">
-                  <input value={draft.categoryEn} onChange={(e) => setDraft((p) => ({ ...p, categoryEn: e.target.value }))} className="w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                  <button type="button" onClick={() => void generateEnglishSuggestion(draft.categoryEt, 'categoryEn')} className="rounded-xl border border-[#e5ddd3] px-2 py-1 text-xs text-[#4b5563]">Generate English suggestion</button>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <label className="text-sm font-medium text-[#4f3f46]">Hind (EUR)
-              <input type="number" value={draft.price} onChange={(e) => setDraft((p) => ({ ...p, price: Number(e.target.value) }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-            </label>
-            <label className="text-sm font-medium text-[#4f3f46]">Laoseis
-              <input type="number" value={draft.stock} onChange={(e) => setDraft((p) => ({ ...p, stock: Number(e.target.value) }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-            </label>
-            <label className="text-sm font-medium text-[#4f3f46]">Pildi URL
-              <input value={draft.imageUrl} onChange={(e) => setDraft((p) => ({ ...p, imageUrl: e.target.value }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-            </label>
-            <div className="flex items-end gap-2">
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async (event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const image = String(reader.result ?? '');
-                  setDraft((prev) => ({ ...prev, imageUrl: image, images: [image, ...prev.images.filter((img) => img !== image)] }));
-                };
-                reader.readAsDataURL(file);
-              }} />
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 text-xs text-[#4b5563]">Upload image</button>
-              <label className="flex items-center gap-2 text-sm text-[#5f4f5f]"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft((p) => ({ ...p, active: e.target.checked }))} /> Aktiivne</label>
-              <label className="flex items-center gap-2 text-sm text-[#5f4f5f]"><input type="checkbox" checked={draft.isFeatured} onChange={(e) => setDraft((p) => ({ ...p, isFeatured: e.target.checked }))} /> Esile toodud</label>
-            </div>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button onClick={() => void saveProduct()} disabled={!draft.nameEt || isSaving} className="rounded-full bg-[#111827] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">
-              {isSaving ? 'Salvestan...' : 'Salvesta toode'}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[140px]"
+            >
+              <option value="all">Kõik kategooriad</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <select
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
+              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[120px]"
+            >
+              <option value="all">Kõik</option>
+              <option value="active">Aktiivsed</option>
+              <option value="inactive">Peidetud</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[160px]"
+            >
+              <option value="name">Nimi A–Ü</option>
+              <option value="nameDesc">Nimi Ü–A</option>
+              <option value="price">Hind kasvav</option>
+              <option value="priceDesc">Hind kahanev</option>
+              <option value="newest">Uusimad esimesena</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setHelpCollapsed(!helpCollapsed)}
+              className="inline-flex items-center gap-1 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              {helpCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              Abi
             </button>
-            <button type="button" onClick={() => setDraft(emptyDraft)} className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563]">Uus toode</button>
           </div>
+          {!helpCollapsed && (
+            <div className="mt-3 rounded-xl border border-[#e5e7eb] bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+              <p className="font-medium text-slate-800 mb-1">Kuidas tooteid hallata</p>
+              <ol className="list-decimal space-y-0.5 pl-4"> <li>Sisesta toote nimi, hind ja kirjeldus.</li><li>Lisa pilt ja laoseis.</li><li>Vajuta „Salvesta toode”.</li></ol>
+            </div>
+          )}
         </section>
 
-        <section className="admin-surface rounded-3xl p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[#111827]">Toodete nimekiri</h2>
-            <p className="text-xs text-[#6b7280]">{products.length} toodet</p>
+        {toast && (
+          <div className="fixed right-6 top-6 z-[70] rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-lg">
+            {toast}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {products.map((product) => (
-              <article key={product.id} className="rounded-2xl border border-[#f0e3ea] bg-white p-3 shadow-[0_14px_24px_-20px_rgba(80,50,66,0.45)]">
-                <div className="mb-3 aspect-[4/3] overflow-hidden rounded-xl bg-[#f7ecf2]">
-                  {product.imageUrl ? <Image src={product.imageUrl} alt={product.nameEt ?? product.name} width={640} height={480} unoptimized className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm text-[#6b7280]">Nailify</div>}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#9a7788]">{product.categoryEt ?? product.category}</p>
-                  <h3 className="text-base font-semibold text-[#111827]">{product.nameEt ?? product.name}</h3>
-                  <p className="line-clamp-2 text-sm text-[#7e6b75]">{product.descriptionEt ?? product.description}</p>
-                </div>
-                <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="font-semibold text-[#374151]">EUR {product.price}</span>
-                  <span className="text-[#7e6b75]">Laos: {product.stock}</span>
-                </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${product.active ? 'bg-[#f0e3ea] text-[#744f66]' : 'bg-[#ececec] text-[#6d6d6d]'}`}>{product.active ? 'Aktiivne' : 'Peidetud'}</span>
-                    {product.isFeatured ? <span className="rounded-full bg-[#ffeaf5] px-2 py-1 text-[11px] font-semibold text-[#8f4f72]">Soovitatud</span> : null}
+        )}
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm text-red-800">{error}</div>
+        )}
+
+        {/* Main content card: product list */}
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-800">Toodete nimekiri</h2>
+            <p className="text-sm text-slate-500">
+              {filteredAndSortedProducts.length} toodet
+              {(searchQuery || categoryFilter !== 'all' || activeFilter !== 'all') && ' (filtreeritud)'}
+            </p>
+          </div>
+
+          {filteredAndSortedProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <Package className="h-7 w-7" />
+              </div>
+              <p className="mt-4 text-sm text-slate-500">Tooteid ei leitud.</p>
+              <p className="mt-1 text-xs text-slate-400">Lisa toode või muuda filtreid.</p>
+              <button type="button" onClick={openNewProduct} className="mt-5 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900">
+                Lisa toode
+              </button>
+            </div>
+          ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredAndSortedProducts.map((product) => (
+              <article
+                key={product.id}
+                className="group flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-200"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
+                  {product.imageUrl ? (
+                    <Image
+                      src={product.imageUrl}
+                      alt={product.nameEt ?? product.name}
+                      width={640}
+                      height={480}
+                      unoptimized
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-slate-400">
+                      <Package className="h-12 w-12" />
+                    </div>
+                  )}
+                  <div className="absolute right-2 top-2 flex flex-col gap-1">
+                    {!product.active && (
+                      <span className="rounded-md bg-slate-800/80 px-2 py-0.5 text-[10px] font-medium text-white">
+                        Peidetud
+                      </span>
+                    )}
+                    {product.isFeatured && (
+                      <span className="rounded-md bg-amber-500/90 px-2 py-0.5 text-[10px] font-medium text-white">
+                        Soovitatud
+                      </span>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setDraft(toDraft(product))} className="rounded-full border border-[#d1d5db] px-3 py-1 text-xs text-[#4b5563] hover:bg-[#fff8fc]">Muuda</button>
-                    <button onClick={() => void deleteProduct(product.id, product.nameEt ?? product.name)} className="rounded-full border border-red-200 px-3 py-1 text-xs text-red-600 hover:bg-red-50">Kustuta</button>
+                </div>
+                <div className="flex flex-1 flex-col p-4">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                    {product.categoryEt ?? product.category}
+                  </p>
+                  <h3 className="mt-1 text-base font-semibold text-slate-800">{product.nameEt ?? product.name}</h3>
+                  <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-slate-500">
+                    {product.descriptionEt ?? product.description}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <div>
+                      <span className="text-lg font-semibold text-slate-800">EUR {product.price}</span>
+                      <span className="ml-2 text-xs text-slate-500">Laos: {product.stock}</span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openEditProduct(product)}
+                        className="rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        Muuda
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteProduct(product.id, product.nameEt ?? product.name)}
+                        className="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      >
+                        Kustuta
+                      </button>
+                    </div>
                   </div>
                 </div>
               </article>
             ))}
           </div>
+          )}
         </section>
       </div>
+
+      {/* Editor drawer */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
+            onClick={() => setIsDrawerOpen(false)}
+            aria-hidden
+          />
+          <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[#e5e7eb] bg-white shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-6 py-4">
+              <h2 className="text-lg font-semibold text-slate-800">{draft.id ? 'Muuda toodet' : 'Lisa toode'}</h2>
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="rounded-lg border border-[#e5e7eb] px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Sulge
+              </button>
+            </div>
+
+            <div className="space-y-6 p-6">
+              <p className="text-xs text-[#6b7280]">Eesti keel (/et) · English (/en)</p>
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800">
+                  {error}
+                </div>
+              )}
+
+              {/* Basic info */}
+              <fieldset className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
+                <legend className="px-2 text-sm font-semibold text-slate-800">Põhiandmed (eesti)</legend>
+                <div className="mt-3 space-y-4">
+                  <label className="block">
+                    <span className="block text-sm font-medium text-slate-600">Toote nimi</span>
+                    <input
+                      value={draft.nameEt}
+                      onChange={(e) => setDraft((p) => ({ ...p, nameEt: e.target.value }))}
+                      className="mt-1 w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Kirjeldus</span>
+                    <textarea
+                      value={draft.descriptionEt}
+                      onChange={(e) => setDraft((p) => ({ ...p, descriptionEt: e.target.value }))}
+                      rows={3}
+                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none focus:ring-1 focus:ring-[#c24d86]/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Kategooria</span>
+                    <input
+                      value={draft.categoryEt}
+                      onChange={(e) => setDraft((p) => ({ ...p, categoryEt: e.target.value }))}
+                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none focus:ring-1 focus:ring-[#c24d86]/20"
+                    />
+                  </label>
+                </div>
+              </fieldset>
+
+              {/* English version */}
+              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+                <legend className="px-2 text-sm font-semibold text-[#374151]">English version</legend>
+                <div className="mt-3 space-y-4">
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Product name</span>
+                    <div className="mt-1 flex gap-2">
+                      <input
+                        value={draft.nameEn}
+                        onChange={(e) => setDraft((p) => ({ ...p, nameEn: e.target.value }))}
+                        className="flex-1 rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void generateEnglishSuggestion(draft.nameEt, 'nameEn')}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#e5e0e3] bg-white px-2.5 py-2 text-xs font-medium text-[#6b7280] hover:bg-[#fdf8fb]"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" /> EN
+                      </button>
+                    </div>
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Description</span>
+                    <div className="mt-1 flex gap-2">
+                      <textarea
+                        value={draft.descriptionEn}
+                        onChange={(e) => setDraft((p) => ({ ...p, descriptionEn: e.target.value }))}
+                        rows={3}
+                        className="flex-1 rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void generateEnglishSuggestion(draft.descriptionEt, 'descriptionEn')}
+                        className="h-fit rounded-lg border border-[#e5e0e3] bg-white px-2.5 py-2 text-xs font-medium text-[#6b7280] hover:bg-[#fdf8fb]"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" /> EN
+                      </button>
+                    </div>
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Category</span>
+                    <div className="mt-1 flex gap-2">
+                      <input
+                        value={draft.categoryEn}
+                        onChange={(e) => setDraft((p) => ({ ...p, categoryEn: e.target.value }))}
+                        className="flex-1 rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void generateEnglishSuggestion(draft.categoryEt, 'categoryEn')}
+                        className="rounded-lg border border-[#e5e0e3] bg-white px-2.5 py-2 text-xs font-medium text-[#6b7280] hover:bg-[#fdf8fb]"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" /> EN
+                      </button>
+                    </div>
+                  </label>
+                </div>
+              </fieldset>
+
+              {/* Commerce / inventory */}
+              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+                <legend className="px-2 text-sm font-semibold text-[#374151]">Hind ja laoseis</legend>
+                <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Hind (EUR)</span>
+                    <input
+                      type="number"
+                      value={draft.price}
+                      onChange={(e) => setDraft((p) => ({ ...p, price: Number(e.target.value) }))}
+                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Laoseis</span>
+                    <input
+                      type="number"
+                      value={draft.stock}
+                      onChange={(e) => setDraft((p) => ({ ...p, stock: Number(e.target.value) }))}
+                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Järjekord</span>
+                    <input
+                      type="number"
+                      value={draft.sortOrder}
+                      onChange={(e) => setDraft((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
+                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                    />
+                  </label>
+                </div>
+              </fieldset>
+
+              {/* Media */}
+              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+                <legend className="px-2 text-sm font-semibold text-[#374151]">Pilt</legend>
+                <div className="mt-3 space-y-3">
+                  <label className="block">
+                    <span className="block text-sm font-medium text-[#4f3f46]">Pildi URL</span>
+                    <input
+                      value={draft.imageUrl}
+                      onChange={(e) => setDraft((p) => ({ ...p, imageUrl: e.target.value }))}
+                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                    />
+                  </label>
+                  {Array.isArray(draft.images) && draft.images.length > 0 && (
+                    <div className="rounded-xl border border-[#efe4eb] bg-[#faf8f9] p-3">
+                      <p className="text-xs font-medium text-[#6b7280]">Toote pildid (vali peapilt)</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {draft.images.map((url, index) => {
+                          const isMain = (draft.imageUrl ?? '').trim() === url.trim() || (index === 0 && !draft.imageUrl.trim());
+                          return (
+                            <div key={`${url}-${index}`} className="group relative">
+                              <button
+                                type="button"
+                                onClick={() => setDraft((prev) => ({ ...prev, imageUrl: url }))}
+                                className={`relative h-16 w-16 overflow-hidden rounded-xl border bg-white ${
+                                  isMain ? 'border-[#c24d86] ring-2 ring-[#c24d86]/15' : 'border-[#e5e0e3]'
+                                }`}
+                                aria-label="Set as main image"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={url} alt="Product image" className="h-full w-full object-cover" />
+                              </button>
+                              <div className="mt-1 flex items-center justify-between">
+                                <span className={`text-[10px] font-medium ${isMain ? 'text-[#b03f75]' : 'text-[#7b7280]'}`}>
+                                  {isMain ? 'Peapilt' : 'Lisa'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDraft((prev) => {
+                                      const next = (prev.images ?? []).filter((value) => value !== url);
+                                      const nextMain = prev.imageUrl === url ? (next[0] ?? '') : prev.imageUrl;
+                                      return { ...prev, images: next, imageUrl: nextMain };
+                                    })
+                                  }
+                                  className="text-[10px] font-semibold text-[#a33a3a] hover:text-[#7f2a2a]"
+                                >
+                                  Eemalda
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (event) => {
+                        const files = event.target.files;
+                        if (!files || files.length === 0) return;
+                        setError(null);
+                        setIsSaving(true);
+                        try {
+                          const formData = new FormData();
+                          Array.from(files).forEach((file) => formData.append('files', file));
+                          const response = await fetch('/api/admin/upload-product-image', {
+                            method: 'POST',
+                            body: formData,
+                          });
+                          if (!response.ok) {
+                            let message = 'Pildi üleslaadimine ebaõnnestus';
+                            try {
+                              const data = (await response.json()) as { error?: string };
+                              if (data?.error) message = data.error;
+                            } catch {
+                              // ignore
+                            }
+                            if (response.status === 401) message = 'Pole sisse logitud (401). Palun logi admini uuesti sisse.';
+                            throw new Error(message);
+                          }
+                          const data = (await response.json()) as { url?: string; urls?: string[] };
+                          const uploadedUrls = Array.isArray(data.urls) ? data.urls.map((v) => String(v).trim()).filter(Boolean) : [];
+                          const singleUrl = String(data.url ?? '').trim();
+                          if (singleUrl) uploadedUrls.push(singleUrl);
+                          if (uploadedUrls.length === 0) throw new Error('Pildi URL puudub');
+
+                          setDraft((prev) => {
+                            const current = (prev.images ?? []).filter(Boolean);
+                            const merged = [...uploadedUrls, ...current.filter((img) => !uploadedUrls.includes(img))];
+                            const main = prev.imageUrl?.trim() ? prev.imageUrl : merged[0] ?? '';
+                            return { ...prev, images: merged, imageUrl: main };
+                          });
+                          setToast(uploadedUrls.length > 1 ? 'Pildid üles laaditud' : 'Pilt üles laaditud');
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Pildi üleslaadimine ebaõnnestus.');
+                        } finally {
+                          setIsSaving(false);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-xl border border-[#e5e0e3] bg-white px-4 py-2 text-sm font-medium text-[#4b5563] hover:bg-[#fdf8fb]"
+                    >
+                      Laadi pilt üles (mitu)
+                    </button>
+                  </div>
+                </div>
+              </fieldset>
+
+              {/* Visibility */}
+              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+                <legend className="px-2 text-sm font-semibold text-[#374151]">Nähtavus</legend>
+                <div className="mt-3 flex flex-wrap gap-6">
+                  <label className="flex cursor-pointer items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={draft.active}
+                      onChange={(e) => setDraft((p) => ({ ...p, active: e.target.checked }))}
+                      className="h-4 w-4 rounded border-[#d1d5db] text-[#c24d86] focus:ring-[#c24d86]/30"
+                    />
+                    <span className="text-sm font-medium text-[#374151]">Aktiivne (nähtav poes)</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={draft.isFeatured}
+                      onChange={(e) => setDraft((p) => ({ ...p, isFeatured: e.target.checked }))}
+                      className="h-4 w-4 rounded border-[#d1d5db] text-[#c24d86] focus:ring-[#c24d86]/30"
+                    />
+                    <span className="text-sm font-medium text-[#374151]">Esile toodud</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <div className="flex flex-wrap items-center gap-3 border-t border-[#e5e7eb] pt-5">
+                <button
+                  type="button"
+                  onClick={() => void saveProduct()}
+                  disabled={!draft.nameEt.trim() || isSaving}
+                  className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+                >
+                  {isSaving ? 'Salvestan...' : 'Salvesta toode'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDraft(emptyDraft); }}
+                  className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Tühjenda
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
+                >
+                  Sulge
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }

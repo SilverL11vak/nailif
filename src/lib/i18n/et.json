@@ -8,34 +8,42 @@
   },
   "hero": {
     "headline": "Obsessiivselt ilusad küüned. Broneeritud sekunditega.",
-    "subtext": "Pikaajalised tulemused, mis on loodud hoolika tähelepanu Detailidele. Broneerige oma kohtamine mõne hetkega ja lahkuge enesekindlalt.",
-    "cta": "Broneeri oma kohtamine",
+    "subtext": "Pikaajalised tulemused, loodud hoolika tähelepanuga detailidele. Broneeri aeg paari hetkega ja lahku enesekindlalt.",
+    "cta": "Broneeri aeg",
     "nextAvailable": "Järgmine vaba"
   },
   "trust": {
     "googleRating": "Google hinnang",
-    "appointmentsThisWeek": "Kohtamist nädalas",
+    "appointmentsThisWeek": "Kohtumisi nädalas",
     "sterileEquipment": "Sterilne varustus",
     "premiumProducts": "Premium tooted",
     "certifiedTechnician": "Sertifitseeritud tehnik",
     "mustamaeStudio": "Mustamäe stuudio",
     "hygienicTools": "Hügieenilised tööriistad",
     "rating": "4.9",
-    "clients": "1,200+ klienti"
+    "clients": "1,200+ klienti",
+    "weeklyAppointmentsStat": "Üle 150 broneeringu nädalas"
   },
   "services": {
     "title": "Meie teenused",
-    "subtitle": "Valige oma teenus ja broneerige vähem kui 30 sekundiga.",
+    "subtitle": "Vali teenus ja broneeri vähem kui 30 sekundiga.",
+    "eyebrow": "Teenused",
+    "nextTimeLabel": "Järgmine aeg",
+    "veryPopular": "Väga populaarne",
     "from": "alates",
     "minutes": "min",
     "viewAll": "Vaata kõiki teenuseid",
-    "book": "Broneeri"
+    "book": "Broneeri",
+    "categoryManicure": "Maniküür",
+    "categoryPedicure": "Pediküür",
+    "categoryExtensions": "Küüne pikendus",
+    "categoryNailArt": "Küünekunst"
   },
   "howItWorks": {
     "title": "Kuidas see toimib",
     "subtitle": "Lihtne 3-sammuline broneerimisprotsess.",
     "step1Title": "Valige teenus",
-    "step1Desc": "Valige meie laia valiku Premium hoolduste seast",
+    "step1Desc": "Vali meie premium hoolduste seast",
     "step2Title": "Valige aeg",
     "step2Desc": "Valige teile sobiv aeg",
     "step3Title": "Kinnitage",
@@ -84,7 +92,7 @@
   "aftercare": {
     "title": "Hooldus",
     "cuticleOil": "Küüneõli",
-    "cuticleOilDesc": "Hoidke küüni niisutatud",
+    "cuticleOilDesc": "Hoia küüsi niisutatuna",
     "nailHardener": "Küüne tugevdaja",
     "nailHardenerDesc": "Säilitage tugevus",
     "protectionSpray": "Kaitse spray",
@@ -97,7 +105,7 @@
   },
   "finalCta": {
     "title": "Valmis ilusate küünte jaoks?",
-    "subtitle": "Kinnitage oma kohtamine ja kogeda Nailify erinevust.",
+    "subtitle": "Kinnita aeg ja koge Nailify erinevust.",
     "mostClients": "Enamik kliente naaseb 4 nädala jooksul",
     "freeReschedule": "Tasuta ümberbroneerimine",
     "secureSlot": "Kinnita oma koht",
@@ -108,15 +116,17 @@
     "contact": "Kontakt",
     "openingHours": "Lahtiolekuajad",
     "copyright": "© 2026 Nailify. Kõik õigused kaitstud.",
-    "bookAppointment": "Broneeri kohtamine",
-    "description": "Premium küünekunst Mustamäes. Kogenud tehnikud, pikaajalised tulemused."
+    "bookAppointment": "Broneeri aeg",
+    "description": "Premium küünekunst Mustamäes. Kogenud tehnikud, pikaajalised tulemused.",
+    "ctaLine": "Järgmine vaba aeg sel nädalal",
+    "rescheduleHint": "Tasuta ümberbroneerimine"
   },
   "discountPill": {
     "firstVisit": "Esimese külastuse pakkumine",
     "discount": "−15%"
   },
   "widget": {
-    "bookInSeconds": "Broneerige alla 30 sekundi.",
+    "bookInSeconds": "Broneeri alla 30 sekundiga.",
     "noSlotsAvailable": "Vabu aegu pole",
     "todayAt": "Täna kell",
     "tomorrowAt": "Homme kell",
@@ -155,7 +165,7 @@
     "pickTime": "Valige sobiv aeg",
     "earliestAvailable": "Varaseim saadaval on esile tõstetud",
     "yourNailsWillThankYou": "Teie küüned tänavad teid",
-    "studioInfo": "Lõõgastuge meie Mustamäe stuudios. Iga kohtamine sisaldab konsultatsiooni.",
+    "studioInfo": "Lõõgastu meie Mustamäe stuudios. Iga külastus sisaldab konsultatsiooni.",
     "earliest": "Varaseim",
     "today": "Täna",
     "availableTimes": "Saadaval ajad",
@@ -210,7 +220,7 @@
   },
   "success": {
     "seeYouSoon": "Kohtume varsti! ✨",
-    "confirmed": "Kohtamine on kinnitatud",
+    "confirmed": "Broneering on kinnitatud",
     "ref": "Viide",
     "prepareVisit": "Valmistuge külastuseks",
     "arriveEarly": "Saage 5 min varem. Eemaldage vana lakk!",
@@ -238,20 +248,22 @@
     "title": "Küsi kiiresti",
     "subtitle": "Kirjuta meile enne broneerimist",
     "aiWelcome": "Tere! Aitan sind broneerimise, vabade aegade ja teenuse valikuga.",
-    "aiPlaceholder": "Kusi teenuste, aja voi broneerimise kohta...",
+    "aiPlaceholder": "Küsi teenuste, aja või broneerimise kohta...",
     "aiSend": "Saada",
-    "aiTyping": "Mottlen...",
-    "aiPricing": "Teenuse hind soltub valitud teenusest ja voimalikest lisadest. Soovin korral aidata sul sobiva valiku teha.",
-    "aiAvailability": "Vabu aegu naed bookingu vaates. Kui vajad kohest kinnitust, saad suhelda otse kuunetehnikuga.",
-    "aiDesign": "Tapsed disaini- ja kuunte seisukorra kusimused on koige parem kinnitada otse tehnikuga.",
+    "aiTyping": "Mõtlen...",
+    "aiPricing": "Teenuse hind sõltub valitud teenusest ja võimalikest lisadest. Soovi korral aitan sul sobiva valiku teha.",
+    "aiAvailability": "Vabu aegu näed broneerimise vaates. Kui vajad kohest kinnitust, saad suhelda otse küünetehnikuga.",
+    "aiDesign": "Täpsed disaini- ja küünte seisukorra küsimused on kõige parem kinnitada otse tehnikuga.",
     "aiBookingHelp": "Saan juhendada sind samm-sammult. Ava booking ja valime koos teenuse ning aja.",
-    "aiFallback": "Mul ei pruugi hetkel olla piisavalt konteksti tapselt vastamiseks.",
-    "handoffAction": "Suhtle otse kuunetehnikuga",
-    "handoffSuggestion": "Kui soovid, saad kohe otse kuunetehnikuga suhelda.",
+    "aiFallback": "Mul ei pruugi hetkel olla piisavalt konteksti täpselt vastamiseks.",
+    "handoffAction": "Suhtle otse küünetehnikuga",
+    "handoffSuggestion": "Kui soovid, saad kohe otse küünetehnikuga suhelda.",
     "openingMessenger": "Avan Messengeri...",
     "whatsapp": "WhatsApp",
     "messenger": "Messenger",
     "open": "Ava",
+    "close": "Sulge",
+    "closeAria": "Sulge vestlusaken",
     "triggerAria": "Ava kiire kontakt",
     "whatsappPrefillEt": "Tere! Soovin küsida vaba aja või teenuse kohta.",
     "whatsappPrefillEn": "Hi! I would like to ask about availability or a service."
@@ -274,7 +286,13 @@
       "eyebrow": "Toimetuslik ilubroneering",
       "nextAvailableLine": "Järgmine vaba aeg täna kell",
       "loyalClients": "120+ püsiklienti",
-      "trustAnchor": "Personaalne konsultatsioon, hoolikas hügieen ja tulemus, mis püsib kaunis nädalateks."
+      "trustAnchor": "Personaalne konsultatsioon, hoolikas hügieen ja tulemus, mis püsib kaunis nädalateks.",
+      "luxuryOverline": "PRIVATE KÜÜNESTUUDIO MUSTAMÄEL",
+      "luxuryHeadline": "Ilusad küüned.\nPingutuseta.",
+      "luxurySupport": "Metoodiline detailitöö, kõrgetasemeline hügieen ja rahulik vastuvõtt privaatses Mustamäe stuudios.",
+      "luxuryCta": "Vali oma aeg",
+      "viewServices": "Vaata teenuseid",
+      "cancelTrust": "Tühistamine tasuta kuni 24h"
     },
     "trust": {
       "premium": "Premium"
@@ -282,74 +300,88 @@
     "featuredService": {
       "badge": "Kliendi lemmik",
       "cta": "Soovitatud valik - broneeri",
-      "priceTrust": "Loplik hind kinnitatakse enne teenuse algust. Ettemaks 10 EUR.",
-      "longevityFallback": "Tulemus pusib tavaliselt 3-4 nadalat."
+      "priceTrust": "Lõplik hind kinnitatakse enne teenuse algust. Ettemaks 10 EUR.",
+      "longevityFallback": "Tulemus püsib tavaliselt 3-4 nädalat."
     },
     "servicesUi": {
+      "featuredTitle": "Soovitatud teenus",
       "whoForLabel": "Kellele:",
       "durationLabel": "Kestus",
-      "longevityLabel": "Pusivus",
-      "lastsLabel": "Pusib",
+      "longevityLabel": "Püsivus",
+      "lastsLabel": "Püsib",
       "priceLabel": "Alates",
-      "trustCue": "Sertifitseeritud hooldus, premium tooted ja puhas tootsoon.",
+      "trustCue": "Sertifitseeritud hooldus, premium tooted ja puhas tööprotsess.",
       "trustTag1": "Premium materjalid",
       "trustTag2": "Personaalne kuju",
-      "cardCta": "Broneeri see teenus"
+      "cardCta": "Broneeri see teenus",
+      "viewDetails": "Vaata detaile",
+      "confirmTime": "Kinnita aeg"
     },
     "localAuthority": {
       "eyebrow": "Kohalik usaldus",
-      "title": "Nailify Mustamae: lihtne tulla, lihtne tagasi tulla",
-      "subtitle": "Meid kulastavad enim Mustamae ja Kesklinna kliendid, kes soovivad tapset tulemust ja kiiret broneerimist.",
-      "item1": "Mustamae tee 55",
-      "item2": "Parkimine lahedal",
-      "item3": "Hea uhistranspordi uhendus"
+      "title": "Nailify Mustamäe: lihtne tulla, lihtne tagasi tulla",
+      "subtitle": "Meid külastavad enim Mustamäe ja Kesklinna kliendid, kes soovivad täpset tulemust ja kiiret broneerimist.",
+      "item1": "Mustamäe tee 55",
+      "item2": "Parkimine lähedal",
+      "item3": "Hea ühistranspordi ühendus"
     },
     "gallery": {
-      "subtitle": "Hoolikalt valitud signatuurstiilid, mis inspireerivad su järgmist broneeringut.",
+      "eyebrow": "MEIE TÖÖ",
+      "realResultsTitle": "Päris tulemused.",
+      "subtitle": "Valitud stiilid igapäevaseks inspiratsiooniks.",
+      "signatureLook": "Signatuurstiil",
+      "bookStyleCta": "Broneeri see stiil",
+      "bookTime": "Broneeri aeg",
+      "ctaLead": "Leia oma järgmine lemmik stiil.",
       "inspirationLook": "Inspiratsioonistiil",
       "styleNames": {
-        "glossy-pink-french": "Laikiv roosa French",
+        "glossy-pink-french": "Läikiv roosa French",
         "matte-nude": "Matt nude manikuur",
-        "chrome-silver": "Kroomitud hobe",
-        "ombre-sunset": "Pehme ombre",
-        "ruby-red": "Sugav rubiinpunane",
-        "pearl-white": "Parlvalge klassika"
+        "chrome-silver": "Kroomitud hõbe",
+        "ombre-sunset": "Pehme ombré",
+        "ruby-red": "Sügav rubiinpunane",
+        "pearl-white": "Pärlvalge klassika"
       },
       "styleCaptions": {
-        "glossy-pink-french": "French geeldisain pehme laikega",
-        "matte-nude": "Naturaalne nude viimistlus igapaevaks",
-        "chrome-silver": "Efektne kroomviimistlus eriliseks sundmuseks",
-        "ombre-sunset": "Orn varviuleminek modernse tulemusega",
-        "ruby-red": "Klassikaline geellakk sugava tooniga",
-        "pearl-white": "Puhas hele toon minimalistlikuks lookiks"
+        "glossy-pink-french": "French geeldisain pehme läikega",
+        "matte-nude": "Naturaalne nude viimistlus igapäevaks",
+        "chrome-silver": "Efektne kroomviimistlus eriliseks sündmuseks",
+        "ombre-sunset": "Õrn värviüleminek modernse tulemusega",
+        "ruby-red": "Klassikaline geellakk sügava tooniga",
+        "pearl-white": "Puhas hele toon minimalistlikuks look’iks"
       },
       "featuredLabel": "Nädala signatuur",
       "featuredQuote": "Pehme läige, puhas kuju ja kauapüsiv viimistlus."
     },
     "serviceDecision": {
       "resultLabel": "Tulemus:",
-      "longevityLabel": "Pusivus:",
+      "longevityLabel": "Püsivus:",
       "suitabilityLabel": "Kellele sobib:",
       "fallback": {
         "gel-manicure": {
-          "result": "Uhtlane laikiv geellakk ja korrektne kuju.",
-          "longevity": "Kuni 3-4 nadalat olenevalt kodusest hooldusest.",
-          "suitability": "Kui soovid kauapusivat tulemust igapaevaseks kandmiseks."
+          "result": "Ühtlane läikiv geellakk ja korrektne kuju.",
+          "longevity": "Kuni 3-4 nädalat olenevalt kodusest hooldusest.",
+          "suitability": "Kui soovid kauapüsivat tulemust igapäevaseks kandmiseks."
         },
         "acrylic-extensions": {
-          "result": "Pikem vorm, tugevam konstruktsioon ja tapselt viimistletud disain.",
-          "longevity": "Hooldusega pusib tulemus 3-4 nadalat.",
-          "suitability": "Kui soovid pikemat kuunt voi tugevamat kuju."
+          "result": "Pikem vorm, tugevam konstruktsioon ja täpselt viimistletud disain.",
+          "longevity": "Hooldusega püsib tulemus 3-4 nädalat.",
+          "suitability": "Kui soovid pikemat küünt või tugevamat kuju."
         },
         "luxury-spa-manicure": {
-          "result": "Hooldatud kaed, pehme nahk ja viimistletud detail.",
-          "longevity": "Parim efekt regulaarse 3-4 nadala rutmiga.",
+          "result": "Hooldatud käed, pehme nahk ja viimistletud detail.",
+          "longevity": "Parim efekt regulaarse 3-4 nädalat rütmiga.",
           "suitability": "Kui soovid hooldushetke koos premium enesehooldusega."
         },
         "gel-pedicure": {
-          "result": "Puhas pedikuur ja vastupidav geellakk.",
-          "longevity": "Keskmiselt 4-6 nadalat, olenevalt koormusest.",
+          "result": "Puhas pediküür ja vastupidav geellakk.",
+          "longevity": "Keskmiselt 4-6 nädalat, olenevalt koormusest.",
           "suitability": "Kui soovid korralikku ja pika kestvusega jalahooldust."
+        },
+        "nail-art": {
+          "result": "Isikupärane küünedisain, detail või kroom, mis sobib sinu valitud stiiliga.",
+          "longevity": "Sõltub baasteenusest; väike korrastus hoiab tulemuse värskena.",
+          "suitability": "Sobib, kui soovid erilist aktsenti, mustrit või efektset viimistlust."
         }
       }
     },
@@ -487,9 +519,9 @@
       "previewText": "Privaatne ja rahulik ilukeskkond premium hügieenistandardiga."
     },
     "aftercare": {
-      "tip1": "• Geelmanikuur pusib tavaliselt 3-4 nadalat.",
-      "tip2": "• Planeeri hooldus, kui valjakasv muutub nahtavaks.",
-      "tip3": "• Kasuta kuuneoli iga paev, et valitda kuivust.",
+      "tip1": "• Geelmaniküür püsib tavaliselt 3-4 nädalat.",
+      "tip2": "• Planeeri hooldus, kui väljakasv muutub nähtavaks.",
+      "tip3": "• Kasuta küüneõli iga päev, et võita kuivust.",
       "eyebrow": "Järelhoolduse valik",
       "title": "Hoia värske tulemus kodus",
       "subtitle": "Igapäevased hooldussoovitused ja tooted, mis aitavad läiget ning kuju säilitada.",
@@ -505,7 +537,10 @@
     "revenue": {
       "offerA": "Lisa teenusele samal visiidil",
       "offerB": "Enim valitud lisad",
-      "offerC": "Kiire mini-upgrade"
+      "offerC": "Kiire mini-upgrade",
+      "sectionEyebrow": "Järelhooldus ja kingid",
+      "sectionTitle": "Hooldus kodus ja kingi kogemus",
+      "sectionIntro": "Valitud järelhooldustooted ja paindlikud kinkekaardid igaks sündmuseks."
     },
     "final": {
       "limited": "Piiratud ajad igal nädalal",

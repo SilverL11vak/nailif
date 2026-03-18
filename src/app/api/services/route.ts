@@ -47,7 +47,8 @@ export async function GET(request: Request) {
         ? undefined
         : {
             headers: {
-              'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=900',
+              // Short cache so admin service edits show on homepage within ~30s
+              'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
             },
           }
     );
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
       category: string;
       imageUrl: string | null;
       isPopular: boolean;
+      sortOrder: number;
       active: boolean;
     }>;
 
@@ -112,6 +114,7 @@ export async function POST(request: Request) {
       category: payload.category,
       imageUrl: payload.imageUrl ?? null,
       isPopular: Boolean(payload.isPopular),
+      sortOrder: Number(payload.sortOrder ?? 0),
       active: payload.active ?? true,
     });
 

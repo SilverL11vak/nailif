@@ -1,4 +1,5 @@
 import { sql } from './db';
+// Customer linking happens only after verified payment success.
 
 export interface OrderRecord {
   id: string;
@@ -28,7 +29,6 @@ interface CreateOrderInput {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_orders_ensure__: Promise<void> | undefined;
 }
 
@@ -49,9 +49,21 @@ async function ensureOrdersTableInternal() {
       booking_id BIGINT,
       items_json JSONB NOT NULL DEFAULT '[]'::jsonb,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      paid_at TIMESTAMPTZ
+      paid_at TIMESTAMPTZ,
+      payment_method TEXT,
+      stripe_payment_intent_id TEXT,
+      manually_reconciled BOOLEAN DEFAULT false,
+      reconciled_at TIMESTAMPTZ,
+      reconciled_by TEXT
     )
   `;
+
+  // CRM linkage (nullable)
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS orders_customer_id_idx ON orders (customer_id)`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name_snapshot TEXT`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email_snapshot TEXT`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone_snapshot TEXT`;
 }
 
 export async function ensureOrdersTable() {
@@ -72,6 +84,10 @@ export async function createOrder(input: CreateOrderInput) {
       customer_name,
       customer_email,
       customer_phone,
+      customer_id,
+      customer_name_snapshot,
+      customer_email_snapshot,
+      customer_phone_snapshot,
       booking_id,
       items_json
     ) VALUES (
@@ -79,6 +95,10 @@ export async function createOrder(input: CreateOrderInput) {
       ${input.status ?? 'pending'},
       ${input.amountTotal},
       ${input.currency ?? 'eur'},
+      ${input.customerName ?? null},
+      ${input.customerEmail ?? null},
+      ${input.customerPhone ?? null},
+      NULL,
       ${input.customerName ?? null},
       ${input.customerEmail ?? null},
       ${input.customerPhone ?? null},
@@ -109,6 +129,130 @@ export async function markOrderPaidBySession(sessionId: string) {
   `;
 
   return row ? String(row.id) : null;
+}
+
+/**
+ * Mark order as paid from webhook event
+ * Includes additional metadata from Stripe
+ */
+export async function markOrderPaidFromWebhook(
+  sessionId: string,
+  paymentIntentId?: string,
+  paymentMethod?: string
+) {
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE orders
+    SET status = 'paid',
+        paid_at = NOW(),
+        stripe_payment_intent_id = ${paymentIntentId ?? null},
+        payment_method = ${paymentMethod ?? null}
+    WHERE stripe_session_id = ${sessionId}
+    RETURNING id
+  `;
+
+  if (!row) return null;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidOrderToCustomerBySession } = await import('./customer-service');
+    await linkPaidOrderToCustomerBySession(sessionId);
+  } catch (e) {
+    console.error('Customer link after order webhook failed:', e);
+  }
+
+  return String(row.id);
+}
+
+/**
+ * Manual Stripe reconciliation for an order
+ * Returns: { success: true, alreadyPaid: false, orderId } | { success: true, alreadyPaid: true } | { success: false, reason }
+ */
+export async function reconcileOrderPayment(input: {
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  adminId: string;
+  adminName: string | null;
+}) {
+  const { stripeSessionId, stripePaymentIntentId, adminId, adminName } = input;
+
+  if (!stripeSessionId && !stripePaymentIntentId) {
+    return { success: false as const, reason: 'Either stripeSessionId or stripePaymentIntentId is required' };
+  }
+
+  // Check if already reconciled
+  let existing: {
+    id: number;
+    status: string;
+    manually_reconciled: boolean;
+    reconciled_at: string | null;
+    reconciled_by: string | null;
+  } | null = null;
+
+  if (stripeSessionId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM orders
+      WHERE stripe_session_id = ${stripeSessionId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  } else if (stripePaymentIntentId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM orders
+      WHERE stripe_payment_intent_id = ${stripePaymentIntentId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  }
+
+  if (!existing) {
+    return { success: false as const, reason: 'Order not found for given Stripe ID' };
+  }
+
+  // Already marked as paid manually
+  if (existing.manually_reconciled && existing.status === 'paid') {
+    return { success: true as const, alreadyPaid: true as const, orderId: String(existing.id) };
+  }
+
+  // Update with audit fields
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE orders
+    SET status = 'paid',
+        paid_at = NOW(),
+        manually_reconciled = true,
+        reconciled_at = NOW(),
+        reconciled_by = ${adminName ?? `admin_${adminId}`}
+    WHERE id = ${existing.id}
+    RETURNING id
+  `;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidOrderToCustomerBySession, linkPaidOrderToCustomerByPaymentIntent } = await import('./customer-service');
+    if (stripeSessionId) await linkPaidOrderToCustomerBySession(stripeSessionId);
+    else if (stripePaymentIntentId) await linkPaidOrderToCustomerByPaymentIntent(stripePaymentIntentId);
+  } catch (e) {
+    console.error('Customer link after order reconcile failed:', e);
+  }
+
+  return { success: true as const, alreadyPaid: false as const, orderId: String(row.id) };
 }
 
 export async function listOrders(limit = 100): Promise<OrderRecord[]> {

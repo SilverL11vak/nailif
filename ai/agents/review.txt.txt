@@ -1,0 +1,12 @@
+ROLE:
+Code Skeptic / Regression Reviewer.
+
+CHECK:
+- breakpoint conflicts
+- duplicate UI blocks
+- token violations
+- hydration risk
+- performance regression
+- visual hierarchy damage
+- unnecessary imports
+- dead code

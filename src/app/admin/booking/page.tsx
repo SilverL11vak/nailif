@@ -70,6 +70,19 @@ const textSections = [
     ],
   },
   {
+    id: 'ai',
+    title: 'AI teadmised',
+    description: 'Chat-assistendi taust ja brändikontekst.',
+    keys: [
+      'ai_knowledge_specialist_name',
+      'ai_knowledge_specialist_role',
+      'ai_knowledge_owner_name',
+      'ai_knowledge_brand_about',
+      'ai_knowledge_location',
+      'ai_knowledge_guideline',
+    ],
+  },
+  {
     id: 'upload',
     title: 'Foto uleslaadimine',
     description: 'Inspiratsioonifoto ploki sonumid.',
@@ -266,18 +279,18 @@ export default function AdminBookingContentPage() {
   };
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[#fafafa] px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
+        <header className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Bookingu sisu haldus</h1>
-              <p className="mt-2 text-sm text-[#4b5563]">Vaade on jaotatud sektoriteks, et igapaevane haldus oleks lihtsam.</p>
+              <p className="type-overline admin-muted">Broneerimine</p>
+              <h1 className="type-h2 admin-heading mt-1">Broneerimise tekstid ja lisateenused</h1>
+              <p className="type-small admin-muted mt-2">Muuda broneerimise sammude tekste ja lisateenuseid.</p>
             </div>
             <div className="flex gap-2 text-sm">
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563]" href="/admin">Halduspaneel</Link>
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563]" href="/admin/services">Teenused</Link>
+              <Link className="btn-secondary btn-secondary-md" href="/admin">Halduspaneel</Link>
+              <Link className="btn-secondary btn-secondary-md" href="/admin/bookings">Broneeringud</Link>
             </div>
           </div>
         </header>
@@ -287,30 +300,30 @@ export default function AdminBookingContentPage() {
         {toast ? <div className="fixed right-4 top-6 z-[70] rounded-xl border border-[#edd9e3] bg-white px-4 py-2 text-sm font-medium text-[#6a3b57] shadow-lg">{toast}</div> : null}
         {error ? <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
-        <section className="admin-panel mb-6 rounded-3xl p-4">
-          <p className="mb-3 text-xs uppercase tracking-[0.16em] text-[#96748a]">Sektorid</p>
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white mb-6 p-4 shadow-sm">
+          <p className="mb-3 type-small admin-muted">Vali vaade</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <button onClick={() => setActiveSector('texts')} className={`rounded-2xl border px-4 py-3 text-left ${activeSector === 'texts' ? 'border-[#c490b2] bg-[#fff2fa]' : 'border-[#e9dce6] bg-white'}`}>
-              <p className="text-sm font-semibold text-[#3b2b3f]">Bookingu tekstid</p>
-              <p className="text-xs text-[#78667b]">Sammude sonumid</p>
+            <button onClick={() => setActiveSector('texts')} className={`rounded-2xl border px-4 py-3 text-left transition ${activeSector === 'texts' ? 'border-[var(--color-primary)] bg-[#fff2fa]' : 'border-[var(--color-border-card-soft)] bg-white hover:bg-[#fef8fb]'}`}>
+              <p className="text-sm font-semibold admin-heading">Tekstid</p>
+              <p className="text-xs admin-muted">Sammude sõnumid</p>
             </button>
-            <button onClick={() => setActiveSector('loader')} className={`rounded-2xl border px-4 py-3 text-left ${activeSector === 'loader' ? 'border-[#c490b2] bg-[#fff2fa]' : 'border-[#e9dce6] bg-white'}`}>
-              <p className="text-sm font-semibold text-[#3b2b3f]">Loaderi seaded</p>
-              <p className="text-xs text-[#78667b]">Laadimise lutitid</p>
+            <button onClick={() => setActiveSector('addons')} className={`rounded-2xl border px-4 py-3 text-left transition ${activeSector === 'addons' ? 'border-[var(--color-primary)] bg-[#fff2fa]' : 'border-[var(--color-border-card-soft)] bg-white hover:bg-[#fef8fb]'}`}>
+              <p className="text-sm font-semibold admin-heading">Lisateenused</p>
+              <p className="text-xs admin-muted">Hinnad ja kestused</p>
             </button>
-            <button onClick={() => setActiveSector('addons')} className={`rounded-2xl border px-4 py-3 text-left ${activeSector === 'addons' ? 'border-[#c490b2] bg-[#fff2fa]' : 'border-[#e9dce6] bg-white'}`}>
-              <p className="text-sm font-semibold text-[#3b2b3f]">Lisateenused</p>
-              <p className="text-xs text-[#78667b]">Add-on haldus</p>
+            <button onClick={() => setActiveSector('loader')} className={`rounded-2xl border px-4 py-3 text-left transition ${activeSector === 'loader' ? 'border-[var(--color-primary)] bg-[#fff2fa]' : 'border-[var(--color-border-card-soft)] bg-white hover:bg-[#fef8fb]'}`}>
+              <p className="text-sm font-semibold admin-heading">Laadimise tekstid</p>
+              <p className="text-xs admin-muted">Enne broneerimist</p>
             </button>
-            <button onClick={() => setActiveSector('preview')} className={`rounded-2xl border px-4 py-3 text-left ${activeSector === 'preview' ? 'border-[#c490b2] bg-[#fff2fa]' : 'border-[#e9dce6] bg-white'}`}>
-              <p className="text-sm font-semibold text-[#3b2b3f]">Eelvaade</p>
-              <p className="text-xs text-[#78667b]">Kliendivaate kontroll</p>
+            <button onClick={() => setActiveSector('preview')} className={`rounded-2xl border px-4 py-3 text-left transition ${activeSector === 'preview' ? 'border-[var(--color-primary)] bg-[#fff2fa]' : 'border-[var(--color-border-card-soft)] bg-white hover:bg-[#fef8fb]'}`}>
+              <p className="text-sm font-semibold admin-heading">Eelvaade</p>
+              <p className="text-xs admin-muted">Kuidas kliendil näeb</p>
             </button>
           </div>
         </section>
 
         {activeSector === 'texts' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-[#111827]">Bookingu tekstid</h2>
@@ -355,7 +368,7 @@ export default function AdminBookingContentPage() {
         )}
 
         {activeSector === 'loader' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-[#111827]">Loaderi seaded</h2>
               <button onClick={() => void saveContent()} disabled={isSavingContent} className="rounded-full bg-[#111827] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
@@ -403,7 +416,7 @@ export default function AdminBookingContentPage() {
         )}
 
         {activeSector === 'addons' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-xl font-semibold text-[#111827]">Lisateenused</h2>
             <div className="mb-4 overflow-x-auto rounded-2xl border border-[#efe3dc] bg-white">
               <table className="min-w-full text-left text-sm">
@@ -472,7 +485,7 @@ export default function AdminBookingContentPage() {
         )}
 
         {activeSector === 'preview' && (
-          <section className="admin-panel rounded-3xl p-5">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-[#111827]">Booking Content Preview</h2>
               <div className="rounded-full border border-[#d1d5db] bg-white p-1 text-xs">

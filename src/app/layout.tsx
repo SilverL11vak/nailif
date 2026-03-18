@@ -1,16 +1,22 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
 import { ClientProviders } from '@/components/providers/ClientProviders';
+import { BehaviorTracking } from '@/components/analytics/BehaviorTracking';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin', 'latin-ext'],
+  display: 'swap',
+  preload: false,
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+const cormorant = Cormorant_Garamond({
+  variable: '--font-cormorant',
+  subsets: ['latin', 'latin-ext'],
+  weight: ['500', '600'],
+  display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -32,8 +38,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="et">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ClientProviders>{children}</ClientProviders>
+      <body className={`${inter.variable} ${cormorant.variable} antialiased`}>
+        <ClientProviders>
+          <BehaviorTracking />
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

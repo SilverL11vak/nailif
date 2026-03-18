@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { ensureCatalogTables, getProductsByIds } from '@/lib/catalog';
 import { createOrder, ensureOrdersTable, setOrderStripeSession } from '@/lib/orders';
 import { getStripeServer } from '@/lib/stripe';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 interface CartCheckoutPayload {
   items: Array<{ productId: string; quantity: number }>;
@@ -17,6 +18,15 @@ function getBaseUrlFromHeaders(originHeader: string | null, hostHeader: string |
 
 export async function POST(request: Request) {
   try {
+    // Rate limit check - prevent payment abuse
+    const rateLimit = checkRateLimit('checkout', request.headers);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter ?? 60) } }
+      );
+    }
+
     const payload = (await request.json()) as CartCheckoutPayload;
     if (!Array.isArray(payload.items) || payload.items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });

@@ -1,7 +1,6 @@
 'use client';
 
-import Image from 'next/image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import type { Service } from '@/store/booking-types';
@@ -9,18 +8,59 @@ import { useServices } from '@/hooks/use-services';
 import { useBookingContent } from '@/hooks/use-booking-content';
 import { useBookingAddOns } from '@/hooks/use-booking-addons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
-
-const serviceVisuals: Record<string, { accent: string; detail: string }> = {
-  'gel-manicure': { accent: 'from-[#f5e5de] to-[#d9a89c]', detail: 'bg-[#fff7f3]' },
-  'acrylic-extensions': { accent: 'from-[#ead8e7] to-[#c6a6bf]', detail: 'bg-[#faf5f9]' },
-  'luxury-spa-manicure': { accent: 'from-[#efe3d8] to-[#ceb29a]', detail: 'bg-[#fdf8f3]' },
-  'gel-pedicure': { accent: 'from-[#e3e6ef] to-[#b7c2da]', detail: 'bg-[#f6f8fc]' },
-  'nail-art': { accent: 'from-[#f0dfd6] to-[#d9b0a3]', detail: 'bg-[#fcf7f4]' },
-};
+import { PremiumImage as Image } from '@/components/ui/PremiumImage';
+import { trackEvent, touchBookingActivity } from '@/lib/analytics-client';
+import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
+
+function normalizeCopy(value?: string | null) {
+  return (value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function cleanPrefixedValue(value: string, prefixes: string[]) {
+  const normalized = normalizeCopy(value);
+  if (!normalized) return normalized;
+  const lowered = normalized.toLowerCase();
+  for (const prefix of prefixes) {
+    const prefixLower = prefix.toLowerCase();
+    if (lowered.startsWith(prefixLower)) {
+      return normalized.slice(prefix.length).trim();
+    }
+  }
+  return normalized;
+}
+
+function isServiceFieldKeyLeak(value: string | undefined | null) {
+  const s = (value ?? '').trim();
+  if (!s) return false;
+  if (s.startsWith('homepage.serviceDecision.fallback.')) return true;
+  return /^homepage\.[a-z0-9_.-]+$/i.test(s) && s.includes('serviceDecision');
+}
+
+function pickServiceText(
+  primary: string | undefined | null,
+  secondary: string | undefined | null,
+  fallback: string
+) {
+  const a = normalizeCopy(primary ?? '');
+  if (a && !isServiceFieldKeyLeak(primary)) return a;
+  const b = normalizeCopy(secondary ?? '');
+  if (b && !isServiceFieldKeyLeak(secondary)) return b;
+  return fallback;
+}
+
+const categoryTypeLabel = (category: string | undefined, en: boolean) => {
+  const c = (category ?? '').toLowerCase();
+  if (c === 'nail-art') return en ? 'Nail art' : 'Küünekunst';
+  if (c === 'manicure') return en ? 'Manicure' : 'Maniküür';
+  if (c === 'pedicure') return en ? 'Pedicure' : 'Pediküür';
+  if (c === 'extensions') return en ? 'Extensions' : 'Pikendused';
+  return en ? 'Service' : 'Teenus';
+};
 
 export function ServiceStep() {
   const { t, language } = useTranslation();
@@ -32,7 +72,16 @@ export function ServiceStep() {
   const nextStep = useBookingStore((state) => state.nextStep);
   const selectedStyle = useBookingStore((state) => state.selectedStyle);
   const continueButtonRef = useRef<HTMLDivElement>(null);
-  const [detailsService, setDetailsService] = useState<Service | null>(null);
+  const servicesViewAtRef = useRef<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (loading) return;
+    if (services.length === 0) return;
+    if (servicesViewAtRef.current == null) servicesViewAtRef.current = Date.now();
+    trackBehaviorEvent('booking_services_view', { numberOfServicesVisible: services.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, services.length]);
 
   const prefetchSlots = () => {
     const now = new Date();
@@ -42,7 +91,27 @@ export function ServiceStep() {
   };
 
   const handleChooseTime = (service: Service) => {
+    const hesitationTime =
+      servicesViewAtRef.current != null ? Math.max(0, Math.round((Date.now() - servicesViewAtRef.current) / 1000)) : undefined;
+    trackBehaviorEvent('booking_service_selected', {
+      serviceId: service.id,
+      servicePrice: service.price,
+      hesitationTime,
+    });
     selectService(service);
+    touchBookingActivity();
+    trackEvent({
+      eventType: 'booking_service_selected',
+      step: 1,
+      serviceId: service.id,
+      metadata: { serviceName: service.name, duration: service.duration, price: service.price },
+    });
+    trackFunnelEvent({
+      event: 'service_selected',
+      serviceId: service.id,
+      metadata: { serviceName: service.name, duration: service.duration, price: service.price, source: 'booking_step_1' },
+      language,
+    });
     prefetchSlots();
     nextStep();
     window.requestAnimationFrame(() => {
@@ -50,266 +119,258 @@ export function ServiceStep() {
     });
   };
 
-  const styleHint =
-    language === 'en' ? 'Style selected, we will match the right service.' : 'Stiil on valitud, leiame sobiva teenuse.';
-  const defaultLongevity = text('service_default_longevity', language === 'en' ? 'Longevity: personalized' : 'Pusivus: individuaalne');
-  const defaultSuitability = text('service_default_suitability', language === 'en' ? 'Suitability: tailored to your needs' : 'Sobivus: kohandatud sinu vajadusele');
-  const defaultResult = text('service_default_result', language === 'en' ? 'Beautifully finished premium result.' : 'Kaunis, hoolikalt viimistletud tulemus.');
-  const includeLabel = text('service_include_label', language === 'en' ? 'Includes' : 'Sisaldab');
-  const detailsLabel = text('service_see_details', language === 'en' ? 'See details' : 'Vaata detaile');
-  const chooseTimeLabel = text('service_choose_time_cta', language === 'en' ? 'Choose time' : 'Vali aeg');
+  const en = language === 'en';
+  const styleHint = en ? 'Style selected — we’ll match the right service.' : 'Stiil on valitud — leiame sobiva teenuse.';
+  const defaultLongevity = text('service_default_longevity', en ? 'Personalized wear' : 'Individuaalne püsivus');
+  const defaultSuitability = text('service_default_suitability', en ? 'Tailored to you' : 'Kohandatud sulle');
+  const defaultResult = text('service_default_result', en ? 'Premium finish.' : 'Premium viimistlus.');
+  const includeLabel = text('service_include_label', en ? 'Includes' : 'Sisaldab');
+  const viewDetailsLabel = en ? 'View details' : 'Vaata detaile';
+  const hideDetailsLabel = en ? 'Hide details' : 'Peida detailid';
+  const chooseTimeLabel = text('service_choose_time_cta', en ? 'Choose time' : 'Vali aeg');
   const addOnHint = text(
     'service_addon_hint',
-    language === 'en' ? 'Want to add nail art or repair? You can add it in the next step.' : 'Soovid lisada disaini voi paranduse? Lisad selle jargmises sammus.'
+    en ? 'Add nail art or repair in the next steps.' : 'Lisa disain või parandus järgmistes sammudes.'
   );
-  const premiumMaterials = text('service_chip_materials', language === 'en' ? 'Premium materials' : 'Premium materjalid');
-  const maintenanceHint = text('service_maintenance_hint', language === 'en' ? 'Maintenance every 3-4 weeks' : 'Hooldus iga 3-4 nadala jarel');
-  const clientFavourite = text('service_client_favourite', language === 'en' ? 'Client favourite' : 'Kliendi lemmik');
-  const lastBookedHint = text('service_last_booked_hint', language === 'en' ? 'Popular choice this week' : 'Selle nadala populaarne valik');
+  const clientFavourite = text('service_client_favourite', en ? 'Popular' : 'Populaarne');
+  const whoForLabel = en ? 'Best for' : 'Sobib';
   const detailsPreparation = text(
     'service_modal_preparation',
-    language === 'en' ? 'Preparation: arrive with clean nails. If gel removal is needed, add removal service.' : 'Ettevalmistus: tule puhaste kuuntega. Kui vajad geeli eemaldust, lisa see teenusena.'
+    en
+      ? 'Arrive with clean nails. Add gel removal as a service if needed.'
+      : 'Tule puhaste küüntega. Geeli eemaldus lisa teenusena.'
   );
   const detailsAftercare = text(
     'service_modal_aftercare',
-    language === 'en' ? 'Aftercare: use cuticle oil daily and avoid harsh chemicals for long-lasting shine.' : 'Jarelhooldus: kasuta kuuneoli iga paev ja valdi tugevaid kemikaale, et laige pusiks.'
+    en
+      ? 'Cuticle oil daily; avoid harsh chemicals for lasting shine.'
+      : 'Küünenahaõli iga päev; väldi tugevaid kemikaale, et tulemus püsiks kaunis.'
   );
   const detailsResult = text(
     'service_modal_result',
-    language === 'en' ? 'Realistic result: final tone and finish are confirmed with Sandra before work starts.' : 'Realistlik tulemus: loplik toon ja viimistlus kinnitatakse Sandraga enne too algust.'
+    en
+      ? 'Final tone confirmed with Sandra before work starts.'
+      : 'Lõplik toon kinnitatakse Sandraga enne töö algust.'
   );
-  const whoForLabel = text('service_who_for_label', language === 'en' ? 'Best for' : 'Sobib');
-  const staysLabel = text('service_stays_label', language === 'en' ? 'Stays' : 'Pusib');
-  const fromLabel = text('service_from_label', language === 'en' ? 'Starting from' : 'Alates');
+
+  const toggleDetails = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
 
   return (
-    <div className="animate-fade-in">
-      <div className="mb-7 text-center">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#b08979]">Samm 1</p>
-        <h2 className="mb-2 text-2xl font-semibold text-gray-800">{t('service.choose')}</h2>
+    <div
+      className="animate-fade-in motion-reduce:animate-none"
+      style={{ animationDuration: '180ms' }}
+    >
+      <div className="mb-10 text-center md:mb-12">
+        <h2 className="font-brand text-[1.75rem] font-semibold tracking-tight text-[#2f2530] md:text-[2rem]">
+          {t('service.choose')}
+        </h2>
         {selectedStyle ? (
-          <div className="mb-2 flex items-center justify-center gap-2 text-sm text-[#b58373]">
+          <p className="mt-2 flex items-center justify-center gap-2 text-sm text-[#c24d86]">
             <span>{selectedStyle.emoji}</span>
             <span>{styleHint}</span>
-          </div>
+          </p>
         ) : (
-          <p className="text-gray-500">{t('service.getStarted')}</p>
+          <p className="mt-2 text-[15px] text-[#7f6677]">{t('service.getStarted')}</p>
         )}
-        <p className="mt-2 text-sm text-[#8c7568]">
-          {text('service_step_motivation', language === 'en' ? 'You are one step away from your next beautiful nails.' : 'Oled vaid uhe sammu kaugusel uutest kaunitest kuuntest.')}
-        </p>
       </div>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2">
-        {loading && services.length === 0 &&
+      <div className="mx-auto grid max-w-[640px] grid-cols-1 gap-6 md:grid-cols-2 md:gap-6">
+        {loading &&
+          services.length === 0 &&
           Array.from({ length: 4 }).map((_, index) => (
-            <div key={`service-loading-${index}`} className="rounded-[26px] border border-[#efe5de] bg-white px-5 py-5">
-              <SkeletonBlock className="mb-4 h-14 w-14 rounded-[18px]" />
-              <SkeletonBlock className="mb-2 h-4 w-28 rounded-lg" />
-              <SkeletonBlock className="mb-2 h-6 w-2/3 rounded-lg" />
-              <SkeletonBlock className="mb-2 h-4 w-full rounded-lg" />
-              <SkeletonBlock className="h-4 w-3/4 rounded-lg" />
+            <div
+              key={`service-loading-${index}`}
+              className="rounded-[20px] border border-[#eedfe8] bg-white p-5"
+              style={{ padding: 20 }}
+            >
+              <SkeletonBlock className="mb-2 h-3 w-24 rounded" />
+              <SkeletonBlock className="mb-3 h-7 w-4/5 rounded-lg" />
+              <SkeletonBlock className="mb-3 h-10 w-full rounded-lg" />
+              <SkeletonBlock className="h-11 w-full rounded-full" />
             </div>
           ))}
 
         {services.map((service) => {
-            const isSelected = selectedService?.id === service.id;
-            const visual = serviceVisuals[service.id] || serviceVisuals['gel-manicure'];
-            const result = service.resultDescription || service.resultDescriptionEt || service.description || defaultResult;
-            const longevity = service.longevityDescription || service.longevityDescriptionEt || defaultLongevity;
-            const suitability = service.suitabilityNote || service.suitabilityNoteEt || defaultSuitability;
+          const isSelected = selectedService?.id === service.id;
+          const expanded = expandedId === service.id;
+          const rawResult = pickServiceText(
+            service.resultDescription || service.resultDescriptionEt,
+            service.description,
+            defaultResult
+          );
+          const rawDescription = pickServiceText(service.description, null, '');
+          const shortBlurb =
+            rawDescription && rawDescription.length > 0 && rawDescription !== rawResult
+              ? rawDescription
+              : rawResult;
+          const longevity = cleanPrefixedValue(
+            pickServiceText(service.longevityDescription, service.longevityDescriptionEt, defaultLongevity),
+            ['Pusivus:', 'Püsivus:', 'Stays:', 'Longevity:']
+          );
+          const suitability = cleanPrefixedValue(
+            pickServiceText(service.suitabilityNote, service.suitabilityNoteEt, defaultSuitability),
+            ['Sobivus:', 'Suitability:', 'Best for:']
+          );
+          const typeLabel = categoryTypeLabel(service.category, en);
+          const smallLabel =
+            service.category === 'nail-art'
+              ? en
+                ? 'Signature'
+                : 'Signatuur'
+              : en
+                ? 'Premium service'
+                : 'Premium teenus';
 
-            return (
-              <article
-                key={service.id}
-                onClick={() => handleChooseTime(service)}
-                className={`group relative overflow-hidden rounded-[26px] border px-5 py-5 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_34px_-24px_rgba(72,49,35,0.45)] ${
-                  isSelected ? 'border-[#d7b0a1] bg-[#fffaf7] shadow-[0_18px_30px_-22px_rgba(72,49,35,0.45)] ring-1 ring-[#f2e5de]' : 'border-[#efe5de] bg-white hover:border-[#d9beaf]'
-                } cursor-pointer`}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,165,154,0.14),transparent_40%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-                <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br ${visual.accent} shadow-[inset_0_1px_1px_rgba(255,255,255,0.75),0_12px_18px_-14px_rgba(72,49,35,0.6)] transition duration-300 group-hover:brightness-105`}>
-                  <div className={`h-10 w-10 rounded-[14px] ${visual.detail} p-2 shadow-inner`}>
-                    <div className="flex h-full items-end gap-1">
-                      <span className="h-4 w-1.5 rounded-full bg-white/90" />
-                      <span className="h-6 w-1.5 rounded-full bg-white/80" />
-                      <span className="h-5 w-1.5 rounded-full bg-white/70" />
-                    </div>
-                  </div>
+          return (
+            <article
+              key={service.id}
+              className={`booking-service-card group relative flex flex-col rounded-[20px] border bg-white text-left transition-[transform,box-shadow] duration-[180ms] motion-reduce:transition-none ${
+                isSelected
+                  ? 'border-[#d4a8c0] shadow-[0_20px_40px_-28px_rgba(194,77,134,0.35)] ring-1 ring-[#f3e6ee]'
+                  : 'border-[#ebe0e6] shadow-[0_8px_28px_-20px_rgba(57,33,52,0.12)] hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-24px_rgba(116,47,93,0.2)] active:scale-[0.99] md:hover:-translate-y-1'
+              }`}
+              style={{ padding: 20 }}
+            >
+              <div className="relative mb-4 overflow-hidden rounded-[16px] border border-[#f1e6ec] bg-[linear-gradient(135deg,#fbf3f7_0%,#f6eef2_55%,#f3eaee_100%)]">
+                <div className="relative aspect-[4/3] w-full">
+                  <Image
+                    src={service.imageUrl ?? ''}
+                    alt={service.name}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 100vw, 420px"
+                    className="object-cover"
+                    revealEnabled
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(18,12,18,0.00)_0%,rgba(18,12,18,0.28)_72%,rgba(18,12,18,0.40)_100%)]" aria-hidden />
                 </div>
+              </div>
 
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a8899c]">
+                  {smallLabel}
+                </span>
                 {service.isPopular && (
-                  <span className="absolute left-4 top-4 rounded-full bg-[#f7efe9] px-2.5 py-1 text-[11px] font-medium text-[#8e6f61] ring-1 ring-[#efe2da]">
+                  <span className="rounded-full bg-[#fdf2f8] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#b04b80]">
                     {clientFavourite}
                   </span>
                 )}
+              </div>
 
-                <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b89e91]">
-                  {service.category === 'nail-art' ? (language === 'en' ? 'Signature detail' : 'Signatuurstiil') : language === 'en' ? 'Premium service' : 'Premium teenus'}
-                </p>
+              <h3 className="font-brand text-[1.35rem] font-semibold leading-tight tracking-tight text-[#2f2530] md:text-[1.45rem]">
+                {service.name}
+              </h3>
 
-                <div className="mb-2 flex items-start justify-between gap-3 pr-10">
-                  <h3 className="text-lg font-semibold text-gray-800">{service.name}</h3>
-                </div>
+              <p className="mt-2 line-clamp-1 sm:line-clamp-2 text-[13px] leading-snug text-[#6b5a66]">{shortBlurb}</p>
 
-                <p className="mb-2 text-sm font-medium leading-6 text-[#6a5247]">{result}</p>
-                <p className="mb-3 line-clamp-2 text-xs text-[#887469]">{service.description || defaultResult}</p>
-
-                <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-[#7a655b]">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fcf4ef] px-2.5 py-1 ring-1 ring-[#efe1d8]">⏱ {service.duration} {t('service.minutes')}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fcf4ef] px-2.5 py-1 ring-1 ring-[#efe1d8]">🔁 {maintenanceHint}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fcf4ef] px-2.5 py-1 ring-1 ring-[#efe1d8]">💎 {premiumMaterials}</span>
-                </div>
-
-                <div className="mb-3 space-y-1 text-xs text-[#7a655b]">
-                  <p><span className="font-medium text-[#69564d]">{whoForLabel}: </span>{suitability}</p>
-                  <p><span className="font-medium text-[#69564d]">{staysLabel}: </span>{longevity}</p>
-                  {service.isPopular && <p className="font-medium text-[#986f60]">{lastBookedHint}</p>}
-                </div>
-
-                <div className="mt-auto rounded-2xl border border-[#f0e2d8] bg-[#fff8f3] px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#a18374]">{fromLabel}</p>
-                  <div className="text-2xl font-semibold leading-none text-[#b58373]">EUR {service.price}</div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleChooseTime(service);
-                    }}
-                    className="w-full rounded-full bg-[#b58373] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_22px_-16px_rgba(90,61,46,0.75)] transition hover:-translate-y-0.5 hover:bg-[#a87463]"
-                  >
-                    {chooseTimeLabel}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setDetailsService(service);
-                    }}
-                    className="w-full rounded-full border border-[#ead9cf] bg-[#fffaf7] px-3 py-2 text-xs font-medium text-[#7f695f] hover:bg-[#fff4ee]"
-                  >
-                    {detailsLabel}
-                  </button>
-                </div>
-
-                {isSelected && (
-                  <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[#b58373] text-white shadow-[0_10px_22px_-12px_rgba(99,71,56,0.9)] animate-scale-in">
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-full bg-[#faf6f8] px-2.5 py-1 text-[11px] font-medium text-[#715b69]">
+                  {service.duration} {t('service.minutes')}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-[#faf6f8] px-2.5 py-1 text-[11px] font-medium text-[#715b69]">
+                  {typeLabel}
+                </span>
+                {longevity && (
+                  <span className="line-clamp-1 inline-flex max-w-full items-center rounded-full bg-[#faf6f8] px-2.5 py-1 text-[11px] text-[#8a7a85]">
+                    {longevity}
+                  </span>
                 )}
-              </article>
-            );
-          })}
-      </div>
+              </div>
 
-      <div className="mb-5">
-        <p className="mb-2 text-center text-sm font-medium text-[#7d685d]">
-          {text('service_addons_title', language === 'en' ? 'Add optional enhancements right away:' : 'Lisa soovi korral kohe juurde:')}
-        </p>
-        <div className="flex flex-wrap justify-center gap-2">
-          {addOns.slice(0, 4).map((chip) => (
-            <span key={chip.id} className="rounded-full border border-[#e8d7cf] bg-[#fffaf7] px-3 py-1 text-xs font-medium text-[#7d685d]">
-              {chip.name}
-            </span>
-          ))}
-        </div>
-      </div>
+              <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-[#f4eaef] pt-4">
+                <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#9b7a8d]">
+                  {en ? 'From' : 'Alates'}
+                </span>
+                <span className="text-2xl font-semibold tabular-nums text-[#c24d86]">€{service.price}</span>
+              </div>
 
-      <div ref={continueButtonRef} />
-
-      <div className="flex items-center justify-center gap-4 pt-3 text-xs text-[#9e8a80]">
-        <span>{language === 'en' ? 'Most clients finish booking in under 30 seconds.' : 'Enamik kliente lopetab broneeringu vahem kui 30 sekundiga.'}</span>
-      </div>
-
-      <style jsx>{`
-        @keyframes scale-in {
-          0% {
-            transform: scale(0);
-          }
-          50% {
-            transform: scale(1.18);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.28s ease-out forwards;
-        }
-      `}</style>
-
-      {detailsService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" onClick={() => setDetailsService(null)}>
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-[#ead9cf] bg-white shadow-[0_30px_64px_-36px_rgba(56,34,24,0.75)]" onClick={(event) => event.stopPropagation()}>
-            <div className="relative h-52 w-full bg-[#f7efe9]">
-              {detailsService.imageUrl ? (
-                <Image src={detailsService.imageUrl} alt={detailsService.name} fill className="object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-[#8b6c5e]">{detailsService.name}</div>
-              )}
-              <button type="button" onClick={() => setDetailsService(null)} className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-[#6f5a50]">
-                {language === 'en' ? 'Close details' : 'Sulge detailid'}
+              <button
+                type="button"
+                onClick={() => handleChooseTime(service)}
+                className="booking-cta-primary mt-4 min-h-[48px] w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_48%,#a93d71_100%)] px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_32px_-12px_rgba(194,77,134,0.65)] transition-all duration-[180ms] hover:shadow-[0_16px_36px_-10px_rgba(194,77,134,0.55)] motion-reduce:transition-none"
+              >
+                {chooseTimeLabel}
               </button>
-            </div>
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-[#3c2f28]">{detailsService.name}</h3>
-              <p className="mt-2 text-sm text-[#6f5a50]">{detailsService.description || defaultResult}</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="overflow-hidden rounded-2xl border border-[#eadcd2] bg-[#fff9f5]">
-                  <div className="relative h-28 w-full">
-                    {detailsService.imageUrl ? <Image src={detailsService.imageUrl} alt={`${detailsService.name} before`} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#8b6c5e]">Before</div>}
+
+              <button
+                type="button"
+                onClick={(e) => toggleDetails(e, service.id)}
+                className="mt-2.5 w-full py-1 text-center text-[13px] font-medium text-[#9d6b8a] underline decoration-[#e8c9d8] underline-offset-4 transition-opacity duration-[180ms] hover:text-[#c24d86] hover:decoration-[#c24d86]"
+              >
+                {expanded ? hideDetailsLabel : viewDetailsLabel}
+              </button>
+
+              <div
+                className={`grid transition-[grid-template-rows] duration-[180ms] motion-reduce:transition-none ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="mt-3 space-y-3 border-t border-[#f0e6ea] pt-3 text-[13px] leading-relaxed text-[#6d5868]">
+                    {rawDescription && rawDescription !== shortBlurb && <p>{rawDescription}</p>}
+                    <p>{rawResult}</p>
+                    <p>
+                      <span className="font-semibold text-[#5d4a59]">{whoForLabel}: </span>
+                      {suitability || defaultSuitability}
+                    </p>
+                    <div className="rounded-xl bg-[#fff8fc] p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9b7a8d]">
+                        {includeLabel}
+                      </p>
+                      <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-[#6d5868]">
+                        <li>{detailsPreparation}</li>
+                        <li>{detailsAftercare}</li>
+                        <li>{detailsResult}</li>
+                      </ul>
+                    </div>
+                    <p className="text-xs text-[#8a7a88]">{addOnHint}</p>
                   </div>
-                  <p className="px-3 py-2 text-[11px] font-medium text-[#7a655b]">{language === 'en' ? 'Before consultation' : 'Enne konsultatsiooni'}</p>
-                </div>
-                <div className="overflow-hidden rounded-2xl border border-[#eadcd2] bg-[#fff9f5]">
-                  <div className="relative h-28 w-full">
-                    {detailsService.imageUrl ? <Image src={detailsService.imageUrl} alt={`${detailsService.name} after`} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#8b6c5e]">After</div>}
-                  </div>
-                  <p className="px-3 py-2 text-[11px] font-medium text-[#7a655b]">{language === 'en' ? 'Expected finish' : 'Oodatav viimistlus'}</p>
                 </div>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-[#eadcd2] bg-[#fff9f5] p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9a7c6d]">{includeLabel}</p>
-                  <ul className="mt-2 space-y-1 text-xs text-[#6f5a50]">
-                    <li>{detailsService.resultDescription || defaultResult}</li>
-                    <li>{detailsService.longevityDescription || defaultLongevity}</li>
-                    <li>{detailsService.suitabilityNote || defaultSuitability}</li>
-                  </ul>
-                </div>
-                <div className="rounded-2xl border border-[#eadcd2] bg-[#fff9f5] p-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9a7c6d]">{language === 'en' ? 'Before and after care' : 'Enne ja parast hooldus'}</p>
-                  <ul className="mt-2 space-y-1 text-xs text-[#6f5a50]">
-                    <li>{detailsPreparation}</li>
-                    <li>{detailsAftercare}</li>
-                    <li>{detailsResult}</li>
-                  </ul>
-                </div>
-              </div>
-              <p className="mt-4 text-xs text-[#7f695f]">{addOnHint}</p>
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-lg font-semibold text-[#b58373]">EUR {detailsService.price}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleChooseTime(detailsService);
-                    setDetailsService(null);
-                  }}
-                  className="rounded-full bg-[#b58373] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a87463]"
+
+              {isSelected && (
+                <div
+                  className="pointer-events-none absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-[#c24d86] text-white shadow-md"
+                  aria-hidden
                 >
-                  {chooseTimeLabel}
-                </button>
-              </div>
-            </div>
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+
+      {addOns.length > 0 && (
+        <div className="mx-auto mt-10 max-w-[640px]">
+          <p className="mb-2 text-center text-xs font-medium text-[#8a7a88]">
+            {text('service_addons_title', en ? 'Optional add-ons next:' : 'Valikulised lisad järgmisena:')}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {addOns.slice(0, 4).map((chip) => (
+              <span
+                key={chip.id}
+                className="rounded-full border border-[#ebe0e6] bg-white/80 px-3 py-1 text-[11px] text-[#7d6275]"
+              >
+                {chip.name}
+              </span>
+            ))}
           </div>
         </div>
       )}
+
+      <div ref={continueButtonRef} />
+
+      <p className="mt-8 text-center text-[11px] text-[#a898a8]">
+        {en ? 'Most guests finish in under a minute.' : 'Enamik kliente lopetab alla minutiga.'}
+      </p>
     </div>
   );
 }

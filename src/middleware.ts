@@ -22,50 +22,57 @@ function isPublicAsset(pathname: string) {
   );
 }
 
-function preferredLocale(request: NextRequest) {
-  const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
-  return isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
+function safePreferredLocale(request: NextRequest) {
+  try {
+    const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
+    return isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
+  } catch {
+    return DEFAULT_LOCALE;
+  }
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  try {
+    const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith('/admin')) {
-    if (pathname === '/admin/login') {
+    if (isPublicAsset(pathname)) {
       return NextResponse.next();
     }
 
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-    if (!token) {
-      const loginUrl = new URL('/admin/login', request.url);
-      return NextResponse.redirect(loginUrl);
+    if (pathname.startsWith('/admin')) {
+      if (pathname === '/admin/login') {
+        return NextResponse.next();
+      }
+      const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+      if (!token) {
+        const loginUrl = new URL('/admin/login', request.url);
+        return NextResponse.redirect(loginUrl);
+      }
+      return NextResponse.next();
     }
 
+    const localeInPath = getLocaleFromPathname(pathname);
+    if (localeInPath) {
+      const response = NextResponse.next();
+      response.cookies.set(LOCALE_COOKIE, localeInPath, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: 'lax',
+      });
+      return response;
+    }
+
+    const locale = safePreferredLocale(request);
+    const localizedPath = withLocale(stripLocalePrefix(pathname), locale);
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = localizedPath;
+    return NextResponse.redirect(redirectUrl);
+  } catch {
     return NextResponse.next();
   }
-
-  if (isPublicAsset(pathname)) {
-    return NextResponse.next();
-  }
-
-  const localeInPath = getLocaleFromPathname(pathname);
-  if (localeInPath) {
-    const response = NextResponse.next();
-    response.cookies.set(LOCALE_COOKIE, localeInPath, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-    });
-    return response;
-  }
-
-  const locale = preferredLocale(request);
-  const localizedPath = withLocale(stripLocalePrefix(pathname), locale);
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = localizedPath;
-  return NextResponse.redirect(redirectUrl);
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image).*)'],
+  // Exclude all _next (static, chunks, webpack, react-refresh, etc.) to avoid 500s on asset requests
+  matcher: ['/((?!_next).*)'],
 };

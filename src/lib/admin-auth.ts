@@ -12,7 +12,6 @@ export interface AdminUser {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_admin_ensure__: Promise<void> | undefined;
 }
 

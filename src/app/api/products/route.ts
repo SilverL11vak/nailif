@@ -68,6 +68,7 @@ export async function POST(request: Request) {
       stock: number;
       active: boolean;
       isFeatured: boolean;
+      sortOrder: number;
     }>;
 
     const nameEt = payload.nameEt?.trim();
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
       stock: Number(payload.stock ?? 0),
       active: payload.active ?? true,
       isFeatured: payload.isFeatured ?? false,
+      sortOrder: Number(payload.sortOrder ?? 0),
     });
 
     return NextResponse.json({ ok: true, id });

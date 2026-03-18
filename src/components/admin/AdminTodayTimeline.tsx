@@ -27,7 +27,7 @@ function paymentLabel(status: string) {
   return 'Tasumata';
 }
 
-export function AdminTodayTimeline({ items }: { items: TodayBookingItem[] }) {
+export function AdminTodayTimeline({ items, showHeader = true }: { items: TodayBookingItem[]; showHeader?: boolean }) {
   const [bookings, setBookings] = useState(items);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,45 +57,35 @@ export function AdminTodayTimeline({ items }: { items: TodayBookingItem[] }) {
     await patchBooking(booking.id, { status: 'cancelled' });
   };
 
-  return (
-    <article className="admin-panel rounded-3xl p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-[#6b7280]">Tana tegevused</p>
-          <h2 className="mt-1 text-lg font-semibold text-[#111827]">Broneeringute ajajoon</h2>
-        </div>
-        <Link href="/admin/bookings?view=today" className="rounded-xl border border-[#d1d5db] bg-white px-3 py-1.5 text-xs font-semibold text-[#374151]">
-          Ava koik
-        </Link>
-      </div>
-
+  const content = (
+    <>
       {error ? <p className="mb-2 rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">{error}</p> : null}
 
       <div className="space-y-2.5">
-        {bookings.length === 0 ? <p className="text-sm text-[#6b7280]">Tana pole broneeringuid.</p> : null}
+        {bookings.length === 0 && showHeader ? <p className="type-small admin-muted">Täna pole broneeringuid.</p> : null}
         {bookings.map((booking) => (
-          <div key={booking.id} className="rounded-2xl border border-[#e5e7eb] bg-white p-3">
+          <div key={booking.id} className="rounded-2xl border border-[var(--color-border-card-soft)] bg-white p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-[#111827]">
-                  {booking.slotTime} - {booking.clientName}
+                <p className="text-sm font-semibold admin-heading">
+                  {booking.slotTime} — {booking.clientName}
                 </p>
-                <p className="text-xs text-[#6b7280]">{booking.serviceName}</p>
-                <p className="mt-1 text-[11px] text-[#4b5563]">
-                  {statusLabel(booking.status)} - {paymentLabel(booking.paymentStatus)}
+                <p className="type-small admin-muted">{booking.serviceName}</p>
+                <p className="mt-1 text-[11px] admin-muted">
+                  {statusLabel(booking.status)} — {paymentLabel(booking.paymentStatus)}
                 </p>
               </div>
-              <Link href={`/admin/bookings?view=today&edit=${booking.id}`} className="rounded-lg border border-[#d1d5db] bg-white px-2 py-1 text-xs text-[#374151]">
+              <Link href={`/admin/bookings?view=today&edit=${booking.id}`} className="btn-secondary btn-secondary-sm text-xs">
                 Vaata infot
               </Link>
             </div>
 
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <button disabled={savingId === booking.id} onClick={() => void patchBooking(booking.id, { status: 'confirmed' })} className="rounded-lg border border-[#d1d5db] bg-[#f9fafb] px-2 py-1 text-xs text-[#374151] disabled:opacity-60">
+              <button disabled={savingId === booking.id} onClick={() => void patchBooking(booking.id, { status: 'confirmed' })} className="rounded-lg border border-[var(--color-border-card-soft)] bg-[#fff8fb] px-2 py-1 text-xs font-medium text-[var(--color-text-body)] hover:bg-[#fff4fa] disabled:opacity-60">
                 Kinnita
               </button>
-              <button disabled={savingId === booking.id} onClick={() => void patchBooking(booking.id, { status: 'completed', paymentStatus: 'paid' })} className="rounded-lg border border-[#d1d5db] bg-[#f9fafb] px-2 py-1 text-xs text-[#374151] disabled:opacity-60">
-                Lopeta
+              <button disabled={savingId === booking.id} onClick={() => void patchBooking(booking.id, { status: 'completed', paymentStatus: 'paid' })} className="rounded-lg border border-[var(--color-border-card-soft)] bg-[#fff8fb] px-2 py-1 text-xs font-medium text-[var(--color-text-body)] hover:bg-[#fff4fa] disabled:opacity-60">
+                Lõpeta
               </button>
               <button
                 disabled={savingId === booking.id}
@@ -104,17 +94,36 @@ export function AdminTodayTimeline({ items }: { items: TodayBookingItem[] }) {
                     paymentStatus: booking.paymentStatus === 'paid' ? 'unpaid' : 'paid',
                   })
                 }
-                className="rounded-lg border border-[#d1d5db] bg-[#f9fafb] px-2 py-1 text-xs text-[#374151] disabled:opacity-60"
+                className="rounded-lg border border-[var(--color-border-card-soft)] bg-[#fff8fb] px-2 py-1 text-xs font-medium text-[var(--color-text-body)] hover:bg-[#fff4fa] disabled:opacity-60"
               >
-                {booking.paymentStatus === 'paid' ? 'Margi tasumata' : 'Margi makstud'}
+                {booking.paymentStatus === 'paid' ? 'Märgi tasumata' : 'Märgi makstud'}
               </button>
-              <button disabled={savingId === booking.id} onClick={() => void confirmCancel(booking)} className="rounded-lg border border-[#fecaca] bg-[#fff1f2] px-2 py-1 text-xs text-[#b91c1c] disabled:opacity-60">
-                Tuhista
+              <button disabled={savingId === booking.id} onClick={() => void confirmCancel(booking)} className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-60">
+                Tühista
               </button>
             </div>
           </div>
         ))}
       </div>
+    </>
+  );
+
+  if (!showHeader) {
+    return <div className="contents">{content}</div>;
+  }
+
+  return (
+    <article className="rounded-2xl border border-[var(--color-border-card-soft)] bg-white/90 p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="type-overline text-[var(--color-text-muted)]">Täna tegevused</p>
+          <h2 className="type-h4 admin-heading mt-1">Broneeringute ajajoon</h2>
+        </div>
+        <Link href="/admin/bookings?view=today" className="btn-secondary btn-secondary-sm">
+          Ava kõik
+        </Link>
+      </div>
+      {content}
     </article>
   );
 }

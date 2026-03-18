@@ -21,15 +21,23 @@
     "mustamaeStudio": "Mustamäe Studio",
     "hygienicTools": "Hygienic Tools",
     "rating": "4.9",
-    "clients": "1,200+ clients"
+    "clients": "1,200+ clients",
+    "weeklyAppointmentsStat": "150+ appointments weekly"
   },
   "services": {
     "title": "Our Services",
     "subtitle": "Choose your service and book in less than 30 seconds.",
+    "eyebrow": "Services",
+    "nextTimeLabel": "Next available",
+    "veryPopular": "Very popular",
     "from": "from",
     "minutes": "min",
     "viewAll": "View All Services",
-    "book": "Book"
+    "book": "Book",
+    "categoryManicure": "Manicure",
+    "categoryPedicure": "Pedicure",
+    "categoryExtensions": "Nail extensions",
+    "categoryNailArt": "Nail art"
   },
   "howItWorks": {
     "title": "How It Works",
@@ -109,7 +117,9 @@
     "openingHours": "Opening Hours",
     "copyright": "© 2026 Nailify. All rights reserved.",
     "bookAppointment": "Book Appointment",
-    "description": "Premium nail artistry in Mustamäe. Expert technicians, lasting results."
+    "description": "Premium nail artistry in Mustamäe. Expert technicians, lasting results.",
+    "ctaLine": "Next slot available this week",
+    "rescheduleHint": "Free reschedule if plans change"
   },
   "discountPill": {
     "firstVisit": "First Visit Offer",
@@ -252,6 +262,8 @@
     "whatsapp": "WhatsApp",
     "messenger": "Messenger",
     "open": "Open",
+    "close": "Close",
+    "closeAria": "Close chat panel",
     "triggerAria": "Open quick contact",
     "whatsappPrefillEt": "Tere! Soovin küsida vaba aja või teenuse kohta.",
     "whatsappPrefillEn": "Hi! I would like to ask about availability or a service."
@@ -274,7 +286,13 @@
       "eyebrow": "Editorial beauty booking",
       "nextAvailableLine": "Next available today at",
       "loyalClients": "120+ loyal clients",
-      "trustAnchor": "Personal consultation, careful hygiene and a result that stays beautiful for weeks."
+      "trustAnchor": "Personal consultation, careful hygiene and a result that stays beautiful for weeks.",
+      "luxuryOverline": "PRIVATE NAIL STUDIO MUSTAMÄE",
+      "luxuryHeadline": "Beautiful nails.\nEffortlessly.",
+      "luxurySupport": "Meticulous detail, elevated hygiene, and a calm appointment experience in a private Mustamäe studio.",
+      "luxuryCta": "Choose your time",
+      "viewServices": "View services",
+      "cancelTrust": "Free cancellation up to 24h"
     },
     "trust": {
       "premium": "Premium"
@@ -286,6 +304,7 @@
       "longevityFallback": "Results usually last around 3-4 weeks."
     },
     "servicesUi": {
+      "featuredTitle": "Featured Service",
       "whoForLabel": "Who it's for:",
       "durationLabel": "Duration",
       "longevityLabel": "Longevity",
@@ -294,18 +313,26 @@
       "trustCue": "Certified care, premium products and a hygienic work process.",
       "trustTag1": "Premium materials",
       "trustTag2": "Personalized shaping",
-      "cardCta": "Book this service"
+      "cardCta": "Book this service",
+      "viewDetails": "View details",
+      "confirmTime": "Confirm time"
     },
     "localAuthority": {
       "eyebrow": "Local trust",
-      "title": "Nailify Mustamae: easy to reach, easy to return",
-      "subtitle": "Most of our clients come from Mustamae and central Tallinn for precise results and a smooth booking experience.",
-      "item1": "Mustamae tee 55",
+      "title": "Nailify Mustamäe: easy to reach, easy to return",
+      "subtitle": "Most of our clients come from Mustamäe and central Tallinn for precise results and a smooth booking experience.",
+      "item1": "Mustamäe tee 55",
       "item2": "Parking nearby",
       "item3": "Convenient public transport"
     },
     "gallery": {
-      "subtitle": "Curated signature looks designed to inspire your next appointment.",
+      "eyebrow": "OUR WORK",
+      "realResultsTitle": "Real results.",
+      "subtitle": "Curated styles for everyday inspiration.",
+      "signatureLook": "Signature look",
+      "bookStyleCta": "Book this style",
+      "bookTime": "Book time",
+      "ctaLead": "Find your next favorite style.",
       "inspirationLook": "Inspiration look",
       "styleNames": {
         "glossy-pink-french": "Glossy Pink French",
@@ -350,6 +377,11 @@
           "result": "Clean pedicure with durable gel color.",
           "longevity": "Typically lasts 4-6 weeks depending on activity.",
           "suitability": "Ideal for durable and neat foot care."
+        },
+        "nail-art": {
+          "result": "Custom nail art, accents, or chrome detail aligned with your chosen style.",
+          "longevity": "Depends on your base service; touch-ups keep the look fresh.",
+          "suitability": "Perfect when you want a signature accent, pattern, or special finish."
         }
       }
     },
@@ -505,7 +537,10 @@
     "revenue": {
       "offerA": "Add during the same visit",
       "offerB": "Most selected upgrades",
-      "offerC": "Quick mini-upgrade"
+      "offerC": "Quick mini-upgrade",
+      "sectionEyebrow": "Aftercare & gifts",
+      "sectionTitle": "Care at home and give the experience",
+      "sectionIntro": "Curated aftercare essentials and flexible gift cards for every occasion."
     },
     "final": {
       "limited": "Limited slots weekly",

@@ -12,23 +12,30 @@ import { ConfirmStep } from '@/components/booking/ConfirmStep';
 import { useServices } from '@/hooks/use-services';
 import { useBookingAddOns } from '@/hooks/use-booking-addons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import {
+  clearBookingSession,
+  getLastFunnelStep,
+  hasBookingSuccess,
+  setLastFunnelStep,
+  touchBookingActivity,
+  trackEvent,
+  trackSessionStart,
+} from '@/lib/analytics-client';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 const nailStyles = [
-  { id: '1', name: 'Glossy Pink French', slug: 'glossy-pink-french', recommendedServiceId: 'gel-manicure', emoji: '✦' },
-  { id: '2', name: 'Matte Nude', slug: 'matte-nude', recommendedServiceId: 'gel-manicure', emoji: '○' },
-  { id: '3', name: 'Chrome Silver', slug: 'chrome-silver', recommendedServiceId: 'nail-art', emoji: '✶' },
-  { id: '4', name: 'Ombre Sunset', slug: 'ombre-sunset', recommendedServiceId: 'gel-manicure', emoji: '✧' },
-  { id: '5', name: 'Ruby Red', slug: 'ruby-red', recommendedServiceId: 'gel-manicure', emoji: '◆' },
-  { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: '◇' },
+  { id: '1', name: 'Glossy Pink French', slug: 'glossy-pink-french', recommendedServiceId: 'gel-manicure', emoji: 'P' },
+  { id: '2', name: 'Matte Nude', slug: 'matte-nude', recommendedServiceId: 'gel-manicure', emoji: 'N' },
+  { id: '3', name: 'Chrome Silver', slug: 'chrome-silver', recommendedServiceId: 'nail-art', emoji: 'C' },
+  { id: '4', name: 'Ombre Sunset', slug: 'ombre-sunset', recommendedServiceId: 'gel-manicure', emoji: 'O' },
+  { id: '5', name: 'Ruby Red', slug: 'ruby-red', recommendedServiceId: 'gel-manicure', emoji: 'R' },
+  { id: '6', name: 'Pearl White', slug: 'pearl-white', recommendedServiceId: 'luxury-spa-manicure', emoji: 'W' },
 ];
 
-type TimelineStage = 1 | 2 | 3 | 4;
-
-function stepToStage(step: number): TimelineStage {
+function funnelStepFromBookingStep(step: number): 1 | 2 | 3 {
   if (step <= 1) return 1;
   if (step === 2) return 2;
-  if (step === 3 || step === 4) return 3;
-  return 4;
+  return 3;
 }
 
 function BookingContent() {
@@ -41,17 +48,12 @@ function BookingContent() {
   const setMode = useBookingStore((state) => state.setMode);
   const selectedService = useBookingStore((state) => state.selectedService);
   const selectedSlot = useBookingStore((state) => state.selectedSlot);
-  const selectedStyle = useBookingStore((state) => state.selectedStyle);
   const setSelectedStyle = useBookingStore((state) => state.setSelectedStyle);
   const selectService = useBookingStore((state) => state.selectService);
   const selectDate = useBookingStore((state) => state.selectDate);
   const setStep = useBookingStore((state) => state.setStep);
   const nextStep = useBookingStore((state) => state.nextStep);
   const totalPrice = useBookingStore((state) => state.totalPrice);
-  const totalDuration = useBookingStore((state) => state.totalDuration);
-  const allAddOns = useBookingStore((state) => state.selectedAddOns);
-  const selectedAddOns = allAddOns.filter((item) => item.selected);
-  const contactInfo = useBookingStore((state) => state.contactInfo);
   const { services } = useServices();
   useBookingAddOns();
 
@@ -59,7 +61,14 @@ function BookingContent() {
   const activeTimelineRef = useRef<HTMLButtonElement | null>(null);
   const activePanelRef = useRef<HTMLDivElement>(null);
   const serviceRef = useRef<HTMLDivElement>(null);
+  const step3Ref = useRef<HTMLDivElement>(null);
   const transitionsEnabled = true;
+  const abandonSentRef = useRef(false);
+  const inactivityTimerRef = useRef<number | null>(null);
+  const INACTIVITY_MS = 90_000;
+  const stepStartedAtRef = useRef<number>(Date.now());
+  const hesitationSentForStepRef = useRef<number | null>(null);
+  const hesitationTimerRef = useRef<number | null>(null);
 
   const copy = useMemo(
     () =>
@@ -78,7 +87,7 @@ function BookingContent() {
             edit: 'Edit',
             summary: 'Booking summary',
             pickService: 'Select service',
-            studio: 'Mustamae studio',
+            studio: 'Mustamäe studio',
             dateTime: 'Date and time',
             pickSlot: 'Choose time',
             total: 'Total',
@@ -86,29 +95,49 @@ function BookingContent() {
             noSos: 'No surcharge',
             duration: 'Approximate duration',
             tech: 'Technician',
+            funnel1: 'Choose service',
+            funnel2: 'Choose time',
+            funnel3: 'Confirm booking',
+            stepLabel: 'Step',
+            progressTitle: 'Your booking',
+            mobileSelectService: 'Select a service',
+            mobileContinueTime: 'Choose time',
+            mobilePickSlot: 'Pick a time',
+            mobileContinue: 'Continue',
+            mobileConfirm: 'Confirm booking',
           }
         : {
             header: 'Broneerimine Sandraga',
             helper: 'Vali rahulikult - saad alati muuta.',
             stageService: 'Teenus',
-            stageServicePreview: 'Vali oma soovitud pohiteenus',
+            stageServicePreview: 'Vali oma soovitud põhiteenus',
             stageTime: 'Aeg',
             stageTimePreview: 'Leia visiidiks sobivaim aeg',
             stageDetails: 'Detailid',
-            stageDetailsPreview: 'Lisa eelistused ja markused',
+            stageDetailsPreview: 'Lisa eelistused ja märkused',
             stageConfirm: 'Kinnitus',
-            stageConfirmPreview: 'Vaata ule ja kinnita enesekindlalt',
+            stageConfirmPreview: 'Vaata üle ja kinnita enesekindlalt',
             edit: 'Muuda',
-            summary: 'Broneeringu kokkuvote',
+            summary: 'Broneeringu kokkuvõte',
             pickService: 'Vali teenus',
-            studio: 'Mustamae stuudio',
-            dateTime: 'Kuupaev ja aeg',
+            studio: 'Mustamäe stuudio',
+            dateTime: 'Kuupäev ja aeg',
             pickSlot: 'Vali aeg',
             total: 'Kokku',
             sos: 'SOS lisatasu',
             noSos: 'Lisatasuta',
             duration: 'Ligikaudne kestus',
             tech: 'Tehnik',
+            funnel1: 'Vali teenus',
+            funnel2: 'Vali aeg',
+            funnel3: 'Kinnita broneering',
+            stepLabel: 'Samm',
+            progressTitle: 'Sinu broneering',
+            mobileSelectService: 'Vali teenus',
+            mobileContinueTime: 'Vali aeg',
+            mobilePickSlot: 'Vali kellaaeg',
+            mobileContinue: 'Jätka',
+            mobileConfirm: 'Kinnita broneering',
           },
     [language]
   );
@@ -148,6 +177,138 @@ function BookingContent() {
     }
   }, [searchParams, setSelectedStyle, selectService, selectedService, nextStep, services, selectDate, setStep]);
 
+  // Analytics: session lifecycle start + booking open
+  useEffect(() => {
+    trackSessionStart({
+      locale: language,
+      path: typeof window !== 'undefined' ? window.location.pathname : '/book',
+      referrer: typeof document !== 'undefined' ? document.referrer : '',
+    });
+    trackEvent({ eventType: 'booking_open', step: 0 });
+    touchBookingActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Analytics: update last step + key milestones.
+  useEffect(() => {
+    touchBookingActivity();
+    setLastFunnelStep(currentStep);
+    stepStartedAtRef.current = Date.now();
+    hesitationSentForStepRef.current = null;
+
+    if (currentStep === 1) return;
+    if (currentStep === 3) {
+      trackEvent({
+        eventType: 'booking_details_started',
+        step: 3,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep]);
+
+  // Analytics: inactivity + abandon detection (non-blocking).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const resetInactivity = () => {
+      touchBookingActivity();
+      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+      if (hesitationTimerRef.current) window.clearTimeout(hesitationTimerRef.current);
+
+      // Lightweight hesitation detection (>10s idle on step)
+      hesitationTimerRef.current = window.setTimeout(() => {
+        if (hasBookingSuccess()) return;
+        if (hesitationSentForStepRef.current === currentStep) return;
+        hesitationSentForStepRef.current = currentStep;
+        trackBehaviorEvent('hesitation_detected', { step: currentStep, duration: 10_000 });
+      }, 10_000);
+
+      inactivityTimerRef.current = window.setTimeout(() => {
+        if (abandonSentRef.current) return;
+        if (hasBookingSuccess()) return;
+        abandonSentRef.current = true;
+        trackEvent({
+          eventType: 'booking_abandon',
+          step: getLastFunnelStep() ?? currentStep,
+          serviceId: selectedService?.id,
+          slotId: selectedSlot?.id,
+          metadata: { reason: 'inactivity_timeout' },
+        });
+        trackBehaviorEvent('booking_abandon', {
+          step: getLastFunnelStep() ?? currentStep,
+          serviceId: selectedService?.id,
+          slotId: selectedSlot?.id,
+          timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
+        });
+        clearBookingSession();
+      }, INACTIVITY_MS);
+    };
+
+    const resetInactivityListener: EventListener = () => resetInactivity();
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        resetInactivity();
+        if (abandonSentRef.current) return;
+        if (hasBookingSuccess()) return;
+        trackBehaviorEvent('booking_tab_hidden', { step: getLastFunnelStep() ?? currentStep });
+      }
+    };
+
+    const onBeforeUnload = () => {
+      resetInactivity();
+      if (abandonSentRef.current) return;
+      if (hasBookingSuccess()) return;
+      abandonSentRef.current = true;
+      trackEvent({
+        eventType: 'booking_abandon',
+        step: getLastFunnelStep() ?? currentStep,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+        metadata: { reason: 'page_unload' },
+      });
+      trackBehaviorEvent('booking_abandon', {
+        step: getLastFunnelStep() ?? currentStep,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+        timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
+      });
+      clearBookingSession();
+    };
+
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    for (const e of events) window.addEventListener(e, resetInactivityListener, { passive: true } as AddEventListenerOptions);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    resetInactivity();
+
+    return () => {
+      for (const e of events) window.removeEventListener(e, resetInactivityListener);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+      if (hesitationTimerRef.current) window.clearTimeout(hesitationTimerRef.current);
+    };
+  }, [currentStep, selectedService?.id, selectedSlot?.id]);
+
+  // Analytics: route change / unmount abandon (SPA-safe)
+  useEffect(() => {
+    return () => {
+      if (abandonSentRef.current) return;
+      if (hasBookingSuccess()) return;
+      abandonSentRef.current = true;
+      trackBehaviorEvent('booking_abandon', {
+        step: getLastFunnelStep() ?? currentStep,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+        timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     setMode('guided');
   }, [setMode]);
@@ -164,48 +325,114 @@ function BookingContent() {
     activePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [currentStep]);
 
-  const currentStage = stepToStage(currentStep);
+  const funnelStep = funnelStepFromBookingStep(currentStep);
+  const progressFillPct = funnelStep === 1 ? 33.333 : funnelStep === 2 ? 66.667 : 100;
   const selectedSlotLabel = selectedSlot
     ? `${new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'short', day: 'numeric', month: 'short' })} ${t('confirm.at')} ${selectedSlot.time}`
     : null;
 
-  const timeline = [
-    {
-      id: 'service',
-      stage: 1 as TimelineStage,
-      label: copy.stageService,
-      preview: copy.stageServicePreview,
-      summary: selectedService?.name || null,
-      editStep: 1,
-    },
-    {
-      id: 'time',
-      stage: 2 as TimelineStage,
-      label: copy.stageTime,
-      preview: copy.stageTimePreview,
-      summary: selectedSlotLabel,
-      editStep: 2,
-    },
-    {
-      id: 'details',
-      stage: 3 as TimelineStage,
-      label: copy.stageDetails,
-      preview: copy.stageDetailsPreview,
-      summary:
-        contactInfo?.firstName || selectedAddOns.length > 0
-          ? `${contactInfo?.firstName ?? ''}${contactInfo?.firstName && selectedAddOns.length > 0 ? ' - ' : ''}${selectedAddOns.length > 0 ? `${selectedAddOns.length} ${language === 'en' ? 'extras' : 'lisa'}` : ''}`
-          : null,
-      editStep: 3,
-    },
-    {
-      id: 'confirmation',
-      stage: 4 as TimelineStage,
-      label: copy.stageConfirm,
-      preview: copy.stageConfirmPreview,
-      summary: currentStep === 5 ? `${copy.total}: EUR ${totalPrice || selectedService?.price || 0}` : null,
-      editStep: 5,
-    },
+  const funnelSteps = [
+    { n: 1 as const, title: copy.funnel1 },
+    { n: 2 as const, title: copy.funnel2 },
+    { n: 3 as const, title: copy.funnel3 },
   ];
+
+  const prefetchSlotsNav = () => {
+    const now = new Date();
+    const to = new Date(now);
+    to.setDate(to.getDate() + 40);
+    const from = now.toISOString().slice(0, 10);
+    const toStr = to.toISOString().slice(0, 10);
+    void fetch(`/api/slots?from=${from}&to=${toStr}`).catch(() => null);
+  };
+
+  const handleFunnelStepClick = (n: 1 | 2 | 3) => {
+    if (n === 1 && currentStep > 1) setStep(1);
+    if (n === 2 && currentStep > 2) setStep(2);
+    if (n === 3 && currentStep > 3) setStep(3);
+  };
+
+  const handleMobileStickyCta = () => {
+    if (currentStep === 1) {
+      if (!selectedService) return;
+      prefetchSlotsNav();
+      nextStep();
+    } else if (currentStep === 2) {
+      if (!selectedSlot) return;
+      nextStep();
+    } else {
+      document.getElementById('booking-sticky-primary-action')?.click();
+    }
+  };
+
+  // Mobile polish: avoid dual-primary CTA (hero card CTA + bottom sticky CTA).
+  // The sticky CTA shows only after the hero CTA button scrolls out of view.
+  // Assume hero CTA exists for steps 3/4 where it is rendered inside the form.
+  const [heroPrimaryCtaFound, setHeroPrimaryCtaFound] = useState(currentStep === 3 || currentStep === 4);
+  const [heroPrimaryCtaInView, setHeroPrimaryCtaInView] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (currentStep === 2 || currentStep === 5) {
+      setHeroPrimaryCtaFound(false);
+      return;
+    }
+
+    let observer: IntersectionObserver | null = null;
+    let rafId = 0;
+    let attempts = 0;
+
+    const tryAttach = () => {
+      attempts += 1;
+      const el = document.getElementById('booking-sticky-primary-action');
+      if (!el) {
+        if (attempts < 25) {
+          rafId = window.setTimeout(tryAttach, 40);
+          return;
+        }
+        setHeroPrimaryCtaFound(false);
+        setHeroPrimaryCtaInView(true);
+        return;
+      }
+
+      setHeroPrimaryCtaFound(true);
+      observer?.disconnect();
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          const ratio = entry?.intersectionRatio ?? 0;
+          setHeroPrimaryCtaInView(ratio > 0.12);
+        },
+        { threshold: [0, 0.12, 0.25], root: null, rootMargin: '0px 0px 0px 0px' }
+      );
+      observer.observe(el);
+    };
+
+    tryAttach();
+
+    return () => {
+      if (observer) observer.disconnect();
+      if (rafId) window.clearTimeout(rafId);
+    };
+  }, [currentStep]);
+
+  const showMobileStickyPrimary = !heroPrimaryCtaFound || !heroPrimaryCtaInView;
+
+  const mobileCtaDisabled =
+    (currentStep === 1 && !selectedService) || (currentStep === 2 && !selectedSlot);
+
+  const mobileCtaLabel =
+    currentStep === 1
+      ? selectedService
+        ? copy.mobileContinueTime
+        : copy.mobileSelectService
+      : currentStep === 2
+        ? selectedSlot
+          ? copy.mobileContinue
+          : copy.mobilePickSlot
+        : currentStep === 5
+          ? copy.mobileConfirm
+          : copy.mobileContinue;
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -220,7 +447,7 @@ function BookingContent() {
       case 1:
         return <ServiceStep />;
       case 2:
-        return <DateTimeStep />;
+        return <DateTimeStep step3AnchorRef={step3Ref} />;
       case 3:
         return <ContactStep />;
       case 4:
@@ -233,173 +460,277 @@ function BookingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fdfcfb_0%,_#f8f6f4_46%,_#f2efec_100%)] pb-24 lg:pb-10">
-      <header className="sticky top-0 z-30 border-b border-[#ebe6e1] bg-[linear-gradient(180deg,rgba(255,255,255,0.95)_0%,rgba(248,246,244,0.9)_100%)] backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleBack}
-              className="inline-flex items-center gap-2 rounded-full border border-[#e6dfd8] bg-white px-3 py-2 text-sm font-medium text-[#5f5550] transition hover:bg-[#f7f3ef]"
+    <div
+      className={`min-h-screen bg-[radial-gradient(ellipse_at_top,_#fffdfa_0%,_#fff6fb_50%,_#fef5f9_100%)] xl:pb-12 ${
+        currentStep === 5
+          ? 'pb-[calc(12rem+env(safe-area-inset-bottom))]'
+          : 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
+      }`}
+    >
+      <header className="sticky top-0 z-40 border-b border-[#f0e6ec]/80 bg-white/80 backdrop-blur-xl">
+        <div
+          className={`mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 ${
+            currentStep === 3 || currentStep === 5 ? 'py-2.5' : 'py-3'
+          } sm:px-6`}
+        >
+          <button
+            type="button"
+            onClick={handleBack}
+            className={`inline-flex shrink-0 items-center gap-2 rounded-full border border-[#ecdbe5] bg-white px-3 ${
+              currentStep === 3 || currentStep === 5 ? 'py-1.5' : 'py-2'
+            } text-sm font-medium text-[#634f5f] transition-[background-color,transform] duration-[180ms] hover:bg-[#fff8fc] active:scale-[0.98]`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            {t('booking.back')}
+          </button>
+          <div className="min-w-0 text-center">
+            <p
+              className={`${
+                currentStep === 3 || currentStep === 5 ? 'whitespace-normal break-words leading-tight' : 'truncate'
+              } text-[11px] font-semibold uppercase tracking-[0.22em] text-[#c24d86]`}
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              {t('booking.back')}
-            </button>
-            <div className="text-center">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#997667]">{copy.header}</p>
-              <p className="mt-1 text-sm text-[#6f655f]">{copy.helper}</p>
-            </div>
-            <div className="w-16" />
+              {copy.progressTitle} · {copy.stepLabel} {funnelStep} / 3
+            </p>
+            <p
+              className={`${
+                currentStep === 3 || currentStep === 5 ? 'whitespace-normal break-words leading-tight text-[12px]' : 'truncate text-xs'
+              } text-[#8a7a88]`}
+            >
+              {copy.header}
+            </p>
           </div>
+          <div className="w-14 shrink-0 sm:w-20" aria-hidden />
         </div>
       </header>
 
-      <main className="w-full px-3 pb-8 pt-5 sm:px-5 lg:px-8 xl:px-10">
-        <div className="mx-auto grid w-full max-w-[1600px] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <main
+        className={`mx-auto w-full px-5 sm:px-6 lg:px-8 ${
+          currentStep === 2 ? 'max-w-[1040px] pt-8 pb-20' : 'max-w-[1200px] pt-6 md:pt-10 lg:pt-[48px] xl:pt-20'
+        }`}
+      >
+        <div
+          className={`grid items-start gap-8 xl:gap-10 ${currentStep === 2 ? '' : 'xl:grid-cols-[minmax(0,1fr)_300px]'}`}
+        >
           <section
             ref={serviceRef}
-            className={`overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(250,248,246,0.99)_100%)] ring-1 ring-[#ede7e2] transition-all duration-300 sm:rounded-[30px] xl:rounded-[36px] ${
-              isStepTransitioning
-                ? 'shadow-[0_34px_84px_-36px_rgba(62,42,30,0.3),0_0_0_1px_rgba(224,211,202,0.7)]'
-                : 'shadow-[0_30px_80px_-36px_rgba(62,42,30,0.28)]'
+            className={`overflow-hidden rounded-[24px] bg-white/90 shadow-[0_24px_64px_-40px_rgba(95,38,77,0.28)] ring-1 ring-[#f0e6ec]/90 transition-shadow duration-[180ms] xl:rounded-[28px] ${
+              isStepTransitioning ? 'shadow-[0_32px_72px_-36px_rgba(194,77,134,0.22)]' : ''
             }`}
           >
-            <div className="h-1 w-full bg-[#efe7e0]">
+            <div className="h-1 w-full bg-[#f4eaef]">
               <div
-                className="h-full bg-[linear-gradient(90deg,#d8b49d_0%,#bb896f_55%,#9f7058_100%)] transition-all duration-300"
-                style={{ width: `${(currentStage / 4) * 100}%` }}
+                className="h-full rounded-r-full bg-[linear-gradient(90deg,#e8b8d4_0%,#c24d86_55%,#a93d71_100%)] transition-[width] duration-[180ms] ease-out"
+                style={{ width: `${progressFillPct}%` }}
               />
             </div>
 
-            <div className="hidden gap-2 px-4 pt-5 sm:grid sm:grid-cols-4 sm:px-6 xl:px-8">
-              {timeline.map((item) => {
-                const status = currentStage > item.stage ? 'done' : currentStage === item.stage ? 'active' : 'upcoming';
-                return (
-                  <button
-                    key={`timeline-inline-${item.id}`}
-                    type="button"
-                    ref={status === 'active' ? activeTimelineRef : undefined}
-                    onClick={() => {
-                      if (status === 'done') {
-                        setStep(item.editStep as 1 | 2 | 3 | 4 | 5);
-                      }
-                    }}
-                    className={`rounded-2xl border px-3 py-2.5 text-left transition-all duration-300 ${
-                      status === 'active'
-                        ? 'border-[#e4d3c8] bg-[linear-gradient(145deg,#fff,#f9f4ef)] shadow-[0_16px_24px_-20px_rgba(113,82,62,0.3)]'
-                        : status === 'done'
-                          ? 'border-[#e8dfd8] bg-[#f9f6f3]'
-                          : 'border-[#ede6e0] bg-white/80'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
+            <div
+              className={`border-b border-[#f5eaef] px-4 ${currentStep === 3 || currentStep === 5 ? 'py-3' : 'py-5'} sm:px-6 md:px-8 md:py-8`}
+            >
+              <p
+                className={`mb-3 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-[#b8a0ae] ${
+                  currentStep === 3 || currentStep === 5 ? 'mb-2' : ''
+                }`}
+              >
+                {copy.helper}
+              </p>
+              <div
+                className={`grid ${
+                  currentStep === 3 || currentStep === 5 ? 'grid-cols-3 gap-1.5' : 'grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4'
+                }`}
+              >
+                {funnelSteps.map(({ n, title }) => {
+                  const isActive = funnelStep === n;
+                  const isDone = funnelStep > n;
+                  const canJumpBack = (n === 1 && currentStep > 1) || (n === 2 && currentStep > 2) || (n === 3 && currentStep > 3);
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      ref={isActive ? activeTimelineRef : undefined}
+                      tabIndex={canJumpBack || isActive ? 0 : -1}
+                      aria-current={isActive ? 'step' : undefined}
+                      onClick={() => {
+                        if (canJumpBack) handleFunnelStepClick(n);
+                      }}
+                      className={`transition-all duration-[180ms] ${
+                        currentStep === 3 || currentStep === 5
+                          ? 'rounded-xl px-2.5 py-1.5 text-center sm:py-2'
+                          : 'rounded-2xl px-4 py-2.5 text-left sm:py-3'
+                      } ${
+                        isActive
+                          ? 'bg-white/70 border border-[#c24d86]/25 ring-1 ring-[#f0e8ed]'
+                          : isDone
+                            ? 'bg-white/55 opacity-85 ring-1 ring-[#eee5ea] hover:bg-[#fffafc] hover:opacity-95'
+                            : 'pointer-events-none bg-[#faf8f9]/70 opacity-[0.28] ring-1 ring-transparent'
+                      } ${canJumpBack ? 'cursor-pointer' : isActive ? 'cursor-default' : ''}`}
+                    >
                       <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
-                          status === 'done'
-                            ? 'bg-[#dccbbe] text-[#5c483f]'
-                            : status === 'active'
-                              ? 'bg-[#b5856c] text-white'
-                              : 'bg-[#efe8e2] text-[#7f6c62]'
+                        className={`block font-bold uppercase tracking-[0.14em] text-[#c24d86] ${
+                          currentStep === 3 || currentStep === 5
+                            ? 'text-[10px] leading-[1.1] whitespace-nowrap overflow-hidden text-ellipsis'
+                            : 'text-[11px]'
                         }`}
                       >
-                        {status === 'done' ? '✓' : item.stage}
+                        {language === 'en' ? `STEP ${n}` : `${copy.stepLabel} ${n}`} —{' '}
+                        <span className="font-semibold normal-case tracking-normal text-[#2f2530]">{title}</span>
                       </span>
-                      <span className="truncate text-xs font-semibold text-[#473a33]">{item.label}</span>
-                    </div>
-                    <p className="mt-1 truncate text-[11px] text-[#7f726a]">
-                      {status === 'done' && item.summary ? item.summary : item.preview}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="px-4 pt-5 text-center sm:px-8 sm:pt-6 xl:px-12 xl:pt-7">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-[#997667]">{copy.helper}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div
               ref={activePanelRef}
-              className={`px-4 pb-9 pt-4 sm:px-8 sm:pb-11 sm:pt-5 xl:px-12 xl:pb-12 xl:pt-6 ${transitionsEnabled ? 'animate-fade-in-up' : ''}`}
+              className={`px-4 pb-14 pt-14 sm:px-6 sm:pb-12 sm:pt-8 md:px-8 md:pb-14 xl:px-10 ${
+                transitionsEnabled ? 'booking-step-fade' : ''
+              } ${isStepTransitioning ? 'will-change-transform' : ''}`}
               key={currentStep}
             >
+              <div
+                ref={step3Ref}
+                className="pointer-events-none h-0 w-full scroll-mt-[76px]"
+                aria-hidden
+                tabIndex={-1}
+              />
               {renderStep()}
             </div>
           </section>
 
-          <aside className="hidden xl:block">
-            <div className="sticky top-28 overflow-hidden rounded-3xl border border-[#e7dfd8] bg-white/94 p-5 shadow-[0_26px_44px_-34px_rgba(72,49,35,0.38)] backdrop-blur-sm">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#8f6e60]">{copy.summary}</p>
-
-              <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#f8f4f1] p-3 ring-1 ring-[#ece2da]">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[linear-gradient(145deg,#f1e1d7,#e2c2b0)] text-[#8d644f]">
-                  {selectedStyle?.emoji ?? '✦'}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#43362f]">{selectedService?.name || copy.pickService}</p>
-                  <p className="text-xs text-[#7b6d64]">{copy.studio}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 divide-y divide-[#eee5de] rounded-2xl border border-[#ece2da] bg-[#fbf9f7] text-sm">
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{copy.dateTime}</p>
-                  <p className="mt-1 font-medium text-[#574840]">{selectedSlotLabel || copy.pickSlot}</p>
-                </div>
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{copy.duration}</p>
-                  <p className="mt-1 font-medium text-[#574840]">{totalDuration || selectedService?.duration || 0} min</p>
-                </div>
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{copy.tech}</p>
-                  <p className="mt-1 font-medium text-[#574840]">Sandra</p>
-                </div>
-                <div className="px-3 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[#968173]">{copy.total}</p>
-                  <p className="mt-1 text-xl font-semibold text-[#a07058]">EUR {totalPrice || selectedService?.price || 0}</p>
-                </div>
-              </div>
-
-              {selectedSlot?.isSos && (
-                <div className="mt-3 rounded-xl border border-[#f0d8e6] bg-[#faf3f7] px-3 py-2">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#8f5d78]">{copy.sos}</p>
-                  <p className="mt-1 font-semibold text-[#b05387]">
-                    {selectedSlot.sosSurcharge ? `+EUR ${selectedSlot.sosSurcharge}` : copy.noSos}
+          <aside className={currentStep === 2 || currentStep === 3 || currentStep === 5 ? 'hidden' : 'hidden xl:block'}>
+            <div className="sticky top-24 rounded-2xl bg-white/75 p-6 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.18)] backdrop-blur-xl">
+              <div className="mb-5 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-xs font-bold text-white">
+                  {funnelStep}
+                </span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8899c]">
+                    {copy.stepLabel} {funnelStep} / 3
+                  </p>
+                  <p className="text-sm font-semibold text-[#2f2530]">
+                    {funnelStep === 1 ? copy.funnel1 : funnelStep === 2 ? copy.funnel2 : copy.funnel3}
                   </p>
                 </div>
+              </div>
+              <div className="space-y-4 border-t border-[#f0e8ed] pt-5">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.pickService}</p>
+                  <p className="mt-0.5 font-brand text-lg font-semibold text-[#3a2a35]">{selectedService?.name ?? '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.dateTime}</p>
+                  <p className="mt-0.5 text-sm font-medium text-[#5d4558]">{selectedSlotLabel ?? copy.pickSlot}</p>
+                </div>
+                <div className="flex items-end justify-between border-t border-dashed border-[#ebe0e6] pt-4">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.total}</span>
+                  <span className="text-2xl font-semibold tabular-nums text-[#c24d86]">
+                    €{totalPrice || selectedService?.price || 0}
+                  </span>
+                </div>
+              </div>
+              {selectedSlot?.isSos && (
+                <p className="mt-3 text-xs text-[#9d6b8a]">
+                  {copy.sos}: {selectedSlot.sosSurcharge ? `+€${selectedSlot.sosSurcharge}` : copy.noSos}
+                </p>
               )}
             </div>
           </aside>
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[#e5ddd6] bg-white/95 px-4 py-3 backdrop-blur-sm xl:hidden">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-[#4a3d35]">{selectedService?.name || copy.pickService}</p>
-            <p className="truncate text-xs text-[#7b6f67]">{selectedSlotLabel || copy.pickSlot}</p>
+      {currentStep !== 2 && currentStep !== 3 && currentStep !== 5 && (
+        <>
+      <div
+        className={`pointer-events-none fixed inset-x-0 bottom-0 z-[55] h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,250,252,0.92)_45%,#fff8fb_100%)] xl:hidden booking-mobile-sticky-grad ${
+          showMobileStickyPrimary ? 'booking-mobile-sticky-grad-show' : 'booking-mobile-sticky-grad-hide'
+        }`}
+        aria-hidden
+      />
+
+      <div
+        className={`fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pt-2 xl:hidden booking-mobile-sticky-outer ${
+          showMobileStickyPrimary ? 'booking-mobile-sticky-outer-show' : 'booking-mobile-sticky-outer-hide'
+        }`}
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="pointer-events-auto flex h-14 w-full max-w-lg items-center gap-2 rounded-full border border-white/60 bg-white/65 px-4 shadow-[0_10px_28px_-16px_rgba(57,33,52,0.22)] backdrop-blur-xl">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-[#2f2530]">{selectedService?.name || copy.pickService}</p>
+            <p className="text-sm font-semibold tabular-nums text-[#c24d86]">€{totalPrice || selectedService?.price || 0}</p>
           </div>
-          <div className="text-right">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#978072]">{copy.total}</p>
-            <p className="text-sm font-semibold text-[#9f7058]">EUR {totalPrice || selectedService?.price || 0}</p>
-          </div>
+          <button
+            type="button"
+            disabled={mobileCtaDisabled}
+            onClick={handleMobileStickyCta}
+            className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold text-white shadow-[0_6px_18px_-10px_rgba(194,77,134,0.55)] transition-all duration-[180ms] ${
+              mobileCtaDisabled
+                ? 'cursor-not-allowed bg-[#e8dce2] text-[#9a8a94] shadow-none'
+                : 'bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] hover:shadow-[0_10px_24px_-10px_rgba(194,77,134,0.45)] active:scale-[0.98]'
+            }`}
+          >
+            {mobileCtaLabel}
+          </button>
         </div>
       </div>
+        </>
+      )}
 
-      <style jsx>{`
-        @keyframes fade-in-up {
+      <style jsx global>{`
+        .booking-step-fade {
+          animation: bookingStepFade 180ms ease-out both;
+        }
+        @keyframes bookingStepFade {
           from {
             opacity: 0;
-            transform: translateY(10px) scale(0.995);
+            transform: translateY(6px);
           }
           to {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
           }
         }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.28s ease-out;
+        @media (prefers-reduced-motion: reduce) {
+          .booking-step-fade {
+            animation: none;
+          }
+        }
+        .booking-cta-primary:hover:not(:disabled) {
+          box-shadow: 0 16px 40px -10px rgba(194, 77, 134, 0.45);
+        }
+
+        .booking-mobile-sticky-grad {
+          transition: opacity 220ms ease, transform 220ms ease;
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        .booking-mobile-sticky-grad-show {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .booking-mobile-sticky-grad-hide {
+          opacity: 0;
+          transform: translateY(16px);
+          pointer-events: none;
+        }
+
+        .booking-mobile-sticky-outer {
+          transition: opacity 220ms ease, transform 220ms ease;
+          opacity: 0;
+          transform: translateY(16px);
+          pointer-events: none;
+        }
+        .booking-mobile-sticky-outer-show {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+        .booking-mobile-sticky-outer-hide {
+          opacity: 0;
+          transform: translateY(16px);
+          pointer-events: none;
         }
       `}</style>
     </div>

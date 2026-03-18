@@ -1,5 +1,6 @@
 import { sql } from './db';
 import type { AddOn, ContactInfo, Service, TimeSlot } from '@/store/booking-types';
+// Customer linking happens only after verified payment success.
 
 export interface BookingInsert {
   service: Service;
@@ -39,11 +40,13 @@ export interface BookingRecord {
   paymentStatus: string;
   depositAmount: number;
   stripeSessionId: string | null;
+  paidAt: string | null;
+  paymentMethod: string | null;
+  stripePaymentIntentId: string | null;
   createdAt: string;
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_bookings_ensure__: Promise<void> | undefined;
 }
 
@@ -87,6 +90,23 @@ async function ensureBookingsTableInternal() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_image TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS current_nail_image TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_note TEXT`;
+  
+  // Webhook-related columns
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_method TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT`;
+
+  // Manual reconciliation audit columns
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS manually_reconciled BOOLEAN DEFAULT false`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reconciled_by TEXT`;
+
+  // CRM linkage (nullable)
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_id TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS bookings_customer_id_idx ON bookings (customer_id)`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_name_snapshot TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_email_snapshot TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_phone_snapshot TEXT`;
 }
 
 export async function ensureBookingsTable() {
@@ -122,7 +142,11 @@ export async function insertBooking(data: BookingInsert) {
       total_duration,
       payment_status,
       deposit_amount,
-      stripe_session_id
+      stripe_session_id,
+      customer_id,
+      customer_name_snapshot,
+      customer_email_snapshot,
+      customer_phone_snapshot
     ) VALUES (
       ${data.source},
       ${data.status ?? 'confirmed'},
@@ -146,7 +170,11 @@ export async function insertBooking(data: BookingInsert) {
       ${data.totalDuration},
       ${data.paymentStatus ?? 'unpaid'},
       ${data.depositAmount ?? 0},
-      ${data.stripeSessionId ?? null}
+      ${data.stripeSessionId ?? null},
+      NULL,
+      ${`${data.contact.firstName} ${data.contact.lastName ?? ''}`.trim()},
+      ${data.contact.email ?? null},
+      ${data.contact.phone}
     )
     RETURNING id, created_at
   `;
@@ -184,6 +212,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
     payment_status: string;
     deposit_amount: number;
     stripe_session_id: string | null;
+    paid_at: string | null;
+    payment_method: string | null;
+    stripe_payment_intent_id: string | null;
     created_at: string;
   }[]>`
     SELECT
@@ -210,6 +241,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       payment_status,
       deposit_amount,
       stripe_session_id,
+      paid_at::text,
+      payment_method,
+      stripe_payment_intent_id,
       created_at::text
     FROM bookings
     ORDER BY created_at DESC
@@ -252,6 +286,9 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       paymentStatus: row.payment_status,
       depositAmount: row.deposit_amount,
       stripeSessionId: row.stripe_session_id,
+      paidAt: row.paid_at,
+      paymentMethod: row.payment_method,
+      stripePaymentIntentId: row.stripe_payment_intent_id,
       createdAt: row.created_at,
     };
   });
@@ -275,6 +312,133 @@ export async function markBookingPaidBySession(sessionId: string) {
   `;
 
   return row ? String(row.id) : null;
+}
+
+/**
+ * Mark booking as paid from webhook event
+ * Includes additional metadata from Stripe
+ */
+export async function markBookingPaidFromWebhook(
+  sessionId: string,
+  paymentIntentId?: string,
+  paymentMethod?: string
+) {
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE bookings
+    SET payment_status = 'paid',
+        status = 'confirmed',
+        paid_at = NOW(),
+        stripe_payment_intent_id = ${paymentIntentId ?? null},
+        payment_method = ${paymentMethod ?? null}
+    WHERE stripe_session_id = ${sessionId}
+    RETURNING id
+  `;
+
+  if (!row) return null;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidBookingToCustomerBySession } = await import('./customer-service');
+    await linkPaidBookingToCustomerBySession(sessionId);
+  } catch (e) {
+    console.error('Customer link after booking webhook failed:', e);
+  }
+
+  return String(row.id);
+}
+
+/**
+ * Manual Stripe reconciliation for a booking
+ * Returns: { success: true, alreadyPaid: false, bookingId } | { success: true, alreadyPaid: true } | { success: false, reason }
+ */
+export async function reconcileBookingPayment(input: {
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  adminId: string;
+  adminName: string | null;
+}) {
+  // Find booking by session ID or payment intent ID
+  const { stripeSessionId, stripePaymentIntentId, adminId, adminName } = input;
+
+  if (!stripeSessionId && !stripePaymentIntentId) {
+    return { success: false as const, reason: 'Either stripeSessionId or stripePaymentIntentId is required' };
+  }
+
+  // Check if already reconciled
+  let existing: {
+    id: number;
+    payment_status: string;
+    manually_reconciled: boolean;
+    reconciled_at: string | null;
+    reconciled_by: string | null;
+  } | null = null;
+
+  if (stripeSessionId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        payment_status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, payment_status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM bookings
+      WHERE stripe_session_id = ${stripeSessionId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  } else if (stripePaymentIntentId) {
+    const [row] = await sql<[
+      {
+        id: number;
+        payment_status: string;
+        manually_reconciled: boolean;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+      }
+    ]>`
+      SELECT id, payment_status, manually_reconciled, reconciled_at::text, reconciled_by
+      FROM bookings
+      WHERE stripe_payment_intent_id = ${stripePaymentIntentId}
+      LIMIT 1
+    `;
+    existing = row ?? null;
+  }
+
+  if (!existing) {
+    return { success: false as const, reason: 'Booking not found for given Stripe ID' };
+  }
+
+  // Already marked as paid manually
+  if (existing.manually_reconciled && existing.payment_status === 'paid') {
+    return { success: true as const, alreadyPaid: true as const, bookingId: String(existing.id) };
+  }
+
+  // Update with audit fields
+  const [row] = await sql<[{ id: number }]>`
+    UPDATE bookings
+    SET payment_status = 'paid',
+        status = 'confirmed',
+        paid_at = NOW(),
+        manually_reconciled = true,
+        reconciled_at = NOW(),
+        reconciled_by = ${adminName ?? `admin_${adminId}`}
+    WHERE id = ${existing.id}
+    RETURNING id
+  `;
+
+  // Link to customer profile after verified payment.
+  try {
+    const { linkPaidBookingToCustomerBySession, linkPaidBookingToCustomerByPaymentIntent } = await import('./customer-service');
+    if (stripeSessionId) await linkPaidBookingToCustomerBySession(stripeSessionId);
+    else if (stripePaymentIntentId) await linkPaidBookingToCustomerByPaymentIntent(stripePaymentIntentId);
+  } catch (e) {
+    console.error('Customer link after booking reconcile failed:', e);
+  }
+
+  return { success: true as const, alreadyPaid: false as const, bookingId: String(row.id) };
 }
 
 export async function updateBookingStatus(
@@ -383,4 +547,11 @@ export async function updateBookingAdminFields(input: {
     totalDuration: row.total_duration,
     contactNotes: row.contact_notes,
   };
+}
+
+export async function deleteBooking(id: string): Promise<boolean> {
+  const result = await sql`
+    DELETE FROM bookings WHERE id = ${id}::bigint
+  `;
+  return result.count !== null && result.count > 0;
 }

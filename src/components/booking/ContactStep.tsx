@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
+import { trackEvent, touchBookingActivity } from '@/lib/analytics-client';
 
 const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -68,6 +69,14 @@ export function ContactStep() {
 
   useEffect(() => {
     firstNameRef.current?.focus();
+    touchBookingActivity();
+    trackEvent({
+      eventType: 'booking_details_started',
+      step: 3,
+      serviceId: selectedService?.id,
+      slotId: selectedSlot?.id,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -176,14 +185,14 @@ export function ContactStep() {
   };
 
   const prepTips = [
-    text('preparation_tip_1', language === 'en' ? 'Free rescheduling' : 'Tasuta umberbroneerimine'),
+    text('preparation_tip_1', language === 'en' ? 'Free rescheduling' : 'Tasuta ümberbroneerimine'),
     text('preparation_tip_2', language === 'en' ? 'Fast confirmation' : 'Kiire kinnitus'),
-    text('preparation_tip_3', language === 'en' ? 'Certified nail technician' : 'Sertifitseeritud kuunetehnik'),
+    text('preparation_tip_3', language === 'en' ? 'Certified nail technician' : 'Sertifitseeritud küünetehnik'),
   ];
 
   const uploadCard = (kind: UploadKind, title: string, imageValue: string, inputRef: React.RefObject<HTMLInputElement | null>) => (
-    <div className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8e7465]">{title}</p>
+    <div className="rounded-2xl border border-[#e8dce6] bg-[#fffafd] p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#84667a]">{title}</p>
       {!imageValue ? (
         <button
           type="button"
@@ -199,7 +208,7 @@ export function ContactStep() {
             void handleImageUpload(kind, event.dataTransfer.files);
           }}
           className={`mt-2 w-full rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm font-medium transition ${
-            dragOver === kind ? 'border-[#ceb7a8] bg-[#f7f2ee] text-[#6f5d53]' : 'border-[#ddd1c8] bg-white text-[#6f5d53] hover:border-[#ceb7a8]'
+            dragOver === kind ? 'border-[#d1b3c8] bg-[#fff4fb] text-[#6d5868]' : 'border-[#e5d7e1] bg-white text-[#6d5868] hover:border-[#d1b3c8]'
           }`}
         >
           {text('upload_cta', language === 'en' ? 'Upload photo from device' : 'Lisa foto seadmest')}
@@ -225,21 +234,19 @@ export function ContactStep() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-8 text-center">
-        <p className="mb-2 text-[11px] uppercase tracking-[0.26em] text-[#9a7c6d]">Samm 3</p>
-        <h2 className="mb-2 text-2xl font-semibold text-[#2f2622]">{t('contact.yourDetails')}</h2>
-        <p className="text-[#6f655f]">{t('contact.sendConfirmation')}</p>
-        <p className="mt-2 text-sm text-[#7f7068]">
-          {text('contact_step_hint', language === 'en' ? 'You are one step away from confirmation.' : 'Oled vaid uhe sammu kaugusel kinnitamisest.')}
-        </p>
+      <div className="mb-8 text-center md:mb-10">
+        <h2 className="font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2622] md:text-[1.85rem]">
+          {t('contact.yourDetails')}
+        </h2>
+        <p className="mt-2 text-[15px] text-[#6f655f]">{t('contact.sendConfirmation')}</p>
       </div>
 
-      <div className="mb-5 rounded-2xl border border-[#e7dfd7] bg-[#faf7f4] p-4">
+      <div className="mb-5 rounded-2xl border border-[#eadce5] bg-[#fffafe] p-4">
         <div className="mb-1 flex items-center justify-between text-sm">
-          <span className="font-medium text-[#3f332d]">{selectedService?.name}</span>
-          <span className="font-semibold text-[#9f7058]">EUR {totalPrice || selectedService?.price}</span>
+          <span className="font-medium text-[#4a3344]">{selectedService?.name}</span>
+          <span className="font-semibold text-[#b04b80]">€{totalPrice || selectedService?.price}</span>
         </div>
-        <div className="flex items-center justify-between text-xs text-[#7b6f67]">
+        <div className="flex items-center justify-between text-xs text-[#7d6275]">
           <span>
             {selectedSlot
               ? `${new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'short', day: 'numeric', month: 'short' })} ${t('confirm.at')} ${selectedSlot.time}`
@@ -251,16 +258,16 @@ export function ContactStep() {
 
       <div className="mb-5 flex flex-wrap gap-2">
         {prepTips.map((item) => (
-          <span key={item} className="rounded-full border border-[#e2d8d0] bg-white px-3 py-1.5 text-xs font-medium text-[#75655b]">
+          <span key={item} className="rounded-full border border-[#eadce5] bg-[#fffafe] px-3 py-1.5 text-xs font-medium text-[#7d6275]">
             {item}
           </span>
         ))}
       </div>
 
-      <section className="mb-5 rounded-2xl border border-[#e7dfd7] bg-white p-4">
-        <h3 className="text-sm font-semibold text-[#443630]">{text('preparation_title', language === 'en' ? 'Before your appointment' : 'Enne visiiti')}</h3>
-        <p className="mt-1 text-xs text-[#74675f]">
-          {text('preparation_helper', language === 'en' ? 'Clean nails and avoid strong oils on the same day.' : 'Puhasta kuuned ja vali samal paeval kergem hooldus.')}
+      <section className="mb-5 rounded-2xl border border-[#eadce5] bg-white p-4">
+        <h3 className="text-sm font-semibold text-[#4a3344]">{text('preparation_title', language === 'en' ? 'Before your appointment' : 'Enne visiiti')}</h3>
+        <p className="mt-1 text-xs text-[#7d6275]">
+          {text('preparation_helper', language === 'en' ? 'Clean nails and avoid strong oils on the same day.' : 'Puhasta küüned ja vali samal päeval kergem hooldus.')}
         </p>
       </section>
 
@@ -273,7 +280,7 @@ export function ContactStep() {
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
-            className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+            className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
               errors.firstName && touched.firstName ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
             }`}
           />
@@ -282,7 +289,13 @@ export function ContactStep() {
 
         <label className="block text-sm font-medium text-[#443630]">
           {t('contact.lastName')} ({t('contact.optional')})
-          <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="mt-1 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 outline-none transition focus:border-[#c79c84]" />
+          <input
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            className="mt-1 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-[16px] outline-none transition focus:border-[#c79c84] sm:text-sm"
+          />
         </label>
 
         <label className="block text-sm font-medium text-[#443630]">
@@ -291,7 +304,7 @@ export function ContactStep() {
             <select
               value={countryCode}
               onChange={(event) => setCountryCode(event.target.value)}
-              className={`rounded-2xl border-2 bg-white px-3 py-3 outline-none transition ${
+              className={`rounded-2xl border-2 bg-white px-3 py-3 text-[16px] outline-none transition sm:text-sm ${
                 errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
               }`}
               aria-label={language === 'en' ? 'Country code' : 'Riigikood'}
@@ -308,7 +321,7 @@ export function ContactStep() {
                 type="tel"
                 value={countryCode}
                 onChange={(event) => handleCountryCodeChange(event.target.value)}
-                className={`rounded-2xl border-2 bg-white px-3 py-3 outline-none transition ${
+                className={`rounded-2xl border-2 bg-white px-3 py-3 text-[16px] outline-none transition sm:text-sm ${
                   errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
                 }`}
                 placeholder="+372"
@@ -320,7 +333,7 @@ export function ContactStep() {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className={`rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+              className={`rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
                 errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
               }`}
               placeholder="___ ___ ____"
@@ -333,7 +346,7 @@ export function ContactStep() {
         </label>
 
         {!showEmail ? (
-          <button type="button" onClick={() => setShowEmail(true)} className="text-sm font-medium text-[#9f7058] transition hover:text-[#8b5f4a]">
+          <button type="button" onClick={() => setShowEmail(true)} className="text-sm font-medium text-[#b04b80] transition hover:text-[#953d6e]">
             {t('contact.addEmail')}
           </button>
         ) : (
@@ -344,7 +357,7 @@ export function ContactStep() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+              className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
                 errors.email && touched.email ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
               }`}
             />
@@ -354,11 +367,11 @@ export function ContactStep() {
 
         <section className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#8e7465]">
-            {text('contact_optional_nails_title', language === 'en' ? 'Optional info about your nails' : 'Kiire info sinu kuunte kohta (valikuline)')}
+            {text('contact_optional_nails_title', language === 'en' ? 'Optional info about your nails' : 'Kiire info sinu küünte kohta (valikuline)')}
           </p>
-          <h3 className="text-sm font-semibold text-[#443630]">{text('upload_title', language === 'en' ? 'Inspiration or current nail photo' : 'Inspiratsioon voi praeguse kuune foto')}</h3>
+          <h3 className="text-sm font-semibold text-[#443630]">{text('upload_title', language === 'en' ? 'Inspiration or current nail photo' : 'Inspiratsioon või praeguse küüne foto')}</h3>
           <p className="mt-1 text-xs text-[#74675f]">
-            {text('upload_helper', language === 'en' ? 'Show us your inspiration. Upload your current nails for better consultation.' : 'Naita meile inspiratsiooni. Lisa praeguste kuunte pilt paremaks konsultatsiooniks.')}
+            {text('upload_helper', language === 'en' ? 'Show us your inspiration. Upload your current nails for better consultation.' : 'Näita meile inspiratsiooni. Lisa praeguste küünte pilt paremaks konsultatsiooniks.')}
           </p>
           <p className="mt-2 text-xs font-medium text-[#7b6558]">
             {text(
@@ -381,37 +394,44 @@ export function ContactStep() {
             )}
             {uploadCard(
               'current',
-              text('upload_current_optional_label', language === 'en' ? 'Add a photo of your current nails (optional)' : 'Lisa pilt oma praegustest kuuntest (valikuline)'),
+              text('upload_current_optional_label', language === 'en' ? 'Add a photo of your current nails (optional)' : 'Lisa pilt oma praegustest küüntest (valikuline)'),
               currentNailImage,
               currentInputRef
             )}
           </div>
           <p className="mt-3 text-xs text-[#74675f]">
-            {text('upload_skip_reassurance', language === 'en' ? 'You can continue without uploading any photo.' : 'Voi jatkata ka ilma pildita.')}
+            {text('upload_skip_reassurance', language === 'en' ? 'You can continue without uploading any photo.' : 'Võid jätkata ka ilma pildita.')}
           </p>
 
           <label className="mt-3 block text-xs font-medium text-[#5e4f48]">
-            {text('upload_note_label', language === 'en' ? 'Add note (optional)' : 'Lisa markus (valikuline)')}
+            {text('upload_note_label', language === 'en' ? 'Add note (optional)' : 'Lisa märkus (valikuline)')}
             <input
               type="text"
               name="inspirationNote"
               value={formData.inspirationNote}
               onChange={handleChange}
               placeholder={language === 'en' ? 'Shape, length, tone...' : 'Kuju, pikkus, toon...'}
-              className="mt-1 w-full rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-sm outline-none focus:border-[#c79c84]"
+              className="mt-1 w-full rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-[16px] outline-none focus:border-[#c79c84] sm:text-sm"
             />
           </label>
         </section>
 
         <label className="block text-sm font-medium text-[#443630]">
           {language === 'en' ? 'Client notes' : 'Kliendi markused'} ({t('contact.optional')})
-          <textarea name="notes" value={formData.notes} onChange={handleChange} className="mt-1 min-h-20 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#c79c84]" />
+          <textarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            className="mt-1 min-h-20 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-[16px] outline-none transition focus:border-[#c79c84] sm:text-sm"
+          />
         </label>
       </div>
 
       <button
+        id="booking-sticky-primary-action"
+        type="button"
         onClick={handleSubmit}
-        className="cta-premium mt-5 w-full rounded-2xl bg-[#b88468] py-5 text-base font-semibold text-white shadow-[0_20px_32px_-24px_rgba(72,49,35,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#a67359]"
+        className="cta-premium mt-5 w-full rounded-full bg-[linear-gradient(135deg,#a56b52_0%,#b88468_50%,#9a6a52_100%)] py-4 text-base font-semibold text-white shadow-[0_14px_32px_-14px_rgba(120,80,60,0.45)] transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-12px_rgba(120,80,60,0.4)] active:scale-[0.99]"
       >
         {language === 'en' ? 'Confirm details and continue' : 'Kinnita andmed ja liigu edasi'}
       </button>

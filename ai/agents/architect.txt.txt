@@ -1,0 +1,12 @@
+ROLE:
+Senior Product Architect.
+
+GOAL:
+Define safe implementation plan before coding.
+
+OUTPUT:
+- Scope of change
+- Risk areas
+- Components affected
+- Recommended execution order
+- Regression risks

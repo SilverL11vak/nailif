@@ -24,14 +24,31 @@ export function useBookingContent() {
 
       try {
         const response = await fetch(`/api/booking-content?lang=${language}`);
-        if (!response.ok) throw new Error('Failed to load booking content');
-        const data = (await response.json()) as { content?: BookingContent };
+        let parsed: { content?: BookingContent } = {};
+        try {
+          parsed = (await response.json()) as { content?: BookingContent };
+        } catch {
+          /* non-JSON response */
+        }
+        if (!response.ok) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(
+              '[useBookingContent] API error',
+              response.status,
+              response.status === 500
+                ? '(check DB / booking_content tables)'
+                : ''
+            );
+          }
+          if (mounted) setContent({});
+          return;
+        }
         if (!mounted) return;
-        const nextContent = data.content ?? {};
+        const nextContent = parsed.content ?? {};
         contentCache.set(language, nextContent);
         setContent(nextContent);
       } catch (error) {
-        console.error('useBookingContent error:', error);
+        console.error('useBookingContent network error:', error);
         if (mounted) setContent({});
       } finally {
         if (mounted) setLoading(false);

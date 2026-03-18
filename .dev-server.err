@@ -1,0 +1,325 @@
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+POST /api/assistant-chat error at stage openrouter_parse: [Error [TimeoutError]: The operation was aborted due to timeout] {
+  code: 23,
+  INDEX_SIZE_ERR: 1,
+  DOMSTRING_SIZE_ERR: 2,
+  HIERARCHY_REQUEST_ERR: 3,
+  WRONG_DOCUMENT_ERR: 4,
+  INVALID_CHARACTER_ERR: 5,
+  NO_DATA_ALLOWED_ERR: 6,
+  NO_MODIFICATION_ALLOWED_ERR: 7,
+  NOT_FOUND_ERR: 8,
+  NOT_SUPPORTED_ERR: 9,
+  INUSE_ATTRIBUTE_ERR: 10,
+  INVALID_STATE_ERR: 11,
+  SYNTAX_ERR: 12,
+  INVALID_MODIFICATION_ERR: 13,
+  NAMESPACE_ERR: 14,
+  INVALID_ACCESS_ERR: 15,
+  VALIDATION_ERR: 16,
+  TYPE_MISMATCH_ERR: 17,
+  SECURITY_ERR: 18,
+  NETWORK_ERR: 19,
+  ABORT_ERR: 20,
+  URL_MISMATCH_ERR: 21,
+  QUOTA_EXCEEDED_ERR: 22,
+  TIMEOUT_ERR: 23,
+  INVALID_NODE_TYPE_ERR: 24,
+  DATA_CLONE_ERR: 25
+}
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+ ⨯ upstream image response failed for https://images.unsplash.com/photo-1583616690835-130bc67bd1b4?w=600&q=80 404
+POST /api/assistant-chat OpenRouter empty text payload signature: keys=id,object,created,model,provider,system_fingerprint,choices,usage firstChoiceKeys=index,logprobs,finish_reason,native_finish_reason,message
+POST /api/assistant-chat OpenRouter empty response, trying OpenAI fallback.
+POST /api/assistant-chat OpenAI error: 400 {
+  "error": {
+    "message": "Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.",
+    "type": "invalid_request_error",
+    "param": "input[1].content[0]",
+    "code": "invalid_value"
+  }
+}
+POST /api/assistant-chat OpenRouter empty text payload signature: keys=id,object,created,model,provider,system_fingerprint,choices,usage firstChoiceKeys=index,logprobs,finish_reason,native_finish_reason,message
+POST /api/assistant-chat OpenRouter empty response, trying OpenAI fallback.
+POST /api/assistant-chat OpenAI error: 400 {
+  "error": {
+    "message": "Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.",
+    "type": "invalid_request_error",
+    "param": "input[1].content[0]",
+    "code": "invalid_value"
+  }
+}
+POST /api/assistant-chat OpenRouter empty text payload signature: keys=id,object,created,model,provider,system_fingerprint,choices,usage firstChoiceKeys=index,logprobs,finish_reason,native_finish_reason,message
+POST /api/assistant-chat OpenRouter empty response, trying OpenAI fallback.
+POST /api/assistant-chat OpenAI error: 400 {
+  "error": {
+    "message": "Invalid value: 'input_text'. Supported values are: 'output_text' and 'refusal'.",
+    "type": "invalid_request_error",
+    "param": "input[1].content[0]",
+    "code": "invalid_value"
+  }
+}
+POST /api/assistant-chat OpenRouter error: 404 minimax/minimax-m2.5:free {"error":{"message":"No endpoints available matching your guardrail restrictions and data policy. Configure: https://openrouter.ai/settings/privacy","code":404}}
+POST /api/assistant-chat trying OpenRouter fallback model openai/gpt-4o-mini
+POST /api/assistant-chat OpenRouter error: 402 openai/gpt-4o-mini {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits","code":402}}
+POST /api/assistant-chat trying OpenAI fallback after OpenRouter.
+POST /api/assistant-chat OpenAI error: 429 {
+  "error": {
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.",
+    "type": "insufficient_quota",
+    "param": null,
+    "code": "insufficient_quota"
+  }
+}
+POST /api/assistant-chat OpenRouter error: 404 minimax/minimax-m2.5:free {"error":{"message":"No endpoints available matching your guardrail restrictions and data policy. Configure: https://openrouter.ai/settings/privacy","code":404}}
+POST /api/assistant-chat trying OpenRouter fallback model nvidia/nemotron-3-super-120b-a12b:free
+POST /api/assistant-chat OpenRouter error: 404 minimax/minimax-m2.5:free {"error":{"message":"No endpoints available matching your guardrail restrictions and data policy. Configure: https://openrouter.ai/settings/privacy","code":404}}
+POST /api/assistant-chat trying OpenRouter fallback model nvidia/nemotron-3-super-120b-a12b:free
+POST /api/assistant-chat error at stage openrouter_parse: [Error [TimeoutError]: The operation was aborted due to timeout] {
+  code: 23,
+  INDEX_SIZE_ERR: 1,
+  DOMSTRING_SIZE_ERR: 2,
+  HIERARCHY_REQUEST_ERR: 3,
+  WRONG_DOCUMENT_ERR: 4,
+  INVALID_CHARACTER_ERR: 5,
+  NO_DATA_ALLOWED_ERR: 6,
+  NO_MODIFICATION_ALLOWED_ERR: 7,
+  NOT_FOUND_ERR: 8,
+  NOT_SUPPORTED_ERR: 9,
+  INUSE_ATTRIBUTE_ERR: 10,
+  INVALID_STATE_ERR: 11,
+  SYNTAX_ERR: 12,
+  INVALID_MODIFICATION_ERR: 13,
+  NAMESPACE_ERR: 14,
+  INVALID_ACCESS_ERR: 15,
+  VALIDATION_ERR: 16,
+  TYPE_MISMATCH_ERR: 17,
+  SECURITY_ERR: 18,
+  NETWORK_ERR: 19,
+  ABORT_ERR: 20,
+  URL_MISMATCH_ERR: 21,
+  QUOTA_EXCEEDED_ERR: 22,
+  TIMEOUT_ERR: 23,
+  INVALID_NODE_TYPE_ERR: 24,
+  DATA_CLONE_ERR: 25
+}
+POST /api/assistant-chat OpenRouter error: 404 minimax/minimax-m2.5:free {"error":{"message":"No endpoints available matching your guardrail restrictions and data policy. Configure: https://openrouter.ai/settings/privacy","code":404}}
+POST /api/assistant-chat trying OpenRouter fallback model nvidia/nemotron-3-super-120b-a12b:free
+POST /api/assistant-chat OpenRouter error: 404 minimax/minimax-m2.5:free {"error":{"message":"No endpoints available matching your guardrail restrictions and data policy. Configure: https://openrouter.ai/settings/privacy","code":404}}
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\client-development\1.pack.gz'
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+ ⨯ ./src/app/page.tsx
+Error:   [31mx[0m Unexpected token `div`. Expected jsx identifier
+     ,-[[36;1;4mC:\Users\Admin\Desktop\SSNails\nailify\src\app\page.tsx[0m:576:1]
+ [2m573[0m |     'rounded-3xl border border-[#efe4eb] bg-white/92 shadow-[0_20px_34px_-30px_rgba(95,63,86,0.28)]';
+ [2m574[0m | 
+ [2m575[0m |   return (
+ [2m576[0m |     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+     : [35;1m     ^^^[0m
+ [2m577[0m |       {/* ===================== */}
+ [2m578[0m |       {/* 1. STICKY HEADER */}
+ [2m578[0m |       {/* ===================== */}
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/page.tsx
+./src/app/[locale]/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\server-development\1.pack.gz_' -> 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\server-development\1.pack.gz'
+ ⨯ ./src/components/booking/ServiceStep.tsx
+Error: Failed to read source code from C:\Users\Admin\Desktop\SSNails\nailify\src\components\booking\ServiceStep.tsx
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Import trace for requested module:
+./src/components/booking/ServiceStep.tsx
+./src/app/book/page.tsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\client-development\0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Users\Admin\Desktop\SSNails\nailify\.next\cache\webpack\client-development\1.pack.gz'

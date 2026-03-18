@@ -1,34 +1,27 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton';
-import { AdminQuickActions } from '@/components/admin/AdminQuickActions';
-import { AdminTodayTimeline } from '@/components/admin/AdminTodayTimeline';
+import { AdminSearch } from '@/components/admin/AdminSearch';
+import { AdminDailyPerformanceStrip } from '@/components/admin/AdminDailyPerformanceStrip';
+import { AdminAnalyticsSummaryStrip } from '@/components/admin/AdminAnalyticsSummaryStrip';
+import { AdminSalonOverview } from '@/components/admin/AdminSalonOverview';
 import { getAdminFromCookies } from '@/lib/admin-auth';
 import { getAdminDashboardStats } from '@/lib/admin-dashboard';
+import { Calendar, Package, Plus } from 'lucide-react';
 
-const businessCards = [
-  { title: 'Teenused', description: 'Hinnad, kestused, nahtavus', href: '/admin/services' },
-  { title: 'Tooted', description: 'Pood, laoseis, pildid', href: '/admin/products' },
-  { title: 'Galerii', description: 'Avalehe inspiratsioon', href: '/admin/gallery' },
-  { title: 'Bookingu sisu', description: 'Mikrocopy ja sammud', href: '/admin/booking' },
-  { title: 'Tellimused', description: 'Maksed ja staatused', href: '/admin/orders' },
-  { title: 'Konto', description: 'Turvalisus ja profiil', href: '/admin/account' },
-];
-
-function statusLabel(status: string) {
-  if (status === 'confirmed') return 'Kinnitatud';
-  if (status === 'completed') return 'Lopetatud';
-  if (status === 'cancelled') return 'Tuhistatud';
-  if (status === 'pending_payment') return 'Makse ootel';
-  return status;
-}
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat('et-EE', {
+function formatHeaderDate(date: Date) {
+  return new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
     day: 'numeric',
     month: 'long',
-    weekday: 'long',
+    year: 'numeric',
   }).format(date);
+}
+
+function greeting(hour: number) {
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 export default async function AdminHomePage() {
@@ -37,189 +30,139 @@ export default async function AdminHomePage() {
 
   const stats = await getAdminDashboardStats();
   const displayName = admin.name?.trim() || 'Sandra';
-  const todayLabel = formatDate(new Date());
-  const bookingTrendPrefix = stats.bookingChangeVsLastWeek >= 0 ? '+' : '';
+  const now = new Date();
+  const todayLabel = formatHeaderDate(now);
+  const greet = greeting(now.getHours());
+
+  const pendingDepositsToday = stats.todayBookings.filter(
+    (b) =>
+      b.status !== 'cancelled' &&
+      b.status !== 'completed' &&
+      (b.paymentStatus === 'unpaid' || b.paymentStatus === 'pending' || b.paymentStatus === 'failed')
+  ).length;
+
+  const overviewStats = {
+    freeSlotsToday: stats.freeSlotsToday,
+    revenueToday: stats.revenueToday,
+    revenueThisWeek: stats.revenueThisWeek,
+  };
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-[1400px]">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#6b7280]">Nailify Super Admin</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.02em] text-[#111827]">Command Deck</h1>
-              <p className="mt-2 max-w-2xl text-sm text-[#4b5563]">
-                Tere {displayName}. Tana on {todayLabel}. Paneel on ules ehitatud paevase too tempo jargi: operatsioonid, ajakava, ari.
-              </p>
-            </div>
+    <main className="min-h-screen bg-[#f5f2ef]">
+      <header className="sticky top-0 z-40 border-b border-[#e8e2dd] bg-[#fffcfc]/95 backdrop-blur-md shadow-[0_4px_24px_-12px_rgba(42,36,40,0.08)]">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <Link
+            href="/admin"
+            className="font-brand text-lg font-semibold tracking-tight text-[#2a2228] transition hover:text-[#8b5c72] sm:text-xl"
+          >
+            Nailify
+          </Link>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <AdminSearch />
             <AdminLogoutButton />
           </div>
+        </div>
+      </header>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Broneeringud tana: {stats.todayBookings.length}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Vabad ajad tana: {stats.freeSlotsToday}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              SOS ajad: {stats.sosSlotsToday}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Kaive tana: EUR {stats.revenueToday}
-            </span>
-            <span className="rounded-full border border-[#d1d5db] bg-white px-3 py-1 text-xs text-[#374151]">
-              Trend: {bookingTrendPrefix}
-              {stats.bookingChangeVsLastWeek}
-            </span>
+      <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+        {/* Greeting + quick actions */}
+        <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#b5a8ad]">Salon overview</p>
+            <h1 className="mt-2 font-brand text-3xl font-semibold tracking-tight text-[#2a2228] sm:text-4xl">
+              {greet}, {displayName}
+            </h1>
+            <p className="mt-2 text-sm text-[#7a6e74]">{todayLabel}</p>
           </div>
-        </header>
-
-        <AdminQuickActions />
-
-        <section className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
-          <aside className="space-y-4">
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Operatsioonid tana</p>
-              <div className="mt-3 space-y-2 text-sm">
-                <Link
-                  href="/admin/bookings?view=today"
-                  className="flex items-center justify-between rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-[#374151]"
-                >
-                  <span>Tanased broneeringud</span>
-                  <span className="font-semibold">{stats.todayBookings.length}</span>
-                </Link>
-                <Link
-                  href="/admin/slots"
-                  className="flex items-center justify-between rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-[#374151]"
-                >
-                  <span>Kalendri juhtimine</span>
-                  <span className="text-xs uppercase text-[#6b7280]">Ava</span>
-                </Link>
-                <Link
-                  href="/admin/orders"
-                  className="flex items-center justify-between rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-[#374151]"
-                >
-                  <span>Maksed</span>
-                  <span className="font-semibold">{stats.orders}</span>
-                </Link>
-              </div>
-            </article>
-
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Kiired soovitused</p>
-              <div className="mt-3 space-y-2 text-sm text-[#374151]">
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="font-medium">Jargmine vaba aeg</p>
-                  <p className="text-xs text-[#6b7280]">
-                    {stats.nextFreeSlot?.slotDate || '-'} {stats.nextFreeSlot?.slotTime || ''}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="font-medium">Jargmine SOS aeg</p>
-                  <p className="text-xs text-[#6b7280]">
-                    {stats.nextSosSlot?.slotDate || '-'} {stats.nextSosSlot?.slotTime || ''}
-                  </p>
-                </div>
-                <Link
-                  href={
-                    stats.nextFreeSlot
-                      ? `/admin/slots?action=sos&date=${encodeURIComponent(stats.nextFreeSlot.slotDate)}&time=${encodeURIComponent(stats.nextFreeSlot.slotTime)}`
-                      : '/admin/slots?action=sos'
-                  }
-                  className="block rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-center font-semibold text-[#374151]"
-                >
-                  Margi jargmine aeg SOS-iks
-                </Link>
-              </div>
-            </article>
-          </aside>
-
-          <div className="space-y-4">
-            <AdminTodayTimeline items={stats.todayBookings} />
-
-            <section className="admin-panel rounded-3xl p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[#111827]">Ari ja sisu moodulid</h2>
-                <p className="text-xs text-[#6b7280]">Core haldus</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {businessCards.map((card) => (
-                  <Link key={card.href} href={card.href} className="admin-action-tile rounded-2xl p-4">
-                    <h3 className="text-base font-semibold text-[#111827]">{card.title}</h3>
-                    <p className="mt-1 text-sm text-[#4b5563]">{card.description}</p>
-                    <span className="mt-3 inline-block text-xs font-semibold uppercase tracking-[0.12em] text-[#6b7280]">
-                      Ava vaade
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/book"
+              className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#9c4d72_0%,#c24d86_55%,#a93d71_100%)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(194,77,134,0.45)]"
+            >
+              <Plus className="h-4 w-4" />
+              New booking
+            </Link>
+            <Link
+              href="/admin/slots"
+              className="inline-flex items-center gap-2 rounded-full border border-[#e5ddd8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5c4f55] shadow-sm hover:bg-[#faf8f6]"
+            >
+              <Calendar className="h-4 w-4 text-[#b85c8a]" />
+              Add slot
+            </Link>
+            <Link
+              href="/admin/products"
+              className="inline-flex items-center gap-2 rounded-full border border-[#e5ddd8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5c4f55] shadow-sm hover:bg-[#faf8f6]"
+            >
+              <Package className="h-4 w-4 text-[#b85c8a]" />
+              Add product
+            </Link>
           </div>
+        </div>
 
-          <aside className="space-y-4">
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Jargmine klient</p>
-              {stats.nextBooking ? (
-                <div className="mt-3">
-                  <p className="text-base font-semibold text-[#111827]">{stats.nextBooking.clientName}</p>
-                  <p className="text-sm text-[#4b5563]">{stats.nextBooking.serviceName}</p>
-                  <p className="mt-1 text-sm text-[#374151]">
-                    {stats.nextBooking.slotDate} kell {stats.nextBooking.slotTime}
-                  </p>
-                  <span className="mt-2 inline-flex rounded-full border border-[#d1d5db] bg-white px-2 py-1 text-xs text-[#4b5563]">
-                    {statusLabel(stats.nextBooking.status)}
-                  </span>
-                </div>
-              ) : (
-                <p className="mt-2 text-sm text-[#6b7280]">Broneeringud puuduvad.</p>
-              )}
-            </article>
+        <AdminDailyPerformanceStrip
+          todayBookingsCount={stats.todayBookings.length}
+          freeSlotsToday={stats.freeSlotsToday}
+          revenueSecuredToday={stats.revenueToday}
+        />
 
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Finantsplokk</p>
-              <div className="mt-3 grid gap-2">
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Kaive tana</p>
-                  <p className="text-lg font-semibold text-[#111827]">EUR {stats.revenueToday}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Kaive nadal</p>
-                  <p className="text-lg font-semibold text-[#111827]">EUR {stats.revenueThisWeek}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Broneeringute trend</p>
-                  <p className="text-lg font-semibold text-[#111827]">
-                    {bookingTrendPrefix}
-                    {stats.bookingChangeVsLastWeek}
-                  </p>
-                </div>
-              </div>
-            </article>
+        <AdminAnalyticsSummaryStrip />
 
-            <article className="admin-panel rounded-3xl p-4">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Susteemi maht</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Teenused</p>
-                  <p className="font-semibold text-[#111827]">{stats.services}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Tooted</p>
-                  <p className="font-semibold text-[#111827]">{stats.products}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Broneeringud</p>
-                  <p className="font-semibold text-[#111827]">{stats.bookings}</p>
-                </div>
-                <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2">
-                  <p className="text-xs text-[#6b7280]">Vabad (7 p)</p>
-                  <p className="font-semibold text-[#111827]">{stats.availableSlotsNext7Days}</p>
-                </div>
-              </div>
-            </article>
-          </aside>
+        {/* KPI strip */}
+        <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              label: 'Bookings today',
+              value: stats.todayBookings.length,
+              hint: 'On the calendar',
+            },
+            {
+              label: 'Free slots',
+              value: stats.freeSlotsToday,
+              hint: 'Available today',
+            },
+            {
+              label: 'Revenue today',
+              value: `€${stats.revenueToday}`,
+              hint: 'Paid shop orders',
+            },
+            {
+              label: 'Pending deposits',
+              value: pendingDepositsToday,
+              hint: "Today's appointments",
+            },
+          ].map((kpi) => (
+            <div
+              key={kpi.label}
+              className="rounded-2xl border border-[#ebe6e3] bg-white px-5 py-4 shadow-[0_4px_20px_-8px_rgba(42,36,40,0.07)]"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">{kpi.label}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums text-[#2a2228] sm:text-3xl">{kpi.value}</p>
+              <p className="mt-1 text-xs text-[#9a8a94]">{kpi.hint}</p>
+            </div>
+          ))}
         </section>
+
+        <AdminSalonOverview stats={overviewStats} />
+
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-4 border-t border-[#ebe6e3] pt-10">
+          <Link
+            href="/admin/account"
+            className="text-sm font-medium text-[#8a7c82] underline-offset-2 hover:text-[#c24d86] hover:underline"
+          >
+            Account & settings
+          </Link>
+          <span className="text-[#e0d8d4]">·</span>
+          <Link
+            href="/admin/booking"
+            className="text-sm font-medium text-[#8a7c82] underline-offset-2 hover:text-[#c24d86] hover:underline"
+          >
+            Booking copy & add-ons
+          </Link>
+          <span className="text-[#e0d8d4]">·</span>
+          <Link href="/" className="text-sm font-medium text-[#8a7c82] underline-offset-2 hover:text-[#c24d86] hover:underline">
+            View site
+          </Link>
+        </div>
       </div>
     </main>
   );

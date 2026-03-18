@@ -39,7 +39,6 @@ const defaultGallerySeed: Array<{ imageUrl: string; caption: string; isFeatured?
 ];
 
 declare global {
-  // eslint-disable-next-line no-var
   var __nailify_gallery_ensure__: Promise<void> | undefined;
 }
 

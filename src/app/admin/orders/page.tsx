@@ -39,9 +39,9 @@ export default async function AdminOrdersPage() {
   const orders = await listOrders(200);
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
+    <main className="min-h-screen bg-[#fafafa] px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-7xl">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
+        <header className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>

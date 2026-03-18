@@ -1,16 +1,24 @@
 import { NextResponse } from 'next/server';
 import {
   ADMIN_SESSION_COOKIE,
-  adminCount,
   authenticateAdmin,
   createAdminSession,
-  createAdminUser,
   ensureAdminTables,
   getSessionMaxAgeSeconds,
 } from '@/lib/admin-auth';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
+    // Rate limit check - prevent brute force attacks
+    const rateLimit = checkRateLimit('login', request.headers);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please wait a moment.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter ?? 60) } }
+      );
+    }
+
     const payload = (await request.json()) as Partial<{
       email: string;
       password: string;
@@ -25,15 +33,6 @@ export async function POST(request: Request) {
     }
 
     await ensureAdminTables();
-    const count = await adminCount();
-
-    if (count === 0 && payload.createIfEmpty) {
-      await createAdminUser({
-        email,
-        password,
-        name: payload.name?.trim() || 'Sandra',
-      });
-    }
 
     const admin = await authenticateAdmin(email, password);
     if (!admin) {

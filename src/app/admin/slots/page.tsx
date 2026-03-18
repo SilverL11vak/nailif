@@ -1,9 +1,32 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TimeSlot } from '@/store/booking-types';
-import { AdminQuickActions } from '@/components/admin/AdminQuickActions';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import {
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  Plus,
+  Settings2,
+  ShieldOff,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  UserCheck,
+  Zap,
+} from 'lucide-react';
+
+type UndoAction = {
+  type: 'block' | 'unblock' | 'sos';
+  times: string[];
+  previousStates: Record<string, { available: boolean; isSos?: boolean; sosSurcharge?: number | null; sosLabel?: string | null }>;
+};
+
+const WORK_HOURS_STORAGE_KEY_START = 'nailify_slots_workStart';
+const WORK_HOURS_STORAGE_KEY_END = 'nailify_slots_workEnd';
 
 type BookingCell = {
   slotDate: string;
@@ -15,14 +38,24 @@ type BookingCell = {
 
 type SlotState = 'free' | 'blocked' | 'booked' | 'sos';
 
-const sosLabels = ['Kiire aeg', 'Tana saadaval', 'Viimane aeg'];
-const quickPresetTimes = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00'];
+const sosLabels = ['Kiire aeg', 'Täna saadaval', 'Viimane aeg'];
+
+const TIME_OPTIONS = (() => {
+  const list: string[] = [];
+  for (let hour = 8; hour <= 20; hour += 1) {
+    for (const minute of [0, 30]) {
+      if (hour === 20 && minute === 30) break;
+      list.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+    }
+  }
+  return list;
+})();
 
 function toIsoDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function buildTimeGrid() {
@@ -35,18 +68,35 @@ function buildTimeGrid() {
   return list;
 }
 
-function buildNextDays(count: number) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Array.from({ length: count }).map((_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() + index);
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function getTimesInRange(start: string, end: string, stepMinutes = 30): string[] {
+  const startM = timeToMinutes(start);
+  let endM = timeToMinutes(end);
+  if (endM <= startM) endM = startM + 12 * 60;
+  const list: string[] = [];
+  for (let m = startM; m < endM; m += stepMinutes) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    list.push(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
+  }
+  return list;
+}
+
+function buildDays(from: Date, count: number) {
+  return Array.from({ length: count }).map((_, i) => {
+    const date = new Date(from);
+    date.setDate(from.getDate() + i);
+    const iso = toIsoDate(date);
     return {
-      iso: toIsoDate(date),
+      iso,
       label: date.toLocaleDateString('et-EE', { weekday: 'short' }),
       day: date.getDate(),
       month: date.toLocaleDateString('et-EE', { month: 'short' }),
-      isToday: index === 0,
+      isToday: i === 0,
     };
   });
 }
@@ -54,8 +104,11 @@ function buildNextDays(count: number) {
 const timeGrid = buildTimeGrid();
 
 export default function AdminSlotsPage() {
-  const initialDateRef = useRef(toIsoDate(new Date()));
-  const initialTimeRef = useRef<string | null>(null);
+  const [weekStart, setWeekStart] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const [selectedDate, setSelectedDate] = useState(toIsoDate(new Date()));
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -66,21 +119,75 @@ export default function AdminSlotsPage() {
   const [sosEnabled, setSosEnabled] = useState(false);
   const [sosSurcharge, setSosSurcharge] = useState('0');
   const [sosLabel, setSosLabel] = useState(sosLabels[0]);
+  const [workStart, setWorkStart] = useState(() => {
+    if (typeof window === 'undefined') return '09:00';
+    return window.localStorage.getItem(WORK_HOURS_STORAGE_KEY_START) || '09:00';
+  });
+  const [workEnd, setWorkEnd] = useState(() => {
+    if (typeof window === 'undefined') return '18:00';
+    return window.localStorage.getItem(WORK_HOURS_STORAGE_KEY_END) || '18:00';
+  });
+  const [blockAllConfirm, setBlockAllConfirm] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkStart, setBulkStart] = useState('09:00');
+  const [bulkEnd, setBulkEnd] = useState('18:00');
+  const [selectedTimes, setSelectedTimes] = useState<Set<string>>(new Set());
+  const [lastShiftTime, setLastShiftTime] = useState<string | null>(null);
+  const [isDragSelecting, setIsDragSelecting] = useState(false);
+  const [dragAnchor, setDragAnchor] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastUndoAction, setToastUndoAction] = useState<UndoAction | null>(null);
+  const [dayTransitioning, setDayTransitioning] = useState(false);
+  const [generatorFeedback, setGeneratorFeedback] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const generatorFeedbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const days = useMemo(() => buildNextDays(14), []);
+  const days = useMemo(() => buildDays(weekStart, 21), [weekStart]);
+
+  const workingHoursTimes = useMemo(
+    () => getTimesInRange(workStart, workEnd).filter((t) => timeGrid.includes(t)),
+    [workStart, workEnd]
+  );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WORK_HOURS_STORAGE_KEY_START, workStart);
+      window.localStorage.setItem(WORK_HOURS_STORAGE_KEY_END, workEnd);
+    } catch {}
+  }, [workStart, workEnd]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('date');
     const timeParam = params.get('time');
-    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-      initialDateRef.current = dateParam;
-      setSelectedDate(dateParam);
-    }
-    if (timeParam && /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeParam)) {
-      initialTimeRef.current = timeParam;
-      setSelectedTime(timeParam);
-    }
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) setSelectedDate(dateParam);
+    if (timeParam && /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeParam)) setSelectedTime(timeParam);
+  }, []);
+
+  useEffect(() => {
+    setSelectedTimes(new Set());
+    setSelectedTime(null);
+    setLastShiftTime(null);
+    setDayTransitioning(true);
+    const t = setTimeout(() => setDayTransitioning(false), 140);
+    return () => clearTimeout(t);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    return () => {
+      if (generatorFeedbackRef.current) clearTimeout(generatorFeedbackRef.current);
+    };
+  }, []);
+
+  const showToast = useCallback((message: string, undo?: UndoAction) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(message);
+    setToastUndoAction(undo ?? null);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+      setToastUndoAction(null);
+      toastTimerRef.current = null;
+    }, 4000);
   }, []);
 
   const loadSlots = useCallback(async () => {
@@ -92,17 +199,14 @@ export default function AdminSlotsPage() {
       toDate.setDate(toDate.getDate() + 45);
       const from = toIsoDate(fromDate);
       const to = toIsoDate(toDate);
-
-      const [slotsResponse, bookingsResponse] = await Promise.all([
+      const [slotsRes, bookingsRes] = await Promise.all([
         fetch(`/api/slots?admin=1&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { cache: 'no-store' }),
         fetch('/api/bookings?limit=500', { cache: 'no-store' }),
       ]);
-
-      if (!slotsResponse.ok) throw new Error('Aegade laadimine ebaonnestus');
-      if (!bookingsResponse.ok) throw new Error('Broneeringute laadimine ebaonnestus');
-
-      const slotsData = (await slotsResponse.json()) as { slots?: TimeSlot[] };
-      const bookingsData = (await bookingsResponse.json()) as {
+      if (!slotsRes.ok) throw new Error('Aegade laadimine ebaonnestus');
+      if (!bookingsRes.ok) throw new Error('Broneeringute laadimine ebaonnestus');
+      const slotsData = (await slotsRes.json()) as { slots?: TimeSlot[] };
+      const bookingsData = (await bookingsRes.json()) as {
         bookings?: Array<{
           slotDate: string;
           slotTime: string;
@@ -112,21 +216,20 @@ export default function AdminSlotsPage() {
           contactLastName: string | null;
         }>;
       };
-
-      const nextBookings: BookingCell[] = (bookingsData.bookings ?? [])
-        .filter((booking) => booking.status !== 'cancelled')
-        .map((booking) => ({
-          slotDate: booking.slotDate,
-          slotTime: booking.slotTime,
-          status: booking.status,
-          serviceName: booking.serviceName,
-          clientName: `${booking.contactFirstName} ${booking.contactLastName ?? ''}`.trim(),
-        }));
-
       setSlots(slotsData.slots ?? []);
-      setBookings(nextBookings);
-    } catch (loadError) {
-      console.error(loadError);
+      setBookings(
+        (bookingsData.bookings ?? [])
+          .filter((b) => b.status !== 'cancelled')
+          .map((b) => ({
+            slotDate: b.slotDate,
+            slotTime: b.slotTime,
+            status: b.status,
+            serviceName: b.serviceName,
+            clientName: `${b.contactFirstName} ${b.contactLastName ?? ''}`.trim(),
+          }))
+      );
+    } catch (e) {
+      console.error(e);
       setError('Aegade laadimine ebaonnestus.');
     } finally {
       setIsLoading(false);
@@ -138,22 +241,18 @@ export default function AdminSlotsPage() {
   }, [loadSlots]);
 
   const selectedDaySlots = useMemo(
-    () => slots.filter((slot) => slot.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time)),
+    () => slots.filter((s) => s.date === selectedDate).sort((a, b) => a.time.localeCompare(b.time)),
     [slots, selectedDate]
   );
-
   const slotMap = useMemo(() => {
-    const map = new Map<string, TimeSlot>();
-    for (const slot of selectedDaySlots) map.set(slot.time, slot);
-    return map;
+    const m = new Map<string, TimeSlot>();
+    selectedDaySlots.forEach((s) => m.set(s.time, s));
+    return m;
   }, [selectedDaySlots]);
-
   const bookedMap = useMemo(() => {
-    const map = new Map<string, BookingCell>();
-    for (const booking of bookings) {
-      if (booking.slotDate === selectedDate) map.set(booking.slotTime, booking);
-    }
-    return map;
+    const m = new Map<string, BookingCell>();
+    bookings.filter((b) => b.slotDate === selectedDate).forEach((b) => m.set(b.slotTime, b));
+    return m;
   }, [bookings, selectedDate]);
 
   const slotState = useCallback(
@@ -166,6 +265,19 @@ export default function AdminSlotsPage() {
     },
     [bookedMap, slotMap]
   );
+
+  const dayAvailability = useMemo(() => {
+    const map = new Map<string, { free: number; booked: number; sos: number; blocked: number }>();
+    days.forEach((d) => {
+      const daySlots = slots.filter((s) => s.date === d.iso);
+      const dayBookings = bookings.filter((b) => b.slotDate === d.iso).length;
+      const free = daySlots.filter((s) => s.available && !s.isSos).length;
+      const sos = daySlots.filter((s) => s.available && s.isSos).length;
+      const blocked = daySlots.filter((s) => !s.available).length;
+      map.set(d.iso, { free, booked: dayBookings, sos, blocked });
+    });
+    return map;
+  }, [days, slots, bookings]);
 
   useEffect(() => {
     if (!selectedTime) {
@@ -180,70 +292,140 @@ export default function AdminSlotsPage() {
     setSosLabel(existing?.sosLabel || sosLabels[0]);
   }, [selectedTime, slotMap]);
 
-  const upsertSlot = async (date: string, time: string, available: boolean, extras?: Partial<TimeSlot>) => {
-    const existing = slots.find((slot) => slot.date === date && slot.time === time);
-    if (existing) {
+  const upsertSlot = useCallback(
+    async (date: string, time: string, available: boolean, extras?: Partial<TimeSlot>) => {
+      const existing = slots.find((s) => s.date === date && s.time === time);
+      if (existing) {
+        await fetch('/api/slots', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: existing.id,
+            available,
+            count: available ? Math.max(existing.count ?? 1, 1) : 0,
+            isSos: available ? extras?.isSos ?? existing.isSos ?? false : false,
+            sosSurcharge: available ? extras?.sosSurcharge ?? existing.sosSurcharge ?? null : null,
+            sosLabel: available ? extras?.sosLabel ?? existing.sosLabel ?? null : null,
+          }),
+        });
+        return;
+      }
       await fetch('/api/slots', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: existing.id,
+          date,
+          time,
           available,
-          count: available ? Math.max(existing.count ?? 1, 1) : 0,
-          isSos: available ? extras?.isSos ?? existing.isSos ?? false : false,
-          sosSurcharge: available ? extras?.sosSurcharge ?? existing.sosSurcharge ?? null : null,
-          sosLabel: available ? extras?.sosLabel ?? existing.sosLabel ?? null : null,
+          count: available ? 1 : 0,
+          isSos: extras?.isSos ?? false,
+          sosSurcharge: extras?.sosSurcharge ?? null,
+          sosLabel: extras?.sosLabel ?? null,
         }),
       });
-      return;
-    }
+    },
+    [slots]
+  );
 
-    await fetch('/api/slots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        date,
-        time,
-        available,
-        count: available ? 1 : 0,
-        isSos: extras?.isSos ?? false,
-        sosSurcharge: extras?.sosSurcharge ?? null,
-        sosLabel: extras?.sosLabel ?? null,
-      }),
-    });
-  };
+  const getSlotPreviousState = useCallback(
+    (time: string) => {
+      const slot = slotMap.get(time);
+      return {
+        available: slot?.available ?? false,
+        isSos: slot?.isSos ?? false,
+        sosSurcharge: slot?.sosSurcharge ?? null,
+        sosLabel: slot?.sosLabel ?? null,
+      };
+    },
+    [slotMap]
+  );
 
-  const toggleSlot = async (time: string) => {
-    if (bookedMap.has(time)) return;
+  const setSlotStatus = useCallback(
+    async (time: string, available: boolean, sosExtras?: { isSos: boolean; sosSurcharge?: number; sosLabel?: string }) => {
+      if (bookedMap.has(time)) return;
+      const prev = getSlotPreviousState(time);
+      setIsSaving(true);
+      setError(null);
+      try {
+        await upsertSlot(selectedDate, time, available, sosExtras);
+        await loadSlots();
+        showToast(available ? 'Aeg vabastatud' : 'Aeg blokeeritud', {
+          type: available ? 'unblock' : 'block',
+          times: [time],
+          previousStates: { [time]: prev },
+        });
+      } catch (err) {
+        console.error(err);
+        setError('Aja muutmine ebaonnestus.');
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [bookedMap, getSlotPreviousState, selectedDate, loadSlots, showToast, upsertSlot]
+  );
+
+  const applyPresetDay = async (makeAvailable: boolean) => {
     setIsSaving(true);
     setError(null);
+    setGeneratorFeedback(null);
+    if (generatorFeedbackRef.current) clearTimeout(generatorFeedbackRef.current);
     try {
-      const current = slotState(time);
-      const nextAvailable = !(current === 'free' || current === 'sos');
-      await upsertSlot(selectedDate, time, nextAvailable);
+      const toApply = workingHoursTimes.filter((time) => !bookedMap.has(time));
+      await Promise.all(
+        toApply.map(async (time) => upsertSlot(selectedDate, time, makeAvailable))
+      );
       await loadSlots();
-    } catch (toggleError) {
-      console.error(toggleError);
-      setError('Aja muutmine ebaonnestus.');
+      if (makeAvailable && toApply.length > 0) {
+        setGeneratorFeedback(`${toApply.length} aega genereeritud`);
+        generatorFeedbackRef.current = setTimeout(() => {
+          setGeneratorFeedback(null);
+          generatorFeedbackRef.current = null;
+        }, 3200);
+      }
+    } catch (e) {
+      console.error(e);
+      setError('Päeva malli rakendamine ebaonnestus.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const applyPresetDay = async (makeAvailable: boolean) => {
+  const blockAllDay = async () => {
+    setIsSaving(true);
+    setError(null);
+    setBlockAllConfirm(false);
+    try {
+      await Promise.all(
+        timeGrid.map(async (time) => {
+          if (bookedMap.has(time)) return;
+          await upsertSlot(selectedDate, time, false);
+        })
+      );
+      await loadSlots();
+    } catch (err) {
+      console.error(err);
+      setError('Kõigi aegade blokeerimine ebaonnestus.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const bulkAddSlots = async () => {
+    const times = getTimesInRange(bulkStart, bulkEnd).filter((t) => timeGrid.includes(t));
     setIsSaving(true);
     setError(null);
     try {
       await Promise.all(
-        quickPresetTimes.map(async (time) => {
+        times.map(async (time) => {
           if (bookedMap.has(time)) return;
-          await upsertSlot(selectedDate, time, makeAvailable);
+          await upsertSlot(selectedDate, time, true);
         })
       );
       await loadSlots();
-    } catch (presetError) {
-      console.error(presetError);
-      setError('Paeva malli rakendamine ebaonnestus.');
+      setBulkModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      setError('Aegade lisamine ebaonnestus.');
     } finally {
       setIsSaving(false);
     }
@@ -255,211 +437,714 @@ export default function AdminSlotsPage() {
     setError(null);
     try {
       const parsed = Number(sosSurcharge);
-      const safeSurcharge = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+      const safe = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
       await upsertSlot(selectedDate, selectedTime, true, {
         isSos: sosEnabled,
-        sosSurcharge: sosEnabled ? safeSurcharge : undefined,
+        sosSurcharge: sosEnabled ? safe : undefined,
         sosLabel: sosEnabled ? sosLabel : undefined,
       });
       await loadSlots();
-    } catch (saveError) {
-      console.error(saveError);
+      showToast('SOS salvestatud');
+    } catch (e) {
+      console.error(e);
       setError('SOS seadete salvestamine ebaonnestus.');
     } finally {
       setIsSaving(false);
     }
   };
 
+  const bulkApply = useCallback(
+    async (
+      type: 'block' | 'unblock' | 'sos',
+      times: string[]
+    ) => {
+      const editable = times.filter((t) => !bookedMap.has(t));
+      if (editable.length === 0) return;
+      const previousStates: UndoAction['previousStates'] = {};
+      editable.forEach((t) => {
+        previousStates[t] = getSlotPreviousState(t);
+      });
+      setIsSaving(true);
+      setError(null);
+      try {
+        if (type === 'block') {
+          await Promise.all(editable.map((t) => upsertSlot(selectedDate, t, false)));
+          showToast(`${editable.length} aega blokeeritud`, { type: 'block', times: editable, previousStates });
+        } else if (type === 'unblock') {
+          await Promise.all(editable.map((t) => upsertSlot(selectedDate, t, true)));
+          showToast(`${editable.length} aega vabastatud`, { type: 'unblock', times: editable, previousStates });
+        } else {
+          await Promise.all(
+            editable.map((t) => upsertSlot(selectedDate, t, true, { isSos: true, sosSurcharge: 0, sosLabel: sosLabels[0] }))
+          );
+          showToast(`${editable.length} aega märgitud SOS-ina`, { type: 'sos', times: editable, previousStates });
+        }
+        await loadSlots();
+        setSelectedTimes(new Set());
+        setSelectedTime(null);
+      } catch (err) {
+        console.error(err);
+        setError('Toiming ebaonnestus.');
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [selectedDate, bookedMap, getSlotPreviousState, loadSlots, showToast, upsertSlot]
+  );
+
+  const performUndo = useCallback(
+    async (action: UndoAction) => {
+      setIsSaving(true);
+      setError(null);
+      try {
+        await Promise.all(
+          action.times.map((time) =>
+            upsertSlot(selectedDate, time, action.previousStates[time]?.available ?? true, {
+              isSos: action.previousStates[time]?.isSos,
+              sosSurcharge: action.previousStates[time]?.sosSurcharge ?? undefined,
+              sosLabel: action.previousStates[time]?.sosLabel ?? undefined,
+            })
+          )
+        );
+        await loadSlots();
+        showToast('Toiming tühistatud');
+      } catch (err) {
+        console.error(err);
+        setError('Tühistamine ebaonnestus.');
+      } finally {
+        setIsSaving(false);
+      }
+      setToastUndoAction(null);
+      setToastMessage(null);
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    },
+    [selectedDate, loadSlots, showToast, upsertSlot]
+  );
+
   const selectedBooking = selectedTime ? bookedMap.get(selectedTime) : undefined;
-  const freeCount = selectedDaySlots.filter((slot) => slot.available && !slot.isSos).length;
-  const sosCount = selectedDaySlots.filter((slot) => slot.available && slot.isSos).length;
-  const bookedCount = bookings.filter((booking) => booking.slotDate === selectedDate).length;
+  const stats = useMemo(() => {
+    const daySlots = slots.filter((s) => s.date === selectedDate);
+    const free = daySlots.filter((s) => s.available && !s.isSos).length;
+    const sos = daySlots.filter((s) => s.available && s.isSos).length;
+    const booked = bookings.filter((b) => b.slotDate === selectedDate).length;
+    const blocked = daySlots.filter((s) => !s.available).length;
+    return { total: daySlots.length, free, sos, booked, blocked };
+  }, [slots, bookings, selectedDate]);
+
+  const selectedDayLabel = useMemo(() => {
+    const d = days.find((x) => x.iso === selectedDate);
+    return d ? `${d.label}, ${d.day}. ${d.month}` : selectedDate;
+  }, [days, selectedDate]);
+
+  const stateLabel = (s: SlotState) => ({ booked: 'Broneeritud', sos: 'SOS', free: 'Vaba', blocked: 'Blokeeritud' }[s]);
+
+  const goPrevWeek = () => {
+    const next = new Date(weekStart);
+    next.setDate(next.getDate() - 7);
+    setWeekStart(next);
+  };
+  const goNextWeek = () => {
+    const next = new Date(weekStart);
+    next.setDate(next.getDate() + 7);
+    setWeekStart(next);
+  };
+
+  const timeRange = useCallback((a: string, b: string) => {
+    const i = timeGrid.indexOf(a);
+    const j = timeGrid.indexOf(b);
+    if (i === -1 || j === -1) return [];
+    const lo = Math.min(i, j);
+    const hi = Math.max(i, j);
+    return timeGrid.slice(lo, hi + 1);
+  }, []);
+
+  const handleSlotClick = useCallback(
+    (time: string, isShift: boolean) => {
+      if (bookedMap.has(time)) return;
+      if (isShift && lastShiftTime !== null) {
+        const range = timeRange(lastShiftTime, time);
+        setSelectedTimes((prev) => new Set([...prev, ...range]));
+        setSelectedTime(time);
+      } else {
+        setSelectedTime(time);
+        setSelectedTimes(new Set([time]));
+      }
+      setLastShiftTime(time);
+    },
+    [bookedMap, lastShiftTime, timeRange]
+  );
+
+  const handleSlotMouseDown = useCallback(
+    (time: string) => {
+      if (bookedMap.has(time)) return;
+      setDragAnchor(time);
+      setSelectedTimes(new Set([time]));
+      setSelectedTime(time);
+      setLastShiftTime(time);
+      setIsDragSelecting(true);
+    },
+    [bookedMap]
+  );
+
+  const handleSlotMouseEnter = useCallback(
+    (time: string) => {
+      if (!isDragSelecting || !dragAnchor || bookedMap.has(time)) return;
+      const range = timeRange(dragAnchor, time);
+      setSelectedTimes((prev) => new Set([...prev, ...range]));
+      setSelectedTime(time);
+    },
+    [isDragSelecting, dragAnchor, bookedMap, timeRange]
+  );
+
+  useEffect(() => {
+    if (!isDragSelecting) return;
+    const onUp = () => setIsDragSelecting(false);
+    window.addEventListener('mouseup', onUp);
+    return () => window.removeEventListener('mouseup', onUp);
+  }, [isDragSelecting]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedTime(null);
+    setSelectedTimes(new Set());
+    setLastShiftTime(null);
+  }, []);
+
+  const handleDeleteSlot = useCallback(() => {
+    if (!selectedTime || bookedMap.has(selectedTime)) return;
+    void setSlotStatus(selectedTime, false);
+    clearSelection();
+  }, [selectedTime, bookedMap, clearSelection, setSlotStatus]);
 
   return (
-    <main className="admin-cockpit-bg px-4 py-8 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-[1300px]">
-        <header className="admin-cockpit-shell mb-6 rounded-[28px] p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#6b7280]">Nailify Haldus</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-[-0.015em] text-[#111827]">Vabad ajad</h1>
-              <p className="mt-2 text-sm text-[#4b5563]">Paevapohine vaade: vali paev, muuda aegu, lisa SOS.</p>
-            </div>
-            <div className="flex gap-2 text-sm">
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563]" href="/admin">
-                Halduspaneel
-              </Link>
-              <Link className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-[#4b5563]" href="/admin/bookings">
-                Broneeringud
-              </Link>
-            </div>
-          </div>
-        </header>
+    <main className="min-h-screen bg-[#fafafa]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <AdminPageHeader
+          overline="Broneerimine"
+          title="Vabad ajad"
+          subtitle="Vali päev, halli aegu. Täida või tühjenda tööaja järgi, lisa ajad või blokeeri kõik."
+          backHref="/admin"
+          backLabel="Halduspaneel"
+          secondaryLinks={[{ label: 'Broneeringud', href: '/admin/bookings' }]}
+        />
 
-        <AdminQuickActions />
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 px-4 py-2.5 text-sm text-red-800">
+            {error}
+          </div>
+        )}
 
-        <section className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div className="admin-panel rounded-2xl p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Vabad ajad</p>
-            <p className="mt-1 text-2xl font-semibold text-[#111827]">{freeCount}</p>
-          </div>
-          <div className="admin-panel rounded-2xl p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">SOS ajad</p>
-            <p className="mt-1 text-2xl font-semibold text-[#111827]">{sosCount}</p>
-          </div>
-          <div className="admin-panel rounded-2xl p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-[#6b7280]">Broneeritud</p>
-            <p className="mt-1 text-2xl font-semibold text-[#111827]">{bookedCount}</p>
+        {/* Zone 1: Day / calendar navigation */}
+        <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={goPrevWeek}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="flex flex-1 gap-2 overflow-x-auto py-2 scrollbar-thin scroll-smooth sm:justify-center">
+              {days.map((day) => {
+                const isSelected = day.iso === selectedDate;
+                const av = dayAvailability.get(day.iso);
+                const hasFree = (av?.free ?? 0) > 0;
+                const hasBooked = (av?.booked ?? 0) > 0;
+                const bookedHeavy = (av?.booked ?? 0) >= 3;
+                const allBlocked = !hasFree && !hasBooked && (av?.blocked ?? 0) > 0;
+                return (
+                  <button
+                    key={day.iso}
+                    type="button"
+                    onClick={() => { setSelectedDate(day.iso); setSelectedTime(null); }}
+                    className={`flex min-w-[64px] flex-col items-center rounded-xl border-2 px-3 py-3 text-center transition-all duration-200 ${
+                      isSelected
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-md'
+                        : 'border-[#e5e7eb] bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                    } ${day.isToday && !isSelected ? 'ring-2 ring-slate-400 ring-offset-2' : ''}`}
+                  >
+                    <span className="text-[10px] font-medium uppercase tracking-wide opacity-90">{day.label}</span>
+                    <span className="mt-1 text-xl font-semibold">{day.day}</span>
+                    <span className="mt-1.5 flex gap-1">
+                      {hasBooked && <span className={`h-2 w-2 rounded-full ${bookedHeavy ? 'bg-rose-500' : 'bg-rose-400'}`} title="Broneeritud" />}
+                      {hasFree && !hasBooked && <span className="h-2 w-2 rounded-full bg-emerald-500" title="Vaba" />}
+                      {allBlocked && <span className="h-2 w-2 rounded-full bg-slate-400" title="Blokeeritud" />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={goNextWeek}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
         </section>
 
-        {error ? <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-4">
-            <article className="admin-panel rounded-3xl p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[#111827]">1. Vali paev</h2>
-                <span className="text-xs text-[#6b7280]">Jargmised 14 paeva</span>
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Zone 2: Main slot workspace */}
+          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-slate-800">
+                {selectedDayLabel}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void applyPresetDay(true)}
+                  disabled={isSaving}
+                  className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Täida tööpäev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void applyPresetDay(false)}
+                  disabled={isSaving}
+                  className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Tühjenda
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkModalOpen(true)}
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  Lisa ajad
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-                {days.map((day) => {
-                  const isSelected = day.iso === selectedDate;
-                  return (
-                    <button
-                      key={day.iso}
-                      onClick={() => {
-                        setSelectedDate(day.iso);
-                        if (!selectedTime) setSelectedTime(initialTimeRef.current);
-                      }}
-                      className={`rounded-2xl border px-3 py-2 text-left transition ${
-                        isSelected ? 'border-[#9ca3af] bg-[#f9fafb] shadow-[0_10px_20px_-18px_rgba(15,23,42,0.6)]' : 'border-[#e5e7eb] bg-white'
-                      }`}
-                    >
-                      <p className="text-[11px] uppercase tracking-[0.12em] text-[#6b7280]">{day.label}</p>
-                      <p className="text-xl font-semibold text-[#111827]">{day.day}</p>
-                      <p className="text-[11px] text-[#6b7280]">{day.month}</p>
-                      {day.isToday ? <p className="mt-1 text-[10px] font-semibold text-[#374151]">TANA</p> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
+            </div>
 
-            <article className="admin-panel rounded-3xl p-5">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold text-[#111827]">2. Muuda aegu ({selectedDate})</h2>
-                <div className="flex gap-2">
-                  <button onClick={() => void applyPresetDay(true)} disabled={isSaving} className="rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-3 py-2 text-xs font-semibold text-[#374151] disabled:opacity-50">
-                    Taida toopaev
-                  </button>
-                  <button onClick={() => void applyPresetDay(false)} disabled={isSaving} className="rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-xs font-semibold text-[#374151] disabled:opacity-50">
-                    Tuhjenda paev
-                  </button>
-                </div>
-              </div>
-
-              {isLoading ? <p className="text-sm text-[#4b5563]">Laen aegu...</p> : null}
-
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
-                {timeGrid.map((time) => {
-                  const state = slotState(time);
-                  const isSelected = selectedTime === time;
-                  const booking = bookedMap.get(time);
-                  const stateLabel = state === 'booked' ? 'Broneeritud' : state === 'sos' ? 'SOS' : state === 'free' ? 'Vaba' : 'Blokeeritud';
-                  return (
-                    <button
-                      key={time}
-                      onClick={() => {
-                        setSelectedTime(time);
-                        if (state !== 'booked') void toggleSlot(time);
-                      }}
-                      className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
-                        state === 'booked'
-                          ? 'border-rose-200 bg-rose-50 text-rose-700'
-                          : state === 'sos'
-                            ? 'border-amber-200 bg-amber-50 text-amber-700'
-                            : state === 'free'
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                              : 'border-slate-300 bg-slate-100 text-slate-700'
-                      } ${isSelected ? 'ring-2 ring-[#9ca3af]' : ''}`}
-                    >
-                      <p className="font-semibold">{time}</p>
-                      <p className="text-[11px]">{stateLabel}</p>
-                      {state === 'booked' && booking ? <p className="truncate text-[11px]">{booking.clientName}</p> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
-          </div>
-
-          <article className="admin-panel rounded-3xl p-5">
-            <h2 className="text-lg font-semibold text-[#111827]">3. Valitud aeg</h2>
-            {!selectedTime ? (
-              <p className="mt-2 text-sm text-[#4b5563]">Vali vasakult kellaaeg, et muuta selle olekut.</p>
+            {isLoading ? (
+              <div className="py-20 text-center text-sm text-slate-500">Laen aegu...</div>
             ) : (
-              <div className="mt-3 space-y-3">
-                <div className="rounded-xl border border-[#d1d5db] bg-[#f9fafb] p-3">
-                  <p className="text-sm font-semibold text-[#111827]">{selectedDate} kell {selectedTime}</p>
-                  <p className="text-xs text-[#6b7280]">Staatus: {slotState(selectedTime)}</p>
-                </div>
-
-                {selectedBooking ? (
-                  <div className="rounded-xl border border-[#d1d5db] bg-white p-3 text-sm text-[#374151]">
-                    <p className="font-semibold">See aeg on juba broneeritud</p>
-                    <p className="mt-1">{selectedBooking.clientName}</p>
-                    <p className="text-xs text-[#6b7280]">{selectedBooking.serviceName}</p>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-[#d1d5db] bg-white p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-sm font-semibold text-[#111827]">SOS valik</p>
-                      <button onClick={() => setSosEnabled((prev) => !prev)} className={`rounded-lg px-2.5 py-1 text-xs font-medium ${sosEnabled ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
-                        {sosEnabled ? 'SOS aktiivne' : 'Lulita SOS sisse'}
-                      </button>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <label className="text-xs text-[#4b5563]">
-                        SOS lisatasu (EUR)
-                        <input type="number" min={0} value={sosSurcharge} onChange={(event) => setSosSurcharge(event.target.value)} className="mt-1 w-full rounded-lg border border-[#d1d5db] px-2 py-1.5 text-sm text-[#374151]" />
-                      </label>
-                      <label className="text-xs text-[#4b5563]">
-                        SOS silt
-                        <select value={sosLabel} onChange={(event) => setSosLabel(event.target.value)} className="mt-1 w-full rounded-lg border border-[#d1d5db] px-2 py-1.5 text-sm text-[#374151]">
-                          {sosLabels.map((label) => (
-                            <option key={label} value={label}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <button onClick={() => void saveSos()} disabled={isSaving} className="mt-3 rounded-lg bg-[#111827] px-3 py-2 text-sm font-medium text-white disabled:opacity-50">
-                      Salvesta SOS
-                    </button>
-                  </div>
+              <div className="relative">
+                {dayTransitioning && (
+                  <div className="absolute inset-0 z-10 rounded-xl bg-gradient-to-r from-transparent via-white/60 to-transparent animate-pulse" aria-hidden />
                 )}
+                <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+                  {timeGrid.map((time) => {
+                    const state = slotState(time);
+                    const isSelected = selectedTime === time || selectedTimes.has(time);
+                    const booking = bookedMap.get(time);
+                    const isBooked = state === 'booked';
+                    const canToggle = !isBooked && (state === 'free' || state === 'blocked');
+                    const isInteractive = !isBooked;
+                    const baseCard = 'flex min-h-[80px] flex-col justify-between rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ';
+                    const stateStyles = isBooked
+                      ? 'cursor-not-allowed border-slate-100 bg-slate-50/95 text-slate-500'
+                      : state === 'sos'
+                        ? 'cursor-pointer border-amber-100 bg-amber-50/40 hover:shadow hover:border-amber-200/80'
+                        : state === 'free'
+                          ? 'cursor-pointer border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-slate-200'
+                          : 'cursor-pointer border-slate-100 bg-slate-50/90 text-slate-500 hover:bg-slate-100/90';
+                    const selectedStyles = isSelected
+                      ? 'ring-2 ring-slate-500 ring-offset-2 shadow-md bg-slate-50/80 border-slate-200'
+                      : '';
+                    return (
+                      <div
+                        key={time}
+                        className={`${baseCard} ${stateStyles} ${selectedStyles}`}
+                        onMouseDown={() => handleSlotMouseDown(time)}
+                        onMouseEnter={() => handleSlotMouseEnter(time)}
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => isInteractive && handleSlotClick(time, e.shiftKey)}
+                            className="min-w-0 flex-1 text-left"
+                          >
+                            <span className={`block text-base font-semibold ${isBooked ? 'text-slate-500' : 'text-slate-800'}`}>{time}</span>
+                            <span className="mt-0.5 block text-xs text-slate-400">{stateLabel(state)}</span>
+                          </button>
+                          {canToggle && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); void setSlotStatus(time, state === 'blocked'); }}
+                              disabled={isSaving}
+                              className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-200/80 hover:text-slate-600 disabled:opacity-50"
+                              title={state === 'blocked' ? 'Tee vabaks' : 'Blokeeri'}
+                            >
+                              {state === 'blocked' ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                            </button>
+                          )}
+                        </div>
+                        {isBooked && booking && (
+                          <span className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+                            <Lock className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{booking.clientName}</span>
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Legend: near grid */}
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 border-t border-slate-100 pt-4">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" title="Vaba aeg">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" /> Vaba
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" title="Blokeeritud">
+                    <span className="h-2 w-2 rounded-full bg-slate-400" /> Blokeeritud
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" title="Broneeritud">
+                    <span className="h-2 w-2 rounded-full bg-rose-400" /> Broneeritud
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" title="SOS">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" /> SOS
+                  </span>
+                </div>
               </div>
             )}
+          </section>
 
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-[#6b7280]">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Vaba
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
-                <span className="h-2 w-2 rounded-full bg-slate-500" /> Blokeeritud
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-1">
-                <span className="h-2 w-2 rounded-full bg-rose-500" /> Broneeritud
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1">
-                <span className="h-2 w-2 rounded-full bg-amber-500" /> SOS
-              </span>
+          {/* Zone 3: Context panel — contextual inspector */}
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
+            {selectedTime && selectedTimes.size <= 1 ? (
+              /* Slot selected: inspector mode */
+              <>
+                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">Valitud aeg</p>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xl font-semibold text-slate-800">{selectedTime}</p>
+                      <p className="text-xs text-slate-500">{selectedDate}</p>
+                      <span className="mt-1 inline-block rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                        {stateLabel(slotState(selectedTime))}
+                      </span>
+                    </div>
+                    {selectedBooking ? (
+                      <div className="rounded-lg border border-rose-100 bg-rose-50/50 p-3">
+                        <p className="text-xs font-medium text-rose-800">Broneeritud</p>
+                        <p className="font-medium text-slate-800">{selectedBooking.clientName}</p>
+                        <p className="text-xs text-slate-600">{selectedBooking.serviceName}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void setSlotStatus(selectedTime, true)}
+                            disabled={isSaving}
+                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+                          >
+                            Vaba
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void setSlotStatus(selectedTime, false)}
+                            disabled={isSaving}
+                            className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
+                          >
+                            Blokeeri
+                          </button>
+                        </div>
+                        <div className="border-t border-[#e5e7eb] pt-3">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-xs font-medium text-slate-600">SOS</span>
+                            <button
+                              type="button"
+                              onClick={() => setSosEnabled((p) => !p)}
+                              className={`rounded-md px-2 py-1 text-xs font-medium transition ${sosEnabled ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}
+                            >
+                              {sosEnabled ? 'Sisse' : 'Välja'}
+                            </button>
+                          </div>
+                          {sosEnabled && (
+                            <>
+                              <label className="block">
+                                <span className="text-[11px] text-slate-500">Lisatasu €</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={sosSurcharge}
+                                  onChange={(e) => setSosSurcharge(e.target.value)}
+                                  className="mt-0.5 w-20 rounded-lg border border-[#e5e7eb] px-2 py-1 text-sm"
+                                />
+                              </label>
+                              <label className="mt-2 block">
+                                <span className="text-[11px] text-slate-500">Silt</span>
+                                <select
+                                  value={sosLabel}
+                                  onChange={(e) => setSosLabel(e.target.value)}
+                                  className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] px-2 py-1 text-sm"
+                                >
+                                  {sosLabels.map((l) => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => void saveSos()}
+                                disabled={isSaving}
+                                className="mt-2 w-full rounded-lg bg-slate-800 py-1.5 text-sm font-medium text-white transition hover:bg-slate-900 disabled:opacity-50"
+                              >
+                                {isSaving ? 'Salvestan...' : 'Salvesta SOS'}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        <div className="border-t border-[#e5e7eb] pt-3">
+                          <button
+                            type="button"
+                            onClick={handleDeleteSlot}
+                            disabled={isSaving}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50/80 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Blokeeri aeg
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* No slot or multi: day summary + working hours + block day */
+              <>
+                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                  <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">Päeva kokkuvõte</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                    <div className="flex flex-col items-center rounded-xl bg-slate-50/80 py-2.5">
+                      <Calendar className="mb-0.5 h-4 w-4 text-slate-500" />
+                      <p className="text-2xl font-semibold tabular-nums text-slate-800">{stats.total}</p>
+                    </div>
+                    <div className="flex flex-col items-center rounded-xl bg-emerald-50/80 py-2.5">
+                      <CheckCircle2 className="mb-0.5 h-4 w-4 text-emerald-600" />
+                      <p className="text-2xl font-semibold tabular-nums text-emerald-800">{stats.free}</p>
+                    </div>
+                    <div className="flex flex-col items-center rounded-xl bg-amber-50/80 py-2.5">
+                      <Zap className="mb-0.5 h-4 w-4 text-amber-600" />
+                      <p className="text-2xl font-semibold tabular-nums text-amber-800">{stats.sos}</p>
+                    </div>
+                    <div className="flex flex-col items-center rounded-xl bg-rose-50/80 py-2.5">
+                      <UserCheck className="mb-0.5 h-4 w-4 text-rose-600" />
+                      <p className="text-2xl font-semibold tabular-nums text-rose-800">{stats.booked}</p>
+                    </div>
+                    <div className="flex flex-col items-center rounded-xl bg-slate-100/80 py-2.5">
+                      <Lock className="mb-0.5 h-4 w-4 text-slate-500" />
+                      <p className="text-2xl font-semibold tabular-nums text-slate-700">{stats.blocked}</p>
+                    </div>
+                  </div>
+                  {selectedTimes.size > 1 && (
+                    <p className="mt-3 text-center text-sm text-slate-500">{selectedTimes.size} aega valitud · kasuta all olevat riba</p>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                  <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-slate-400">
+                    <Settings2 className="h-3.5 w-3.5" />
+                    Fill Your Calendar
+                  </p>
+                  <p className="mb-3 text-xs text-slate-500">
+                    Generate slots intelligently based on service duration and demand patterns.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block">
+                      <span className="text-[11px] text-slate-500">Algus</span>
+                      <select
+                        value={workStart}
+                        onChange={(e) => setWorkStart(e.target.value)}
+                        className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-sm text-slate-800"
+                      >
+                        {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-[11px] text-slate-500">Lõpp</span>
+                      <select
+                        value={workEnd}
+                        onChange={(e) => setWorkEnd(e.target.value)}
+                        className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-sm text-slate-800"
+                      >
+                        {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-slate-50/80 px-3 py-2">
+                    <span className="text-xs text-slate-500">
+                      <span className="font-medium text-slate-600">{workStart}</span>
+                      <span className="mx-1">–</span>
+                      <span className="font-medium text-slate-600">{workEnd}</span>
+                    </span>
+                    <span className="text-sm font-semibold tabular-nums text-slate-700">{workingHoursTimes.length}</span>
+                  </div>
+                  <div className="mt-2 flex gap-0.5 overflow-hidden rounded-md bg-slate-100/80 p-1.5" title={`${workStart} – ${workEnd}`}>
+                    {workingHoursTimes.slice(0, 20).map((t, i) => (
+                      <span key={t} className="h-1.5 flex-1 min-w-0 rounded-sm bg-emerald-400/70" style={{ opacity: 0.4 + (i / 20) * 0.6 }} />
+                    ))}
+                    {workingHoursTimes.length > 20 && <span className="text-[9px] text-slate-400 self-center">+{workingHoursTimes.length - 20}</span>}
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-400">30 min · {workingHoursTimes.length} aega</p>
+                  <button
+                    type="button"
+                    onClick={() => void applyPresetDay(true)}
+                    disabled={isSaving}
+                    className="mt-3 w-full rounded-xl bg-slate-800 py-2.5 text-sm font-medium text-white transition hover:bg-slate-900 disabled:opacity-50"
+                  >
+                    {isSaving ? 'Genereerin...' : 'Täida kalender'}
+                  </button>
+                  {generatorFeedback && (
+                    <p className="mt-2 text-center text-xs font-medium text-emerald-600">{generatorFeedback}</p>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                  {!blockAllConfirm ? (
+                    <button
+                      type="button"
+                      onClick={() => setBlockAllConfirm(true)}
+                      disabled={isSaving}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      <ShieldOff className="h-4 w-4" />
+                      Blokeeri kõik ajad
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-slate-600">Blokeerin kõik vabad ja SOS. Broneeritud jäävad.</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void blockAllDay()}
+                          disabled={isSaving}
+                          className="flex-1 rounded-lg bg-slate-800 py-2 text-sm font-medium text-white transition hover:bg-slate-900 disabled:opacity-50"
+                        >
+                          {isSaving ? '...' : 'Jah'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBlockAllConfirm(false)}
+                          className="rounded-lg border border-[#e5e7eb] py-2 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          Tühista
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </aside>
+        </div>
+
+        {/* Floating bulk action bar */}
+        {selectedTimes.size > 1 && (
+          <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 shadow-lg">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-slate-700">{selectedTimes.size} aega valitud</span>
+              <div className="h-4 w-px bg-slate-200" />
+              <button
+                type="button"
+                onClick={() => void bulkApply('unblock', Array.from(selectedTimes))}
+                disabled={isSaving}
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+              >
+                Vabasta
+              </button>
+              <button
+                type="button"
+                onClick={() => void bulkApply('block', Array.from(selectedTimes))}
+                disabled={isSaving}
+                className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
+              >
+                Blokeeri
+              </button>
+              <button
+                type="button"
+                onClick={() => void bulkApply('sos', Array.from(selectedTimes))}
+                disabled={isSaving}
+                className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:opacity-50"
+              >
+                <Zap className="h-4 w-4" />
+                SOS
+              </button>
+              <div className="h-4 w-px bg-slate-200" />
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
+              >
+                Tühista valik
+              </button>
             </div>
-          </article>
-        </section>
+          </div>
+        )}
+
+        {/* Toast + undo */}
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 shadow-lg">
+            <span className="text-sm text-slate-700">{toastMessage}</span>
+            {toastUndoAction && (
+              <button
+                type="button"
+                onClick={() => void performUndo(toastUndoAction!)}
+                disabled={isSaving}
+                className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+              >
+                Undo
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Bulk add modal */}
+      {bulkModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/20" onClick={() => setBulkModalOpen(false)} aria-hidden />
+          <div className="relative w-full max-w-sm rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-semibold text-slate-800">Lisa ajad</h3>
+            <p className="mt-1 text-sm text-slate-500">Vali vahemik. Lisatakse 30 minuti intervalliga.</p>
+            <div className="mt-4 space-y-3">
+              <label className="block">
+                <span className="text-xs font-medium text-slate-500">Algus</span>
+                <select
+                  value={bulkStart}
+                  onChange={(e) => setBulkStart(e.target.value)}
+                  className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm"
+                >
+                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-slate-500">Lõpp</span>
+                <select
+                  value={bulkEnd}
+                  onChange={(e) => setBulkEnd(e.target.value)}
+                  className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm"
+                >
+                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setBulkModalOpen(false)}
+                className="flex-1 rounded-lg border border-[#e5e7eb] py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Tühista
+              </button>
+              <button
+                type="button"
+                onClick={() => void bulkAddSlots()}
+                disabled={isSaving}
+                className="flex-1 rounded-lg bg-slate-800 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+              >
+                {isSaving ? '...' : 'Lisa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

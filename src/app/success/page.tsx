@@ -1,59 +1,157 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
 import type { TimeSlot } from '@/store/booking-types';
+import { getLocaleFromPathname, withLocale, type LocaleCode } from '@/lib/i18n/locale-path';
+import { clearBookingSession, markBookingSuccessForSession, trackEvent, touchBookingActivity } from '@/lib/analytics-client';
+import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 type PaymentStatus = 'idle' | 'verifying' | 'confirmed' | 'error';
 
+const DEPOSIT_EUROS = 10;
+const FALLBACK_GALLERY = [
+  'https://images.unsplash.com/photo-1604902396830-aca29e19b067?w=400&q=80',
+  'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400&q=80',
+  'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=400&q=80',
+];
+
 function SuccessPageContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { t, language } = useTranslation();
+  const { language } = useTranslation();
   const { text } = useBookingContent();
   const [bookingRef, setBookingRef] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
   const [paymentMessage, setPaymentMessage] = useState<string>('');
+  const [flowType, setFlowType] = useState<'booking' | 'order' | null>(null);
   const [showRepeatOffer, setShowRepeatOffer] = useState(true);
   const [recommendedMaintenanceSlots, setRecommendedMaintenanceSlots] = useState<TimeSlot[]>([]);
+  const [galleryUrls, setGalleryUrls] = useState<string[]>(FALLBACK_GALLERY);
 
   const { selectedService, selectedSlot, totalPrice, totalDuration, reset } = useBookingStore();
 
+  const locale: LocaleCode = getLocaleFromPathname(pathname ?? '') ?? 'et';
+  const L = (path: string) => withLocale(path, locale);
+  // Localization rule: derive from current locale (/en vs /et).
+  const en = locale === 'en';
+
   const copy = useMemo(
     () =>
-      language === 'en'
+      en
         ? {
-            paymentVerifying: 'Verifying payment...',
-            paymentBookingOk: 'Deposit paid successfully. Your appointment is confirmed.',
-            paymentOrderOk: 'Payment completed successfully. Your order has been received.',
-            paymentFail: 'Payment verification failed. Please contact us.',
-            bookingNameFallback: 'Nailify booking',
-            total: 'Total',
-            duration: 'Duration',
-            whatNextA: 'We check your details and prepare your appointment.',
-            whatNextB: 'If needed, we contact you before your visit.',
-            prep: 'Arrive 5 minutes earlier and avoid oily hand creams on the same day.',
-            maintenanceWindowLabel: 'Recommended window',
-            skipRetention: 'Skip for now',
+            paymentVerifying: 'Verifying your payment…',
+            paymentBookingOk: 'Deposit received. Your time is secured.',
+            paymentOrderOk: 'Thank you — your order is on its way.',
+            paymentFail: 'We could not verify this payment. Please contact us.',
+            bookingNameFallback: 'Your appointment',
+            depositPaid: 'Deposit paid',
+            remainingStudio: 'Remaining at studio',
+            studio: 'Mustamäe tee 55, Tallinn',
+            specialist: 'Sandra',
+            headline: 'Your appointment is confirmed',
+            subtext: "We've reserved your time with Sandra. We're excited to see you.",
+            heroHeadline: 'Your time is confirmed ✨',
+            heroSubtext: "We’re waiting for you with Sandra — your beauty moment is now certain.",
+            heroMicroLine: 'Most clients already feel the excitement of their new result right now.',
+            refLabel: 'Reference',
+            summaryDurationLabel: 'Duration',
+            summaryStudioLabel: 'Studio',
+            summaryTechnicianLabel: 'Technician',
+            breakdownServiceTotalLabel: 'Service total',
+            breakdownDepositPaidLabel: 'Deposit paid',
+            breakdownPayAtSalonLabel: 'Pay at salon',
+            depositTrustNote: 'Your deposit protects your time and prevents last-minute cancellations.',
+            calendarHelper: 'You’ll get an automatic reminder before your visit.',
+            secondaryProductsCta: 'View care products',
+            secondaryBookNewCta: 'Book a new time',
+            inspirationTitle: 'Inspiration for your next visit',
+            retentionTitle: 'Plan your next visit',
+            retentionBody:
+              'The best results last 3–4 weeks. Most clients book their next appointment today.',
+            retentionPrimary: 'Book your next appointment',
+            retentionSecondary: 'Not now',
+            footerQuestions: 'Questions? hello@nailify.com',
+            nextTitle: 'What happens next',
+            next1: 'Confirmation sent to you by email',
+            next2: 'Flexible reschedule if plans change',
+            next3: 'Arrive 5 minutes early — we’ll be ready',
+            tipLabel: 'Tip from Sandra',
+            tipBody:
+              'Come with clean nails and skip heavy hand cream that day — it helps your polish last beautifully.',
+            resultsCaption: 'Clients love their results.',
+            addCalendar: 'Add to Calendar',
+            exploreShop: 'Explore products',
+            bookAnother: 'Book another appointment',
+            helpFooter: 'Questions? We’re here — hello@nailify.com',
+            maintenanceTitle: 'Plan your next visit',
+            maintenanceHelper: 'Many clients rebook 3–4 weeks ahead.',
+            bookNext: 'Reserve next slot',
+            skip: 'Not now',
+            orderHeadline: 'Thank you for your order',
+            orderSub: 'We’re preparing everything with care.',
+            backHome: 'Back to home',
           }
         : {
-            paymentVerifying: 'Kontrollime makset...',
-            paymentBookingOk: 'Ettemaks on edukalt tasutud. Sinu aeg on kinnitatud.',
-            paymentOrderOk: 'Makse on edukalt tasutud. Tellimus on vastu voetud.',
-            paymentFail: 'Makse kinnitamine ebaonnestus. Palun vota uhendust.',
-            bookingNameFallback: 'Nailify broneering',
-            total: 'Kokku',
-            duration: 'Kestus',
-            whatNextA: 'Kontrollime sinu andmed ule ja valmistame visiidi ette.',
-            whatNextB: 'Kui vaja, votame enne visiiti uhendust.',
-            prep: 'Tule 5 minutit varem ja vali samal paeval kergem kaehooldus.',
-            maintenanceWindowLabel: 'Soovituslik vahemik',
-            skipRetention: 'Praegu mitte',
+            paymentVerifying: 'Kontrollime makset…',
+            paymentBookingOk: 'Ettemaks laekus. Sinu aeg on kindlustatud.',
+            paymentOrderOk: 'Aitäh — tellimus on teele pandud.',
+            paymentFail: 'Makset ei õnnestunud kinnitada. Palun võta ühendust.',
+            bookingNameFallback: 'Sinu aeg',
+            depositPaid: 'Ettemaks tasutud',
+            remainingStudio: 'Kohapeal tasuda',
+            studio: 'Mustamäe tee 55, Tallinn',
+            specialist: 'Sandra',
+            headline: 'Sinu aeg on kinnitatud',
+            subtext: 'Oleme sulle aja broneerinud Sandraga. Ootame sind!',
+            heroHeadline: 'Sinu aeg on kinnitatud ✨',
+            heroSubtext: 'Ootame sind Sandraga — sinu iluhetk on nüüd kindel.',
+            heroMicroLine: 'Enamus kliente tunneb juba praegu elevust oma uue tulemuse üle.',
+            refLabel: 'Viide',
+            summaryDurationLabel: 'Kestus',
+            summaryStudioLabel: 'Stuudio',
+            summaryTechnicianLabel: 'Tehnik',
+            breakdownServiceTotalLabel: 'Teenuse koguhind',
+            breakdownDepositPaidLabel: 'Ettemaks tasutud',
+            breakdownPayAtSalonLabel: 'Maksta salongis',
+            depositTrustNote: 'Ettemaks kaitseb sinu aega ja väldib viimase hetke tühistamisi.',
+            calendarHelper: 'Saad automaatse meeldetuletuse enne visiiti.',
+            secondaryProductsCta: 'Vaata hooldustooteid',
+            secondaryBookNewCta: 'Broneeri uus aeg',
+            inspirationTitle: 'Inspiratsioon sinu järgmiseks külastuseks',
+            retentionTitle: 'Planeeri järgmine külastus',
+            retentionBody:
+              'Parim tulemus püsib 3–4 nädalat. Enamus kliente broneerib järgmise aja juba täna.',
+            retentionPrimary: 'Broneeri järgmine aeg',
+            retentionSecondary: 'Mitte praegu',
+            footerQuestions: 'Küsimused? hello@nailify.com',
+            nextTitle: 'Mis edasi saab',
+            next1: 'Saadame kinnituse e-postile',
+            next2: 'Vajadusel saad aega paindlikult muuta',
+            next3: 'Tule 5 minutit varem — oleme valmis',
+            tipLabel: 'Nõuanne Sandralt',
+            tipBody:
+              'Tule puhaste küüntega ja väldi sel päeval raskeid kreeme — nii püsib viimistlus kauem kaunis.',
+            resultsCaption: 'Kliendid on tulemustega väga rahul.',
+            addCalendar: 'Lisa kalendrisse',
+            exploreShop: 'Avasta tooted',
+            bookAnother: 'Broneeri uus aeg',
+            helpFooter: 'Küsimused? hello@nailify.com',
+            maintenanceTitle: 'Planeeri järgmine külastus',
+            maintenanceHelper: 'Paljud kliendid broneerivad 3–4 nädala ette.',
+            bookNext: 'Broneeri järgmine aeg',
+            skip: 'Mitte praegu',
+            orderHeadline: 'Aitäh tellimuse eest',
+            orderSub: 'Valmistame kõike hoolega ette.',
+            backHome: 'Tagasi avalehele',
           },
-    [language]
+    [en]
   );
 
   const nextBookingSuggestion = useMemo(() => {
@@ -66,12 +164,12 @@ function SuccessPageContent() {
     end.setDate(base.getDate() + targetDays);
     return {
       startDate: start.toISOString().slice(0, 10),
-      label: `${start.toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString(
-        language === 'en' ? 'en-GB' : 'et-EE',
+      label: `${start.toLocaleDateString(en ? 'en-GB' : 'et-EE', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(
+        en ? 'en-GB' : 'et-EE',
         { day: 'numeric', month: 'short' }
       )}`,
     };
-  }, [selectedSlot, language, text]);
+  }, [selectedSlot, en, text]);
 
   useEffect(() => {
     setBookingRef(`NF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
@@ -82,6 +180,24 @@ function SuccessPageContent() {
       reset();
     };
   }, [reset]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/gallery');
+        if (!res.ok) return;
+        const data = (await res.json()) as { images?: { imageUrl: string }[] };
+        const urls = (data.images ?? [])
+          .map((i) => i.imageUrl)
+          .filter(Boolean)
+          .slice(0, 3);
+        if (urls.length >= 3) setGalleryUrls(urls);
+        else if (urls.length > 0) setGalleryUrls([...urls, ...FALLBACK_GALLERY].slice(0, 3));
+      } catch {
+        /* keep fallbacks */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
@@ -101,12 +217,47 @@ function SuccessPageContent() {
         if (!response.ok) throw new Error('Payment verification failed');
         if (!isMounted) return;
         setPaymentStatus('confirmed');
+        setFlowType(type);
         setPaymentMessage(type === 'booking' ? copy.paymentBookingOk : copy.paymentOrderOk);
+        touchBookingActivity();
+        if (type === 'booking') {
+          markBookingSuccessForSession();
+          trackBehaviorEvent('payment_success', {
+            serviceId: selectedService?.id,
+            slotId: selectedSlot?.id,
+            price: typeof totalPrice === 'number' ? totalPrice : undefined,
+          });
+          trackEvent({
+            eventType: 'booking_success',
+            step: 6,
+            serviceId: selectedService?.id,
+            slotId: selectedSlot?.id,
+            metadata: {
+              source: 'stripe_confirm',
+              totalPrice: typeof totalPrice === 'number' ? totalPrice : null,
+              totalDuration: typeof totalDuration === 'number' ? totalDuration : null,
+              deposit: DEPOSIT_EUROS,
+              remaining: typeof totalPrice === 'number' ? Math.max(0, Number((totalPrice - DEPOSIT_EUROS).toFixed(2))) : null,
+              serviceName: selectedService?.name ?? null,
+            },
+          });
+          trackFunnelEvent({
+            event: 'payment_success',
+            serviceId: selectedService?.id,
+            slotId: selectedSlot?.id,
+            metadata: { totalPrice, totalDuration, deposit: DEPOSIT_EUROS },
+            language,
+          });
+          clearBookingSession();
+        } else {
+          trackBehaviorEvent('shop_payment_success');
+        }
       } catch (error) {
         console.error('Stripe confirm error:', error);
         if (!isMounted) return;
         setPaymentStatus('error');
         setPaymentMessage(copy.paymentFail);
+        trackBehaviorEvent('payment_failed', { reason: error instanceof Error ? error.message : 'verification_failed' });
       }
     };
 
@@ -151,7 +302,7 @@ function SuccessPageContent() {
     if (selectedService?.id) params.set('service', selectedService.id);
     if (nextBookingSuggestion.startDate) params.set('date', nextBookingSuggestion.startDate);
     if (selectedSlot?.time) params.set('time', selectedSlot.time);
-    router.push(`/book?${params.toString()}`);
+    router.push(`${L('/book')}?${params.toString()}`);
   };
 
   const handleRecommendedMaintenance = (slot: TimeSlot) => {
@@ -159,11 +310,17 @@ function SuccessPageContent() {
     if (selectedService?.id) params.set('service', selectedService.id);
     params.set('date', slot.date);
     params.set('time', slot.time);
-    router.push(`/book?${params.toString()}`);
+    router.push(`${L('/book')}?${params.toString()}`);
   };
 
-  const mapUrl = 'https://maps.google.com/?q=Mustam%C3%A4e,+Tallinn';
-  const instagramUrl = 'https://instagram.com/';
+  const handleInspirationTap = () => {
+    if (recommendedMaintenanceSlots[0]) {
+      handleRecommendedMaintenance(recommendedMaintenanceSlots[0]);
+      return;
+    }
+    handleNextBooking();
+  };
+
   const calendarUrl = useMemo(() => {
     if (!selectedSlot || !selectedService) return '';
     const start = new Date(`${selectedSlot.date}T${selectedSlot.time}:00`);
@@ -174,223 +331,371 @@ function SuccessPageContent() {
         .toISOString()
         .replace(/[-:]/g, '')
         .split('.')[0] + 'Z';
-    const title = encodeURIComponent(`Nailify - ${selectedService.name}`);
-    const details = encodeURIComponent(language === 'en' ? 'Booked with Sandra at Mustamae studio.' : 'Broneering Sandraga Mustamäe stuudios.');
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${toGCal(start)}/${toGCal(end)}&details=${details}&location=Mustam%C3%A4e%2C+Tallinn`;
-  }, [selectedService, selectedSlot, totalDuration, language]);
+    const title = encodeURIComponent(`Nailify — ${selectedService.name}`);
+    const details = encodeURIComponent(
+      en ? 'Appointment with Sandra at Nailify Mustamäe.' : 'Aeg Sandraga Nailify Mustamäe stuudios.'
+    );
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${toGCal(start)}/${toGCal(end)}&details=${details}&location=${encodeURIComponent(copy.studio)}`;
+  }, [selectedService, selectedSlot, totalDuration, en, copy.studio]);
 
-  return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#fffdfa_0%,#fff5fa_42%,#f7efe9_100%)] px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl">
-        <section className="success-shimmer mb-5 rounded-[28px] border border-[#ead5e1] bg-white/92 p-7 text-center shadow-[0_28px_46px_-30px_rgba(110,66,95,0.38)]">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#f2f9f0]">
-            <svg className="h-8 w-8 text-[#3f8b58]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M5 13l4 4L19 7" />
+  const remainingStudio = Math.max(0, Math.round((totalPrice - DEPOSIT_EUROS) * 100) / 100);
+  const checkoutType = searchParams.get('type');
+  const isOrderCheckoutFlow = checkoutType === 'order';
+  const isBookingView =
+    !isOrderCheckoutFlow &&
+    (flowType === 'booking' ||
+      (flowType === null && (checkoutType === 'booking' || (!checkoutType && Boolean(selectedSlot)))));
+
+  const serviceDisplayName = selectedService
+    ? en
+      ? selectedService.nameEn ?? selectedService.name
+      : selectedService.nameEt ?? selectedService.name
+    : '';
+
+  const durationDisplayMin = totalDuration || selectedService?.duration || 0;
+
+  if (paymentStatus === 'error') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#faf8f6] px-4 py-16">
+        <div className="max-w-md rounded-2xl border border-[#e8ddd8] bg-white p-8 text-center shadow-sm">
+          <p className="text-[#5c4a52]">{paymentMessage}</p>
+          <button
+            type="button"
+            onClick={() => router.push(L('/'))}
+            className="mt-6 rounded-full bg-[#c24d86] px-6 py-3 text-sm font-semibold text-white"
+          >
+            {copy.backHome}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (flowType === 'order' && paymentStatus === 'confirmed') {
+    return (
+      <div className="min-h-screen bg-[#faf9f7] px-4 pb-36 pt-12 sm:px-6 sm:pb-12 sm:pt-16">
+        <div className="mx-auto max-w-md text-center">
+          <div className="success-check-ring mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f5eeef]">
+            <svg className="success-check-icon h-10 w-10 text-[#b85c8a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-3xl font-semibold tracking-[-0.02em] text-[#352936]">{text('success_headline', language === 'en' ? 'Great, your appointment is confirmed!' : 'Suureparane, sinu aeg on kinnitatud!')}</h1>
-          <p className="mx-auto mt-2 max-w-[52ch] text-sm text-[#6d5a68]">
-            {text('success_subheadline', language === 'en' ? 'See you at the studio. We will also send your confirmation shortly.' : 'Kohtumiseni stuudios. Saadame peagi ka kinnituse.')}
+          <h1 className="font-brand text-2xl font-semibold text-[#2a2228]">{copy.orderHeadline}</h1>
+          <p className="mt-3 text-[#7a6d74]">{copy.orderSub}</p>
+          <p className="mt-2 text-xs text-[#a8989e]">
+            {copy.refLabel}: {bookingRef}
           </p>
-          <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-[#b27f9f]">
-            {t('success.ref')}: {bookingRef}
-          </p>
-        </section>
-
-        {(paymentStatus === 'verifying' || paymentStatus === 'confirmed' || paymentStatus === 'error') && (
-          <section
-            className={`mb-5 rounded-2xl border p-4 text-sm ${
-              paymentStatus === 'confirmed'
-                ? 'border-green-200 bg-green-50 text-green-700'
-                : paymentStatus === 'error'
-                  ? 'border-red-200 bg-red-50 text-red-700'
-                  : 'border-blue-200 bg-blue-50 text-blue-700'
-            }`}
+          <button
+            type="button"
+            onClick={() => router.push(L('/shop'))}
+            className="mt-10 w-full rounded-full bg-[linear-gradient(135deg,#9c4d72_0%,#c24d86_50%,#a93d71_100%)] py-4 text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.45)]"
           >
-            {paymentStatus === 'verifying' ? copy.paymentVerifying : paymentMessage}
-          </section>
+            {copy.exploreShop}
+          </button>
+          <button type="button" onClick={() => router.push(L('/'))} className="mt-4 text-sm font-medium text-[#9d7a8a] underline underline-offset-2">
+            {copy.backHome}
+          </button>
+        </div>
+        <style jsx>{successStyles}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#faf9f7] pb-40 pt-8 sm:px-4 sm:pb-12 sm:pt-12 lg:pt-16">
+      <div className="mx-auto flex max-w-lg flex-col items-center px-4 sm:max-w-xl">
+        {paymentStatus === 'verifying' && (
+          <p className="mb-6 text-center text-sm text-[#8a7c84]">{copy.paymentVerifying}</p>
         )}
 
-        <section className="mb-5 rounded-[26px] border border-[#ead9cf] bg-[#fffaf7] p-6 shadow-[0_24px_38px_-34px_rgba(90,62,48,0.46)]">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#b08476]">{text('success_summary_title', language === 'en' ? 'Your booking details' : 'Sinu broneering')}</p>
-          <div className="mt-2 border-b border-[#efdfd6] pb-4">
-            <h2 className="text-lg font-semibold text-[#3d3028]">{selectedService?.name ?? copy.bookingNameFallback}</h2>
-            <p className="text-sm text-[#6f5f55]">
-              {selectedSlot
-                ? `${new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'long', day: 'numeric', month: 'long' })} ${t('confirm.at')} ${selectedSlot.time}`
-                : t('success.confirmed')}
-            </p>
-          </div>
-          <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-            <div className="rounded-xl border border-[#ecdcd2] bg-white px-3 py-2">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#ac8a7b]">{copy.total}</p>
-              <p className="mt-1 font-semibold text-[#5a483f]">EUR {totalPrice || selectedService?.price || 35}</p>
-            </div>
-            <div className="rounded-xl border border-[#ecdcd2] bg-white px-3 py-2">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#ac8a7b]">{copy.duration}</p>
-              <p className="mt-1 font-semibold text-[#5a483f]">{totalDuration || selectedService?.duration || 45} {t('common.minutes')}</p>
-            </div>
-          </div>
-          <div className="mt-2 rounded-xl border border-[#ecdcd2] bg-white px-3 py-2 text-sm text-[#5a483f]">
-            <span className="text-xs uppercase tracking-[0.14em] text-[#ac8a7b]">{text('success_technician_label', language === 'en' ? 'Technician' : 'Tehnik')}</span>
-            <p className="mt-1 font-semibold">Sandra</p>
-          </div>
-        </section>
+        {paymentStatus === 'confirmed' && isBookingView && (
+          <p className="mb-4 text-center text-sm text-[#9d8a96]">{paymentMessage}</p>
+        )}
 
-        <section className="mb-5 rounded-2xl border border-[#ebdfd7] bg-white p-5">
-          <p className="text-sm font-semibold text-[#4f3f46]">{text('success_next_steps_title', language === 'en' ? 'What happens next' : 'Mis juhtub jargmisena')}</p>
-          <p className="mt-1 text-sm text-[#6f5a6a]">{text('success_next_steps_helper', language === 'en' ? 'We review your details and prepare your appointment. We contact you if needed.' : 'Kontrollime andmed ule ja valmistame visiidi ette. Vajadusel votame uhendust.')}</p>
-          <ul className="mt-3 space-y-1 text-sm text-[#6f5a6a]">
-            <li>{copy.whatNextA}</li>
-            <li>{copy.whatNextB}</li>
-            <li>{copy.prep}</li>
-          </ul>
-        </section>
+        <div className="success-check-ring mb-8 flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-full bg-[#f3ecee] shadow-[0_12px_32px_-20px_rgba(194,77,134,0.2)]">
+          <svg
+            className="success-check-icon h-11 w-11 text-[#b85c8a]"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.65}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
 
-        {showRepeatOffer && (
-          <section className="mb-6 rounded-[30px] border border-[#e8c9da] bg-[linear-gradient(135deg,#fff8fc_0%,#ffeef7_55%,#ffe6f3_100%)] p-6 shadow-[0_30px_42px_-30px_rgba(126,58,98,0.45)]">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#b06b8f]">Next maintenance</p>
-            <p className="mt-2 text-xl font-semibold text-[#4f3344]">
-              {text('success_retention_title', text('repeat_booking_title', language === 'en' ? 'Would you like to reserve your next maintenance appointment?' : 'Soovid jargmise hoolduse juba ette broneerida?'))}
-            </p>
-            <p className="mt-2 text-sm text-[#6e4f62]">
-              {text('success_retention_helper', text('repeat_booking_helper', language === 'en' ? 'We recommend planning your next maintenance visit in 3-4 weeks.' : 'Soovitame hooldusaja planeerida 3-4 nadala parast.'))}
-            </p>
-            <div className="mt-3 rounded-xl border border-[#efd5e2] bg-white/85 px-3 py-2 text-sm text-[#6e4f62]">
-              <span className="font-semibold">{copy.maintenanceWindowLabel}:</span> {nextBookingSuggestion.label}
-            </div>
-            {recommendedMaintenanceSlots.length > 0 && (
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                {recommendedMaintenanceSlots.map((slot) => (
-                  <button
-                    key={`future-${slot.id}`}
-                    type="button"
-                    onClick={() => handleRecommendedMaintenance(slot)}
-                    className="rounded-xl border border-[#efd5e2] bg-white px-3 py-2 text-left text-sm text-[#5e4554] hover:bg-[#fff7fc]"
-                  >
-                    <p className="font-semibold">
-                      {new Date(`${slot.date}T00:00:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
-                        day: 'numeric',
-                        month: 'short',
-                      })}
+        <h1 className="success-stagger-1 text-center font-brand text-[1.75rem] font-semibold leading-tight tracking-tight text-[#2a2228] sm:text-[2rem] sm:text-[2.15rem]">
+          {isBookingView ? copy.heroHeadline : copy.orderHeadline}
+        </h1>
+        <p className="success-stagger-2 mx-auto mt-3 max-w-[34ch] text-center text-[15px] leading-relaxed text-[#6d6268]">
+          {isBookingView ? copy.heroSubtext : copy.orderSub}
+        </p>
+        {isBookingView ? (
+          <p className="success-stagger-3 mt-4 text-center text-[14px] font-medium text-[#7a6d74]">
+            {copy.heroMicroLine}
+          </p>
+        ) : (
+          <p className="mt-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-[#c9aeb8]">
+            {copy.refLabel} · {bookingRef}
+          </p>
+        )}
+
+        {isBookingView && selectedService && (
+          <>
+            <section className="success-stagger-4 mt-10 w-full rounded-[22px] border border-[#ebe6e3] bg-white p-5 shadow-[0_20px_48px_-32px_rgba(45,35,40,0.12)] sm:p-6">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">
+                      {en ? 'Booking summary' : 'Broneeringu kokkuvõte'}
                     </p>
-                    <p>{slot.time}</p>
+                    <p className="mt-2 text-[16px] font-semibold text-[#2f282c]">{serviceDisplayName}</p>
+                    {selectedSlot && (
+                      <p className="mt-1 text-[14px] font-medium text-[#7a6d74]">
+                        {new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}{' '}
+                        · {selectedSlot.time}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#a8989e]">{copy.summaryDurationLabel}</p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#2f282c]">{durationDisplayMin} min</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#a8989e]">{copy.summaryStudioLabel}</p>
+                    <p className="mt-1 text-[13px] font-medium text-[#5d5258]">{copy.studio}</p>
+                  </div>
+                </div>
+
+                <p className="mt-1 text-[13px] font-medium text-[#3d3539]">
+                  {copy.summaryTechnicianLabel}: {copy.specialist}
+                </p>
+              </div>
+
+              <div className="my-5 h-px bg-[#efeae7]" />
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#6d6268]">{copy.breakdownServiceTotalLabel}</span>
+                  <span className="font-semibold tabular-nums text-[#2f282c]">
+                    €{typeof totalPrice === 'number' ? totalPrice : selectedService.price}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#6d6268]">{copy.breakdownDepositPaidLabel}</span>
+                  <span className="font-semibold tabular-nums text-[#b04b80]">€{DEPOSIT_EUROS}</span>
+                </div>
+
+                <div className="rounded-xl border border-[#f0d6e3] bg-[#fff4fb] px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-semibold text-[#6a3b57]">{copy.breakdownPayAtSalonLabel}</span>
+                    <span className="text-[15px] font-bold tabular-nums text-[#b04b80]">€{remainingStudio}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs font-medium leading-relaxed text-[#7a6d74]">{copy.depositTrustNote}</p>
+            </section>
+
+            <section className="success-stagger-5 mt-8 w-full">
+              <a
+                href={calendarUrl || '#'}
+                target="_blank"
+                rel="noreferrer"
+                className={`block w-full rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] py-4 text-center text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.4)] ${
+                  !calendarUrl ? 'pointer-events-none opacity-40' : ''
+                }`}
+              >
+                {copy.addCalendar}
+              </a>
+              <p className="mt-2 text-center text-xs font-medium text-[#a8989e]">{copy.calendarHelper}</p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => router.push(L('/shop'))}
+                  className="rounded-full border-2 border-[#e0d5d9] bg-white py-3.5 text-[15px] font-semibold text-[#5d4a56] hover:bg-[#fff7fc] transition-colors duration-200"
+                >
+                  {copy.secondaryProductsCta}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextBooking}
+                  className="rounded-full border border-[#eadce5] bg-[#fffcfb] py-3.5 text-[15px] font-semibold text-[#8b5c72] hover:bg-[#fff5f8] transition-colors duration-200"
+                >
+                  {copy.secondaryBookNewCta}
+                </button>
+              </div>
+            </section>
+
+            <section className="success-stagger-6 mt-10 w-full">
+              <h2 className="text-left text-[13px] font-semibold tracking-tight text-[#2f282c]">
+                {copy.inspirationTitle}
+              </h2>
+              <div className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 success-inspiration-strip">
+                {galleryUrls.map((url, i) => (
+                  <button
+                    key={`${url}-${i}`}
+                    type="button"
+                    onClick={handleInspirationTap}
+                    className="success-inspiration-card group relative h-[128px] w-[168px] shrink-0 snap-start overflow-hidden rounded-2xl border border-[#ebe6e3] bg-[#f5f0ed] transition-shadow duration-200 hover:shadow-[0_18px_44px_-24px_rgba(194,77,134,0.35)]"
+                    aria-label={en ? 'Open related service' : 'Ava seotud teenus'}
+                  >
+                    <Image
+                      src={url}
+                      alt=""
+                      fill
+                      unoptimized
+                      className="object-cover transition-transform duration-300 group-hover:scale-[1.06]"
+                      sizes="168px"
+                    />
                   </button>
                 ))}
               </div>
+            </section>
+
+            {showRepeatOffer && (
+              <section className="success-stagger-7 mt-10 w-full rounded-2xl border border-[#ebe6e3] bg-[#fffcfb] px-5 py-5">
+                <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#b898a4]">{copy.retentionTitle}</h2>
+                <p className="mt-2 text-sm text-[#6d6268]">{copy.retentionBody}</p>
+
+                <button
+                  type="button"
+                  onClick={handleNextBooking}
+                  className="mt-4 w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.4)] hover:shadow-[0_20px_46px_-18px_rgba(194,77,134,0.35)] transition-shadow duration-200"
+                >
+                  {copy.retentionPrimary}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowRepeatOffer(false)}
+                  className="mt-2 w-full text-center text-xs font-semibold text-[#a8989e] hover:text-[#8a7a88] transition-colors duration-200"
+                >
+                  {copy.retentionSecondary}
+                </button>
+              </section>
             )}
-            <button
-              onClick={handleNextBooking}
-              className="cta-premium mt-4 w-full rounded-xl bg-[#c24d86] py-3.5 text-sm font-semibold text-white shadow-[0_18px_30px_-20px_rgba(141,60,108,0.62)] hover:bg-[#a93d71]"
-            >
-              {text('repeat_booking_button', language === 'en' ? 'Book next appointment' : 'Broneeri jargmine aeg')}
-            </button>
-            <button
-              onClick={() => setShowRepeatOffer(false)}
-              className="mt-2 w-full rounded-xl border border-[#e5d5cb] bg-white py-2.5 text-xs font-medium text-[#7d685d]"
-            >
-              {text('repeat_booking_skip', copy.skipRetention)}
-            </button>
-          </section>
+          </>
         )}
 
-        <section className="mb-6 rounded-2xl border border-[#ead9cf] bg-white p-5">
-          <p className="text-sm font-semibold text-[#4f3f46]">
-            {text('success_upsell_title', language === 'en' ? 'Want to keep the result beautiful for longer?' : 'Soovid tulemust veel kauem hoida?')}
-          </p>
-          <p className="mt-1 text-sm text-[#6f5a6a]">
-            {text('success_upsell_subtitle', language === 'en' ? 'Choose an add-on now to make your next visit even smoother.' : 'Vali sobiv lisa kohe, et jargmine visiit oleks veel sujuvam.')}
-          </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <button onClick={() => router.push('/shop')} className="rounded-xl border border-[#e6d8ce] bg-[#fffaf7] px-3 py-3 text-xs font-semibold text-[#6f5a50] hover:bg-[#fff3ec]">
-              {text('success_upsell_product', language === 'en' ? 'Aftercare products' : 'Jarelhooldustooted')}
-            </button>
-            <button onClick={() => router.push('/book')} className="rounded-xl border border-[#e6d8ce] bg-[#fffaf7] px-3 py-3 text-xs font-semibold text-[#6f5a50] hover:bg-[#fff3ec]">
-              {text('success_upsell_addon', language === 'en' ? 'Nail strengthening add-ons' : 'Kuunte tugevdamise lisad')}
-            </button>
-            <button onClick={() => router.push('/shop')} className="rounded-xl border border-[#e6d8ce] bg-[#fffaf7] px-3 py-3 text-xs font-semibold text-[#6f5a50] hover:bg-[#fff3ec]">
-              {text('success_upsell_gift', language === 'en' ? 'Gift cards' : 'Kinkekaardid')}
+        {!isBookingView && paymentStatus === 'confirmed' && (
+          <div className="mt-10 hidden w-full sm:block">
+            <button
+              type="button"
+              onClick={() => router.push(L('/shop'))}
+              className="w-full rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] py-4 text-[15px] font-semibold text-white"
+            >
+              {copy.exploreShop}
             </button>
           </div>
-        </section>
+        )}
 
-        <section className="grid gap-3 sm:grid-cols-3">
-          <button onClick={() => router.push('/')} className="rounded-xl bg-[#D4A59A] py-3 font-semibold text-white transition hover:bg-[#C47D6D]">
-            {text('success_primary_cta', language === 'en' ? 'Back to homepage' : 'Tagasi avalehele')}
-          </button>
-          <button onClick={() => router.push('/#services')} className="rounded-xl border border-[#D4A59A] bg-white py-3 font-semibold text-[#A06C5F] transition hover:bg-[#FFF8F5]">
-            {text('success_secondary_cta', language === 'en' ? 'View services' : 'Vaata teenuseid')}
-          </button>
-          <button onClick={() => router.push('/#location')} className="rounded-xl border border-[#e3d3ca] bg-white py-3 font-semibold text-[#7d685d] transition hover:bg-[#faf4ef]">
-            {text('success_contact_cta', language === 'en' ? 'Contact the salon' : 'Vota salongiga uhendust')}
-          </button>
-        </section>
-
-        <section className="mt-4 grid gap-3 sm:grid-cols-3">
-          <a
-            href={calendarUrl || '#'}
-            target="_blank"
-            rel="noreferrer"
-            className={`rounded-xl border border-[#e8d7ce] bg-white py-3 text-center text-sm font-semibold text-[#6f5a50] transition hover:bg-[#faf3ef] ${!calendarUrl ? 'pointer-events-none opacity-50' : ''}`}
-          >
-            {language === 'en' ? 'Add to calendar' : 'Lisa kalendrisse'}
-          </a>
-          <a
-            href={mapUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-xl border border-[#e8d7ce] bg-white py-3 text-center text-sm font-semibold text-[#6f5a50] transition hover:bg-[#faf3ef]"
-          >
-            {language === 'en' ? 'Directions' : 'Juhised'}
-          </a>
-          <a
-            href={instagramUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-xl border border-[#e8d7ce] bg-white py-3 text-center text-sm font-semibold text-[#6f5a50] transition hover:bg-[#faf3ef]"
-          >
-            {language === 'en' ? 'Follow on Instagram' : 'Jälgi Instagramis'}
-          </a>
-        </section>
+        <p className="mt-12 text-center text-xs text-[#b5a8ad]">{copy.footerQuestions}</p>
       </div>
 
-      <style jsx>{`
-        .success-shimmer {
-          position: relative;
-          overflow: hidden;
-        }
-        .success-shimmer::after {
-          content: '';
-          position: absolute;
-          inset: -30% auto auto -40%;
-          width: 50%;
-          height: 160%;
-          background: linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.38) 45%, transparent 100%);
-          transform: rotate(12deg);
-          animation: shimmer-pass 2.6s ease-out 1;
-          pointer-events: none;
-        }
-        @keyframes shimmer-pass {
-          from {
-            transform: translateX(0) rotate(12deg);
-            opacity: 0;
-          }
-          15% {
-            opacity: 1;
-          }
-          to {
-            transform: translateX(320%) rotate(12deg);
-            opacity: 0;
-          }
-        }
-      `}</style>
+      <style jsx>{successStyles}</style>
     </div>
   );
 }
 
+const successStyles = `
+  @keyframes success-check-pulse {
+    0% {
+      transform: scale(0.8);
+      opacity: 0;
+      filter: saturate(0.9);
+    }
+    45% {
+      transform: scale(1.08);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+      filter: saturate(1);
+    }
+  }
+
+  .success-check-icon {
+    animation: success-check-pulse 0.85s cubic-bezier(0.22, 0.8, 0.22, 1) both;
+  }
+
+  @keyframes success-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .success-stagger-1 {
+    animation: success-fade-up 520ms ease-out both;
+  }
+  .success-stagger-2 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 80ms;
+  }
+  .success-stagger-3 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 140ms;
+  }
+  .success-stagger-4 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 220ms;
+  }
+  .success-stagger-5 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 280ms;
+  }
+  .success-stagger-6 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 340ms;
+  }
+  .success-stagger-7 {
+    animation: success-fade-up 520ms ease-out both;
+    animation-delay: 410ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .success-check-icon {
+      animation: none;
+    }
+    .success-stagger-1,
+    .success-stagger-2,
+    .success-stagger-3,
+    .success-stagger-4,
+    .success-stagger-5,
+    .success-stagger-6,
+    .success-stagger-7 {
+      animation: none;
+    }
+  }
+
+  .success-inspiration-strip {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+`;
+
 export default function SuccessPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#F5F0EB] p-4 text-[#7d685d]">Laen kinnitust...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[#faf9f7] p-4 text-[#8a7c84]">
+          Loading…
+        </div>
+      }
+    >
       <SuccessPageContent />
     </Suspense>
   );
