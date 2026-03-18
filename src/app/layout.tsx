@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
 import { ClientProviders } from '@/components/providers/ClientProviders';
+import { BehaviorTracking } from '@/components/analytics/BehaviorTracking';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -36,7 +37,10 @@ export default function RootLayout({
   return (
     <html lang="et">
       <body className={`${inter.variable} ${cormorant.variable} antialiased`}>
-        <ClientProviders>{children}</ClientProviders>
+        <ClientProviders>
+          <BehaviorTracking />
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

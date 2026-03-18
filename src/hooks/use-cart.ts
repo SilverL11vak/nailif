@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { trackEvent } from '@/lib/behavior-tracking';
 
 export interface StoredCartItem {
   productId: string;
@@ -55,7 +56,8 @@ export function useCart() {
     writeCart(nextItems);
   }, []);
 
-  const addToCart = useCallback((productId: string, quantity = 1) => {
+  const addToCart = useCallback((productId: string, quantity = 1, price?: number) => {
+    trackEvent('product_add_to_cart', { productId, quantity, price });
     setItems((previous) => {
       const found = previous.find((item) => item.productId === productId);
       const next = found

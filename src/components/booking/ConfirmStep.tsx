@@ -4,7 +4,10 @@ import Image from 'next/image';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
-import { Lock } from 'lucide-react';
+import { CreditCard, Lock, RefreshCw, ShieldCheck, Star } from 'lucide-react';
+import { clearBookingSession, trackEvent, touchBookingActivity } from '@/lib/analytics-client';
+import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 const DEPOSIT_EUROS = 10;
 const LOCK_STORAGE_KEY = 'booking_slot_lock';
@@ -64,8 +67,8 @@ export function ConfirmStep() {
       remaining: en ? 'Remaining at studio' : 'Kohapeal tasuda',
       trustRating: en ? '4.9 rating (1200+ clients)' : '4.9 hinnang (1200+ klienti)',
       trustHygiene: en ? 'Medical hygiene' : 'Meditsiiniline hügieen',
-      trustStripe: en ? 'Secure Stripe' : 'Turvaline Stripe',
-      trustReschedule: en ? 'Free reschedule' : 'Tasuta ümberbroneering',
+      trustStripe: en ? 'Secure Stripe checkout' : 'Turvaline Stripe makse',
+      trustReschedule: en ? 'Free reschedule' : 'Tasuta ümberbroneerimine',
       locked: en ? 'Time locked for you' : 'Aeg sulle lukus',
       resultsCaption: en ? 'Recent results from Sandra' : 'Sandra hiljutised tulemused',
       cta: en ? `Secure my appointment — €${DEPOSIT_EUROS}` : `Kinnita aeg — ${DEPOSIT_EUROS} €`,
@@ -73,6 +76,12 @@ export function ConfirmStep() {
       note1: en ? 'Instant confirmation' : 'Kohene kinnitus',
       note2: en ? 'Flexible reschedule' : 'Paindlik ümberbroneering',
       note3: en ? 'Pay rest at studio' : 'Ülejäänud kohapeal',
+      depositExplain: en
+        ? 'The deposit confirms your reservation. The remaining amount is paid at the studio.'
+        : 'Ettemaks kinnitab broneeringu. Ülejäänud summa tasud stuudios.',
+      cancelExplain: en
+        ? 'Need to change plans? You can reschedule your time later.'
+        : 'Plaanid muutusid? Saad aja hiljem ümber broneerida.',
       toastExpired: en ? 'This time is no longer reserved' : 'See aeg pole enam broneeritud',
       needContact: en ? 'Please complete your details on the previous step.' : 'Palun täida eelmine samm.',
       at: en ? 'at' : 'kell',
@@ -81,6 +90,15 @@ export function ConfirmStep() {
   );
 
   const remainingStudio = Math.max(0, Math.round((totalPrice - DEPOSIT_EUROS) * 100) / 100);
+
+  useEffect(() => {
+    trackBehaviorEvent('booking_payment_view', {
+      serviceId: selectedService?.id,
+      slotId: selectedSlot?.id,
+      depositAmount: DEPOSIT_EUROS,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedService?.id, selectedSlot?.id]);
 
   useEffect(() => {
     void (async () => {
@@ -177,6 +195,21 @@ export function ConfirmStep() {
 
     setIsLoading(true);
     setStatus('confirming');
+    touchBookingActivity();
+    trackBehaviorEvent('payment_started', { paymentMethod: 'stripe' });
+    trackEvent({
+      eventType: 'booking_payment_start',
+      step: 5,
+      serviceId: selectedService.id,
+      slotId: selectedSlot.id,
+    });
+    trackFunnelEvent({
+      event: 'payment_started',
+      serviceId: selectedService.id,
+      slotId: selectedSlot.id,
+      metadata: { totalPrice, totalDuration, source: 'booking_confirm_step' },
+      language,
+    });
 
     try {
       const response = await fetch('/api/bookings/checkout', {
@@ -211,6 +244,14 @@ export function ConfirmStep() {
     } catch (error) {
       console.error('Confirm booking error:', error);
       setStatus('error');
+      trackBehaviorEvent('payment_failed', { reason: error instanceof Error ? error.message : 'checkout_failed' });
+      trackEvent({
+        eventType: 'booking_payment_fail',
+        step: 5,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+      });
+      clearBookingSession();
       setIsLoading(false);
     }
   };
@@ -305,13 +346,28 @@ export function ConfirmStep() {
             <span className="font-medium tabular-nums text-[#3d2f38]">€{remainingStudio}</span>
           </div>
         </div>
+        <div className="mt-4 space-y-1.5 rounded-2xl border border-[#f0e8ed] bg-white px-4 py-3 text-[12px] text-[#6f5d69]">
+          <p className="font-medium text-[#5d4a56]">{copy.depositExplain}</p>
+          <p className="inline-flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
+            {copy.cancelExplain}
+          </p>
+        </div>
       </section>
 
       <div className="mb-6 flex flex-wrap justify-center gap-x-5 gap-y-2 border-y border-[#f0eaee] py-4 text-center text-[11px] font-medium leading-snug text-[#8a7c86] sm:justify-between sm:gap-3 sm:text-left">
-        <span className="min-w-[7.5rem] sm:min-w-0">⭐ {copy.trustRating}</span>
-        <span className="min-w-[7.5rem] sm:min-w-0">🧼 {copy.trustHygiene}</span>
-        <span className="min-w-[7.5rem] sm:min-w-0">🔒 {copy.trustStripe}</span>
-        <span className="min-w-[7.5rem] sm:min-w-0">🔁 {copy.trustReschedule}</span>
+        <span className="inline-flex min-w-[7.5rem] items-center gap-2 sm:min-w-0">
+          <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden /> {copy.trustRating}
+        </span>
+        <span className="inline-flex min-w-[7.5rem] items-center gap-2 sm:min-w-0">
+          <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden /> {copy.trustHygiene}
+        </span>
+        <span className="inline-flex min-w-[7.5rem] items-center gap-2 sm:min-w-0">
+          <CreditCard className="h-4 w-4 text-[#6b5a66]" strokeWidth={1.8} aria-hidden /> {copy.trustStripe}
+        </span>
+        <span className="inline-flex min-w-[7.5rem] items-center gap-2 sm:min-w-0">
+          <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden /> {copy.trustReschedule}
+        </span>
       </div>
 
       <div

@@ -6,9 +6,12 @@ import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
 import type { TimeSlot } from '@/store/booking-types';
-import { DateTimeSlotPill, type SlotPillBadge } from './DateTimeSlotPill';
+import type { SlotPillBadge } from './DateTimeSlotPill';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ShieldCheck, Star } from 'lucide-react';
+import { trackEvent, trackSlotClick, touchBookingActivity } from '@/lib/analytics-client';
+import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 function toIsoDate(date: Date) {
   const year = date.getFullYear();
@@ -85,12 +88,15 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   const [recommendedSlots, setRecommendedSlots] = useState<TimeSlot[]>([]);
   const [slotsByDate, setSlotsByDate] = useState<Record<string, TimeSlot[]>>({});
   const [weekOffset, setWeekOffset] = useState(0);
-  const [justSelectedId, setJustSelectedId] = useState<string | null>(null);
   const [summaryBump, setSummaryBump] = useState(0);
   const [summaryDesktopPulse, setSummaryDesktopPulse] = useState(false);
   const [desktopCtaPulse, setDesktopCtaPulse] = useState(false);
   const [mobileStickyLift, setMobileStickyLift] = useState(false);
   const [slotAreaShake, setSlotAreaShake] = useState(false);
+  const [lockExpiresAt, setLockExpiresAt] = useState<number | null>(null);
+  const [lockRemainingMs, setLockRemainingMs] = useState<number | null>(null);
+  const [reservationToast, setReservationToast] = useState<string | null>(null);
+  const confirmationPanelRef = useRef<HTMLDivElement>(null);
   const continueButtonRef = useRef<HTMLDivElement>(null);
   const dayScrollRef = useRef<HTMLDivElement>(null);
   const summaryDesktopInnerRef = useRef<HTMLDivElement>(null);
@@ -104,23 +110,11 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   const preferredTimeRef = useRef(searchParams.get('time'));
   const initialSelectedDateRef = useRef<Date | null>(selectedDate);
   const initialSelectedSlotIdRef = useRef<string | null>(selectedSlot?.id ?? null);
+  const slotsViewAtRef = useRef<number | null>(null);
+  const hoverStartsRef = useRef<Map<string, number>>(new Map());
   const maxWeekOffset = 12;
 
   const en = language === 'en';
-
-  const pillLabels = useMemo(
-    () => ({
-      recommended: en ? 'Recommended' : 'Soovitus',
-      fastest: en ? 'Fastest booking' : 'Kiireim broneering',
-      popular: en ? 'Most popular' : 'Populaarseim',
-      midday: en ? 'Prime time' : 'Parim aeg',
-      limited: en ? 'Filling fast' : 'Täitub kiiresti',
-      quiet: en ? 'Quiet' : 'Rahulik',
-      available: en ? 'Available' : 'Vaba',
-      selectedLine: en ? 'Your time' : 'Sinu aeg',
-    }),
-    [en]
-  );
 
   const weekDates = useMemo(() => {
     const base = new Date();
@@ -130,6 +124,14 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
   const selectedDateKey = selectedDate ? toIsoDate(selectedDate) : toIsoDate(weekDates[0]);
   const currentSlots = slotsByDate[selectedDateKey] ?? [];
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (currentSlots.length === 0) return;
+    if (slotsViewAtRef.current == null) slotsViewAtRef.current = Date.now();
+    trackBehaviorEvent('booking_slots_view', { slotsCount: currentSlots.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, currentSlots.length]);
 
   const nextAvailableSlot = useMemo(
     () =>
@@ -375,23 +377,56 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
     (slot: TimeSlot) => {
       if (!slot.available) return;
       ignoreTouchGestureUntilRef.current = Date.now() + 450;
+      const prevSlotId = selectedSlot?.id ?? null;
+      const hesitationTime =
+        slotsViewAtRef.current != null ? Math.max(0, Math.round((Date.now() - slotsViewAtRef.current) / 1000)) : undefined;
+      trackBehaviorEvent('slot_selected', {
+        slotId: slot.id,
+        slotTime: slot.time,
+        hesitationTime,
+        urgencyTimerActive: Boolean(lockExpiresAt && lockExpiresAt > Date.now()),
+      });
+      if (prevSlotId && prevSlotId !== slot.id) {
+        trackBehaviorEvent('slot_changed', { fromSlotId: prevSlotId, toSlotId: slot.id });
+      }
+      touchBookingActivity();
+      trackSlotClick(slot.id);
+      trackEvent({
+        eventType: 'booking_slot_selected',
+        step: 2,
+        serviceId: selectedService?.id,
+        slotId: slot.id,
+      });
+      trackFunnelEvent({
+        event: 'slot_clicked',
+        serviceId: selectedService?.id,
+        slotId: slot.id,
+        metadata: { date: slot.date, time: slot.time, source: 'booking_step_2' },
+        language,
+      });
+      const expiresAt = Date.now() + SLOT_LOCK_MS;
       try {
         localStorage.setItem(
           BOOKING_SLOT_LOCK_KEY,
-          JSON.stringify({ slotId: slot.id, expiresAt: Date.now() + SLOT_LOCK_MS })
+          JSON.stringify({ slotId: slot.id, expiresAt })
         );
       } catch {
         /* ignore */
       }
+      setLockExpiresAt(expiresAt);
+      trackBehaviorEvent('slot_lock_started', { slotId: slot.id, countdownSeconds: Math.round(SLOT_LOCK_MS / 1000) });
       selectSlot(slot);
-      setJustSelectedId(slot.id);
       setSummaryBump((k) => k + 1);
-      window.setTimeout(() => setJustSelectedId(null), 320);
       window.setTimeout(() => {
         runAutoScrollAfterSlotSelect();
       }, SLOT_SELECT_SCROLL_DELAY_MS);
+
+      // Conversion: bring the confirmation panel into view.
+      window.setTimeout(() => {
+        confirmationPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, SLOT_SELECT_SCROLL_DELAY_MS + 80);
     },
-    [selectSlot, runAutoScrollAfterSlotSelect]
+    [selectSlot, runAutoScrollAfterSlotSelect, selectedService?.id, language, selectedSlot?.id, lockExpiresAt]
   );
 
   const handleContinue = () => {
@@ -400,6 +435,111 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
+
+  // Psychological reservation lock timer (UI only).
+  // - Persisted in localStorage so it doesn't reset on re-renders.
+  // - Tied to selectedSlot id; if user switches slot, it gets a new 5-minute window.
+  useEffect(() => {
+    if (!selectedSlot) {
+      setLockExpiresAt(null);
+      setLockRemainingMs(null);
+      return;
+    }
+
+    let initialExpires: number | null = null;
+    try {
+      const raw = localStorage.getItem(BOOKING_SLOT_LOCK_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { slotId?: string; expiresAt?: number };
+        if (parsed?.slotId === selectedSlot.id && typeof parsed.expiresAt === 'number') {
+          initialExpires = parsed.expiresAt;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const nextExpires = initialExpires && initialExpires > Date.now() ? initialExpires : lockExpiresAt ?? Date.now() + SLOT_LOCK_MS;
+    setLockExpiresAt(nextExpires);
+
+    let raf: number | null = null;
+    const tick = () => {
+      const remaining = Math.max(0, nextExpires - Date.now());
+      setLockRemainingMs(remaining);
+      raf = window.setTimeout(tick, 1000) as unknown as number;
+    };
+    tick();
+    return () => {
+      if (raf) window.clearTimeout(raf);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSlot?.id]);
+
+  const lockLine = useMemo(() => {
+    if (!selectedSlot || !lockRemainingMs || lockRemainingMs <= 0) return null;
+    const totalSec = Math.floor(lockRemainingMs / 1000);
+    const mm = Math.floor(totalSec / 60);
+    const ss = totalSec % 60;
+    return `${en ? 'Time locked for you' : 'Aeg lukus sinu jaoks'} — ${String(mm).padStart(1, '0')}:${String(ss).padStart(2, '0')}`;
+  }, [selectedSlot, lockRemainingMs, en]);
+
+  const availabilityContext = useMemo(() => {
+    const av = currentSlots.filter((s) => s.available);
+    const count = av.length;
+    if (count === 0) return null;
+    const evening = av.filter((s) => {
+      const h = Number(s.time.split(':')[0] ?? 0);
+      return Number.isFinite(h) && h >= 17;
+    }).length;
+    if (count <= 3) return en ? `Only ${count} slots left today` : `Täna on jäänud ainult ${count} aega`;
+    if (evening > 0 && evening <= 2) return en ? 'Evening nearly full' : 'Õhtused ajad on peaaegu täis';
+    return en ? 'Times fill fast — choose your favourite' : 'Ajad täituvad kiiresti — vali endale sobiv';
+  }, [currentSlots, en]);
+
+  // Reservation expiry (UI-only): if countdown reaches 0, deselect and prompt user.
+  useEffect(() => {
+    if (!selectedSlot) return;
+    if (lockRemainingMs == null) return;
+    if (lockRemainingMs > 0) return;
+
+    trackBehaviorEvent('slot_lock_expired', { slotId: selectedSlot.id });
+    trackFunnelEvent({
+      event: 'slot_abandoned',
+      serviceId: selectedService?.id,
+      slotId: selectedSlot.id,
+      metadata: { reason: 'reservation_expired', date: selectedSlot.date, time: selectedSlot.time },
+      language,
+    });
+
+    try {
+      localStorage.removeItem(BOOKING_SLOT_LOCK_KEY);
+    } catch {
+      // ignore
+    }
+    setReservationToast(en ? 'Reservation expired. Please select again.' : 'Broneering aegus. Palun vali uuesti.');
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('booking_shake_slots', '1');
+    } catch {
+      // ignore
+    }
+    selectSlot(null);
+    const t = window.setTimeout(() => setReservationToast(null), 4800);
+    return () => window.clearTimeout(t);
+  }, [lockRemainingMs, selectedSlot?.id, en, selectSlot, selectedService?.id, language]);
+
+  // Abandonment recovery: warn on leaving while a time is reserved.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const active = Boolean(selectedSlot && lockRemainingMs != null && lockRemainingMs > 0);
+    if (!active) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = en ? 'Your reserved time may be released.' : 'Sinu broneeritud aeg võib vabaneda.';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [selectedSlot?.id, lockRemainingMs, en]);
 
   const jumpToNextAvailable = () => {
     if (!nextAvailableSlot) return;
@@ -451,15 +591,27 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       ? `${selectedService.name.slice(0, 20)}…`
       : selectedService?.name ?? '';
 
-  const daysUntilNext =
-    nextAvailableSlot && selectedDate
-      ? Math.max(0, daysBetween(selectedDate, new Date(`${nextAvailableSlot.date}T12:00:00`)))
-      : null;
-
   const showEmptyDay =
     !isLoading && currentSlots.length > 0 && !currentSlots.some((s) => s.available) && nextAvailableSlot;
 
   const emptyNoSlotsAtAll = !isLoading && currentSlots.length === 0;
+
+  // Funnel analytics: slot list viewed (once per selected date view).
+  useEffect(() => {
+    if (isLoading) return;
+    if (currentSlots.length === 0) return;
+    trackFunnelEvent({
+      event: 'slot_viewed',
+      serviceId: selectedService?.id,
+      metadata: {
+        date: selectedDateKey,
+        slots: currentSlots.length,
+        available: currentSlots.filter((s) => s.available).length,
+      },
+      language,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, selectedDateKey]);
 
   const price = totalPrice || selectedService?.price || 0;
 
@@ -518,9 +670,45 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
   return (
     <div className="animate-fade-in mx-auto max-w-[1100px]">
-      <p className="mb-3 text-center text-[11px] font-medium tracking-wide text-[#b8a8b0] lg:mb-4">
-        {en ? 'Times fill fast — book in advance.' : 'Ajad täituvad kiiresti — broneeri ette.'}
-      </p>
+      {/* Sticky progress + trust strip (Step 2) */}
+      <div className="sticky top-0 z-30 -mx-4 mb-5 border-b border-[#f0e8ec] bg-white/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:border-[#f0e8ec] lg:shadow-[0_10px_30px_-22px_rgba(57,33,52,0.18)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">
+          {en ? 'Step 2 of 3 — Choose Time' : 'Samm 2/3 — Vali aeg'}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] font-medium text-[#7a6a72]">
+          <span className="inline-flex items-center gap-1.5">
+            <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} /> 4.9
+          </span>
+          <span className="h-1 w-1 rounded-full bg-[#d4c8cc]" aria-hidden />
+          <span>{en ? '1200+ clients' : '1200+ klienti'}</span>
+          <span className="h-1 w-1 rounded-full bg-[#d4c8cc]" aria-hidden />
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} />
+            {en ? 'Medical level hygiene' : 'Meditsiiniline hügieen'}
+          </span>
+          {lockLine && (
+            <>
+              <span className="h-1 w-1 rounded-full bg-[#d4c8cc]" aria-hidden />
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[11px] font-semibold text-[#6a3b57]">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c24d86] opacity-50" aria-hidden />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#c24d86]" aria-hidden />
+                </span>
+                {lockLine}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {reservationToast && (
+        <div
+          className="mb-4 rounded-2xl border border-[#f0d6e3] bg-[#fff4fb] px-4 py-3 text-sm font-medium text-[#6a3b57] shadow-[0_14px_34px_-22px_rgba(57,33,52,0.22)]"
+          role="status"
+        >
+          {reservationToast}
+        </div>
+      )}
 
       <div className="lg:grid lg:grid-cols-[minmax(260px,280px)_1fr] lg:items-start lg:gap-10">
         <aside className="mb-8 hidden lg:sticky lg:top-24 lg:mb-0 lg:block">
@@ -641,14 +829,16 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             </span>
           </div>
 
-          <div
-            className={slotAreaShake ? 'booking-slot-area-shake rounded-2xl' : ''}
-            id="booking-datetime-slot-area"
-          >
+          <div className={slotAreaShake ? 'booking-slot-area-shake rounded-2xl' : ''} id="booking-datetime-slot-area">
+          {availabilityContext && !isLoading && currentSlots.length > 0 && (
+            <div className="mb-4 rounded-2xl border border-[#efe0e8] bg-white/80 px-4 py-3 text-sm font-medium text-[#5d4558] shadow-[0_12px_30px_-24px_rgba(57,33,52,0.16)]">
+              {availabilityContext}
+            </div>
+          )}
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
               {Array.from({ length: 12 }).map((_, i) => (
-                <SkeletonBlock key={i} className="h-[52px] rounded-full" />
+                <SkeletonBlock key={i} className="h-[68px] rounded-2xl" />
               ))}
             </div>
           ) : emptyNoSlotsAtAll ? (
@@ -659,15 +849,13 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               {nextAvailableSlot && (
                 <>
                   <p className="mt-3 text-sm text-[#7a6a72]">
-                    {en ? 'Next availability' : 'Järgmine vabadus'}{' '}
+                    {en ? 'Next available time' : 'Järgmine vaba aeg'}:{' '}
                     <span className="font-semibold text-[#b04b80]">
-                      {daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`)) === 0
+                      {daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`)) === 1
                         ? en
-                          ? 'today'
-                          : 'täna'
-                        : en
-                          ? `in ${daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`))} days`
-                          : `${daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`))} päeva pärast`}
+                          ? `tomorrow at ${nextAvailableSlot.time}`
+                          : `homme kell ${nextAvailableSlot.time}`
+                        : `${nextAvailableSlot.date} ${nextAvailableSlot.time}`}
                     </span>
                   </p>
                   <button
@@ -681,43 +869,208 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               )}
             </div>
           ) : showEmptyDay ? (
-            <div className="rounded-2xl border border-[#f0e6ea] bg-[linear-gradient(180deg,#fffdfb_0%,#fff8fc_100%)] px-6 py-8 text-center">
-              <p className="text-sm font-medium text-[#5d4a59]">
-                {en ? 'No times left this day.' : 'Sellel päeval pole vabu aegu.'}
+            <div className="rounded-2xl border border-[#f0e6ea] bg-[linear-gradient(180deg,#fffdfb_0%,#fff8fc_100%)] px-6 py-10 text-center shadow-[0_18px_44px_-30px_rgba(57,33,52,0.16)]">
+              <p className="font-brand text-lg font-semibold text-[#2f2530]">
+                {en ? 'Today is fully booked.' : 'Täna on täis broneeritud.'}
               </p>
-              {daysUntilNext != null && daysUntilNext > 0 && (
-                <p className="mt-2 text-sm text-[#8a7a88]">
-                  {en
-                    ? `Next availability in ${daysUntilNext} day${daysUntilNext === 1 ? '' : 's'}.`
-                    : `Järgmine vabadus ${daysUntilNext} päeva pärast.`}
+              {nextAvailableSlot && (
+                <p className="mt-2 text-sm text-[#7a6a72]">
+                  {en ? 'Next available time' : 'Järgmine vaba aeg'}{' '}
+                  <span className="font-semibold text-[#b04b80]">
+                    {daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`)) === 1
+                      ? en
+                        ? `tomorrow at ${nextAvailableSlot.time}`
+                        : `homme kell ${nextAvailableSlot.time}`
+                      : `${nextAvailableSlot.date} ${nextAvailableSlot.time}`}
+                  </span>
                 </p>
               )}
               <button
                 type="button"
                 onClick={jumpToNextAvailable}
-                className="mt-5 rounded-full border-2 border-[#c24d86] bg-white px-6 py-2.5 text-sm font-semibold text-[#c24d86] transition-colors hover:bg-[#fff5f9]"
+                className="mt-6 inline-flex min-h-[48px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] px-8 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_-12px_rgba(194,77,134,0.45)] transition-transform duration-[160ms] hover:scale-[1.02] active:scale-[0.98]"
               >
-                {en ? 'View next available' : 'Vaata järgmist'}
+                {en ? 'View next day' : 'Vaata järgmist päeva'} →
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
-              {currentSlots.map((slot) => (
-                <DateTimeSlotPill
-                  key={slot.id}
-                  slot={slot}
-                  isSelected={selectedSlot?.id === slot.id}
-                  badge={slotBadges.get(slot.id) ?? null}
-                  labels={pillLabels}
-                  onSelect={handleSlotSelect}
-                  justSelected={justSelectedId === slot.id}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {currentSlots.map((slot) => {
+                  const isSelected = selectedSlot?.id === slot.id;
+                  const badge = slotBadges.get(slot.id) ?? null;
+                  const isAvailable = slot.available;
+                  const dimOthers = Boolean(selectedSlot) && !isSelected;
+                  const hour = Number(slot.time.split(':')[0] ?? 0);
+                  const isEvening = Number.isFinite(hour) && hour >= 17;
+                  const isMorning = Number.isFinite(hour) && hour >= 9 && hour <= 11;
+                  const isMidday = Number.isFinite(hour) && hour >= 12 && hour <= 14;
+                  const eveningAvailable = sortedAvailable.filter((s) => {
+                    const h = Number(s.time.split(':')[0] ?? 0);
+                    return Number.isFinite(h) && h >= 17;
+                  });
+                  const isLastEveningSlot = isEvening && eveningAvailable.length === 1 && eveningAvailable[0]?.id === slot.id;
+
+                  const label =
+                    badge === 'popular'
+                      ? en ? 'Most Popular' : 'Populaarseim'
+                      : isLastEveningSlot
+                        ? en ? 'Last Evening Slot' : 'Viimane õhtune aeg'
+                        : isMorning
+                          ? en ? 'Relaxed Morning' : 'Rahulik hommik'
+                          : isMidday
+                            ? en ? 'Quick Visit' : 'Kiire külastus'
+                            : badge === 'fastest'
+                              ? en ? 'Booked often' : 'Broneeritakse tihti'
+                              : badge === 'limited'
+                                ? en ? 'Almost full' : 'Peaaegu täis'
+                                : badge === 'recommended'
+                                  ? en ? 'Recommended' : 'Soovitus'
+                                  : null;
+
+                  return (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      disabled={!isAvailable}
+                      onClick={() => handleSlotSelect(slot)}
+                      onMouseEnter={() => {
+                        if (typeof window === 'undefined') return;
+                        if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                          hoverStartsRef.current.set(slot.id, Date.now());
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (typeof window === 'undefined') return;
+                        if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                          const start = hoverStartsRef.current.get(slot.id);
+                          if (!start) return;
+                          hoverStartsRef.current.delete(slot.id);
+                          const hoverDuration = Math.max(0, Date.now() - start);
+                          trackBehaviorEvent('slot_hover', {
+                            slotId: slot.id,
+                            slotTime: slot.time,
+                            hoverDuration,
+                          });
+                        }
+                      }}
+                      className={[
+                        'relative min-h-[68px] rounded-2xl border px-4 py-3 text-left transition-all duration-200 motion-reduce:transition-none',
+                        isAvailable
+                          ? 'bg-white shadow-[0_10px_26px_-18px_rgba(57,33,52,0.22)] hover:-translate-y-0.5 hover:shadow-[0_16px_34px_-22px_rgba(57,33,52,0.26)]'
+                          : 'cursor-not-allowed border-[#eeeaeb] bg-[#faf9f9] text-[#b5a8ad] opacity-75',
+                        isSelected
+                          ? 'border-[#e8b8d0] bg-[linear-gradient(135deg,#fff2f9_0%,#ffe9f3_45%,#fffdfc_100%)] ring-2 ring-[#c24d86]/20 scale-[1.03]'
+                          : 'border-[#ebe5e8]',
+                        dimOthers ? 'opacity-80' : '',
+                      ].join(' ')}
+                      aria-pressed={isSelected}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className={`text-[15px] font-semibold tabular-nums ${isSelected ? 'text-[#2f2530]' : 'text-[#2f2530]'}`}>
+                            {slot.time}
+                          </p>
+                          {label && (
+                            <p
+                              className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                                badge === 'popular'
+                                  ? 'bg-amber-50 text-amber-800'
+                                  : isLastEveningSlot
+                                    ? 'bg-[#fff4fb] text-[#8b3b62]'
+                                    : badge === 'limited'
+                                    ? 'bg-rose-50 text-rose-700'
+                                    : 'bg-[#fff2f9] text-[#8b4d6a]'
+                              }`}
+                            >
+                              {label}
+                            </p>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-white shadow-[0_12px_24px_-14px_rgba(194,77,134,0.65)]">
+                            <Check className="h-4 w-4" strokeWidth={2.4} />
+                          </span>
+                        )}
+                      </div>
+                      {isAvailable && (
+                        <p className="mt-2 text-[11px] font-medium text-[#7a6a72]">
+                          {en ? 'Tap to select' : 'Vali aeg'}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Optional subtle popularity signal */}
+              <p className="mt-4 text-center text-[12px] text-[#9a8a94]">
+                {sortedAvailable.length > 0
+                  ? en
+                    ? 'Some times book fastest — choose quickly to secure your preferred slot.'
+                    : 'Mõned ajad broneeritakse kiiremini — vali kiiresti, et kindlustada sobiv aeg.'
+                  : en
+                    ? 'Select a day to see openings.'
+                    : 'Vali päev, et näha vabu aegu.'}
+              </p>
+
+              {/* Safe reassurance */}
+              <div className="mt-4 rounded-2xl border border-[#f0e6ea] bg-white/90 p-4 shadow-[0_16px_40px_-30px_rgba(57,33,52,0.18)]">
+                <p className="text-sm font-semibold text-[#2f2530]">{en ? 'Safe booking' : 'Turvaline broneering'}</p>
+                <ul className="mt-2 space-y-1 text-[13px] text-[#6f6168]">
+                  <li>✓ {en ? 'You can change your time later' : 'Aega saab hiljem muuta'}</li>
+                  <li>✓ {en ? 'Deposit only confirms reservation' : 'Ettemaks kinnitab broneeringu'}</li>
+                  <li>✓ {en ? 'No hidden fees' : 'Peidetud tasusid ei ole'}</li>
+                </ul>
+              </div>
+            </>
           )}
           </div>
 
           <div ref={mobileScrollNudgeRef} className="h-px w-full shrink-0 lg:hidden" aria-hidden />
+
+          {/* Desktop confirmation panel (sticky within flow) */}
+          <div
+            ref={confirmationPanelRef}
+            className="mt-7 hidden lg:block"
+            aria-live="polite"
+          >
+            <div className="sticky bottom-6 rounded-[26px] border border-white/70 bg-white/75 p-5 shadow-[0_26px_66px_-34px_rgba(57,33,52,0.28)] backdrop-blur-xl">
+              <div className="flex items-start justify-between gap-6">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">
+                    {en ? 'Confirm selection' : 'Kinnita valik'}
+                  </p>
+                  <p className="mt-2 truncate font-brand text-xl font-semibold text-[#2f2530]">{selectedService?.name ?? '—'}</p>
+                  <p className="mt-1 text-[14px] font-semibold tabular-nums text-[#c24d86]">{selectedTimeLine}</p>
+                  {selectedService?.duration ? (
+                    <p className="mt-1 text-[13px] text-[#7a6a72]">
+                      {en ? 'Duration' : 'Kestus'}: <span className="font-semibold">{selectedService.duration} {en ? 'min' : 'min'}</span>
+                    </p>
+                  ) : null}
+                  {lockLine ? (
+                    <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[12px] font-semibold text-[#6a3b57]">
+                      <span className="h-2 w-2 rounded-full bg-[#c24d86]" aria-hidden />
+                      {lockLine}
+                    </p>
+                  ) : null}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  disabled={!selectedSlot}
+                  className={`mt-1 inline-flex min-h-[52px] shrink-0 items-center justify-center rounded-2xl px-7 text-[15px] font-semibold transition-all duration-[160ms] ${
+                    selectedSlot
+                      ? 'bg-[linear-gradient(135deg,#1f171d_0%,#2a2228_55%,#1c151b_100%)] text-white shadow-[0_18px_40px_-18px_rgba(31,23,29,0.55)] hover:shadow-[0_20px_46px_-18px_rgba(31,23,29,0.5)] active:scale-[0.99]'
+                      : 'cursor-not-allowed bg-[#ece8ea] text-[#9a9094]'
+                  }`}
+                >
+                  {en ? 'Continue Booking →' : 'Jätka broneerimist →'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -727,29 +1080,37 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[45] h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,252,253,0.92)_50%,#fff9fb_100%)] lg:hidden" />
 
+      {/* Sticky bottom confirmation panel (mobile) */}
       <div className="fixed inset-x-0 bottom-0 z-[50] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
         <div
-          className={`pointer-events-auto flex h-16 w-full max-w-lg items-center gap-3 rounded-full border border-white/70 bg-white/72 px-4 shadow-[0_14px_40px_-14px_rgba(57,33,52,0.28)] backdrop-blur-xl transition-transform duration-[160ms] ease-out motion-reduce:transition-none ${
+          className={`pointer-events-auto w-full max-w-lg overflow-hidden rounded-[22px] border border-white/70 bg-white/72 shadow-[0_18px_48px_-18px_rgba(57,33,52,0.28)] backdrop-blur-xl transition-transform duration-[160ms] ease-out motion-reduce:transition-none ${
             mobileStickyLift ? 'booking-mobile-sticky-lift' : ''
           }`}
         >
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-semibold text-[#2f2530]">{serviceShort}</p>
-            <p className="truncate text-[13px] font-bold tabular-nums text-[#c24d86]">{selectedTimeLine}</p>
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] font-semibold text-[#2f2530]">{serviceShort || (en ? 'Service' : 'Teenus')}</p>
+              <p className="truncate text-[13px] font-bold tabular-nums text-[#c24d86]">{selectedTimeLine}</p>
+              {selectedService?.duration ? (
+                <p className="mt-0.5 text-[11px] font-medium text-[#7a6a72]">
+                  {selectedService.duration} {en ? 'min' : 'min'}
+                </p>
+              ) : null}
+            </div>
+            <button
+              id="booking-sticky-primary-action"
+              type="button"
+              disabled={!selectedSlot}
+              onClick={handleContinue}
+              className={`shrink-0 rounded-2xl px-5 py-3 text-[13px] font-semibold transition-all duration-[160ms] ${
+                selectedSlot
+                  ? 'bg-[linear-gradient(135deg,#1f171d_0%,#2a2228_55%,#1c151b_100%)] text-white shadow-[0_12px_28px_-14px_rgba(31,23,29,0.55)] active:scale-[0.98]'
+                  : 'cursor-not-allowed bg-[#e8e4e6] text-[#a09a9c]'
+              }`}
+            >
+              {en ? 'Continue Booking →' : 'Jätka broneerimist →'}
+            </button>
           </div>
-          <button
-            id="booking-sticky-primary-action"
-            type="button"
-            disabled={!selectedSlot}
-            onClick={handleContinue}
-            className={`shrink-0 rounded-full px-5 py-2.5 text-[13px] font-semibold transition-all duration-[160ms] ${
-              selectedSlot
-                ? 'bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] text-white shadow-[0_8px_24px_-8px_rgba(194,77,134,0.5)] active:scale-[0.98]'
-                : 'cursor-not-allowed bg-[#e8e4e6] text-[#a09a9c]'
-            }`}
-          >
-            {en ? 'Continue' : 'Jätka'}
-          </button>
         </div>
       </div>
 

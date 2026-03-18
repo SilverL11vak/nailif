@@ -13,7 +13,24 @@ import { useTranslation, type Language } from '@/lib/i18n';
 import type { NailStyle } from '@/store/booking-types';
 import type { Product } from '@/lib/catalog';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
-import { Globe, ShoppingBag, Menu, ArrowRight, MapPin, Clock, Car, Building2, CheckCircle2, RefreshCw, Bus } from 'lucide-react';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
+import {
+  Globe,
+  ShoppingBag,
+  Menu,
+  ArrowRight,
+  MapPin,
+  Clock,
+  Car,
+  Building2,
+  CheckCircle2,
+  RefreshCw,
+  Bus,
+  Star,
+  Users,
+  Droplet,
+  Home as HomeIcon,
+} from 'lucide-react';
 interface ServiceCard {
   id: string;
   name: string;
@@ -458,12 +475,32 @@ export default function Home() {
     const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) {
       setTestimonialsInView(true);
+      try {
+        const doc = document.documentElement;
+        const scrollTop = window.scrollY || doc.scrollTop || 0;
+        const height = Math.max(1, doc.scrollHeight - window.innerHeight);
+        const scrollDepthPercent = Math.round((scrollTop / height) * 100);
+        trackBehaviorEvent('testimonials_view', { scrollDepthPercent });
+      } catch {
+        // ignore
+      }
       return;
     }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) setTestimonialsInView(true);
+          if (entry.isIntersecting) {
+            setTestimonialsInView(true);
+            try {
+              const doc = document.documentElement;
+              const scrollTop = window.scrollY || doc.scrollTop || 0;
+              const height = Math.max(1, doc.scrollHeight - window.innerHeight);
+              const scrollDepthPercent = Math.round((scrollTop / height) * 100);
+              trackBehaviorEvent('testimonials_view', { scrollDepthPercent });
+            } catch {
+              // ignore
+            }
+          }
         });
       },
       { threshold: 0.12 }
@@ -1048,19 +1085,23 @@ export default function Home() {
           0%, 100% { transform: translate(0, 0); }
           50% { transform: translate(2px, -3px); }
         }
+        @keyframes heroBgShift {
+          0%, 100% { transform: translate3d(0,0,0) scale(1); }
+          50% { transform: translate3d(4px,-6px,0) scale(1.01); }
+        }
         @keyframes heroGrain {
           0% { transform: translate(0, 0); }
           100% { transform: translate(-5%, -5%); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .hero-drift, .hero-grain { animation: none !important; }
+          .hero-drift, .hero-grain, .hero-bg-shift { animation: none !important; }
         }
       `}</style>
 
       {/* 2. HERO — Premium luxury nail studio conversion: editorial left + floating glass booking card right */}
-      <section className={`relative min-h-[85vh] overflow-hidden pb-12 pt-24 md:pt-28 lg:min-h-[90vh] lg:pb-14 lg:pt-32 ${isScrolled ? 'pt-20' : ''}`}>
+      <section className={`relative min-h-[76vh] overflow-hidden pb-10 pt-20 md:pt-28 lg:min-h-[90vh] lg:pb-14 lg:pt-32 ${isScrolled ? 'pt-20' : ''}`}>
         {/* Background: subtle radial from top-left, light pink/cream, soft vignette */}
-        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,#fdf6f9_0%,#faf5f8_35%,#f6f0f4_70%,#f2ecf0_100%)]" aria-hidden />
+        <div className="hero-bg-shift pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,#fdf6f9_0%,#faf5f8_35%,#f6f0f4_70%,#f2ecf0_100%)]" style={{ animation: 'heroBgShift 28s ease-in-out infinite' }} aria-hidden />
         <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_50%,transparent_50%,rgba(240,230,235,0.4)_100%)]" aria-hidden />
         <div className="pointer-events-none absolute -left-[20%] top-[10%] z-0 h-[600px] w-[600px] rounded-full bg-[#f0e6ec]/50 blur-[100px]" aria-hidden />
         <div className="pointer-events-none absolute right-[-10%] top-[20%] z-0 h-[400px] w-[400px] rounded-full bg-[#eadce4]/35 blur-[80px]" aria-hidden />
@@ -1068,7 +1109,7 @@ export default function Home() {
         <div className="hero-grain pointer-events-none absolute inset-0 z-[1] opacity-[0.035] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', animation: 'heroGrain 20s linear infinite' }} aria-hidden />
 
         <div className={`relative z-10 ${contentMax}`}>
-          <div className="grid grid-cols-1 grid-rows-[auto_auto_auto] items-center gap-10 lg:min-h-[88vh] lg:grid-cols-[1fr_minmax(400px,0.5fr)] lg:grid-rows-1 lg:gap-16">
+          <div className="grid grid-cols-1 grid-rows-[auto_auto_auto] items-center gap-8 lg:min-h-[88vh] lg:grid-cols-[1fr_minmax(400px,0.5fr)] lg:grid-rows-1 lg:gap-16">
             {/* LEFT — Luxury editorial (mobile: row 1; desktop: col 1) */}
             <div className="order-1 flex flex-col justify-center lg:row-span-1">
               <div
@@ -1102,11 +1143,16 @@ export default function Home() {
                 }`}
                 style={{ transitionDelay: '120ms' }}
               >
-                {getI18nTextOrFallback('homepage.hero.luxurySupport', language === 'en' ? 'Meticulous detail, elevated hygiene, and a calm appointment experience in a private Mustamäe studio.' : 'Metoodiline detailitöö, kõrgetasemeline hügieen ja rahulik vastuvõtt privaatses Mustamäe stuudios.')}
+                {getI18nTextOrFallback(
+                  'homepage.hero.luxurySupport',
+                  language === 'en'
+                    ? 'A calm private appointment where every detail is finished for a flawless result.'
+                    : 'Rahulik privaatne hooldus, kus iga detail on viimistletud täiusliku tulemuse nimel.'
+                )}
               </p>
 
               <div
-                className={`mt-10 flex flex-wrap gap-4 transition-all duration-700 ease-out lg:mt-12 ${
+                className={`mt-10 flex flex-wrap gap-3 transition-all duration-700 ease-out lg:mt-12 ${
                   heroContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}
                 style={{ transitionDelay: '220ms' }}
@@ -1120,7 +1166,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => scrollToSection('services')}
-                  className="inline-flex items-center rounded-full border-2 border-[#d4c4ce] bg-transparent px-8 py-4 text-base font-medium text-[#5c4a54] transition-all duration-300 hover:bg-[#faf5f8] hover:border-[#c9b5c1] hover:-translate-y-0.5 active:scale-[0.98]"
+                  className="inline-flex items-center rounded-full border-2 border-[#c8b3bf] bg-transparent px-8 py-4 text-base font-medium text-[#5c4a54] transition-all duration-300 hover:bg-[#faf5f8] hover:border-[#bfa6b3] hover:-translate-y-0.5 active:scale-[0.98]"
                 >
                   {getI18nTextOrFallback('homepage.hero.viewServices', language === 'en' ? 'View services' : 'Vaata teenuseid')}
                 </button>
@@ -1133,13 +1179,22 @@ export default function Home() {
                 }`}
                 style={{ transitionDelay: '340ms' }}
               >
-                <span className="flex items-center gap-1.5">{t('trust.rating')} {language === 'en' ? 'rated' : 'hinnang'}</span>
+                <span className="flex items-center gap-2">
+                  <Star className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {t('trust.rating')}{' '}
+                  {language === 'en' ? 'rated' : 'hinnang'}
+                </span>
                 <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-                <span>{language === 'en' ? '1200+ clients' : '1200+ klienti'}</span>
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? '1200+ clients' : '1200+ klienti'}
+                </span>
                 <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-                <span>{language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}</span>
+                <span className="flex items-center gap-2">
+                  <Droplet className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}
+                </span>
                 <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-                <span>{language === 'en' ? 'Private studio' : 'Privaatne stuudio'}</span>
+                <span className="flex items-center gap-2">
+                  <HomeIcon className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Private studio' : 'Privaatne stuudio'}
+                </span>
               </p>
             </div>
 
@@ -1172,13 +1227,22 @@ export default function Home() {
 
             {/* Trust row — mobile only (order 3: after headline, CTA, card) */}
             <p className="order-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[14px] text-[#6f5e66] lg:hidden">
-              <span className="flex items-center gap-1.5">{t('trust.rating')} {language === 'en' ? 'rated' : 'hinnang'}</span>
+              <span className="flex items-center gap-2">
+                <Star className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {t('trust.rating')}{' '}
+                {language === 'en' ? 'rated' : 'hinnang'}
+              </span>
               <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-              <span>{language === 'en' ? '1200+ clients' : '1200+ klienti'}</span>
+              <span className="flex items-center gap-2">
+                <Users className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? '1200+ clients' : '1200+ klienti'}
+              </span>
               <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-              <span>{language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}</span>
+              <span className="flex items-center gap-2">
+                <Droplet className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}
+              </span>
               <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-              <span>{language === 'en' ? 'Private studio' : 'Privaatne stuudio'}</span>
+              <span className="flex items-center gap-2">
+                <HomeIcon className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Private studio' : 'Privaatne stuudio'}
+              </span>
             </p>
           </div>
         </div>
@@ -1317,7 +1381,14 @@ export default function Home() {
             {/* LAYER 1 — Featured service hero (horizontal on desktop, stacked on mobile) */}
             {featuredService && (
               <article
-                onClick={() => router.push(localizePath('/book'))}
+                onClick={() => {
+                  trackBehaviorEvent('service_card_click', {
+                    serviceId: featuredService.id,
+                    servicePosition: 0,
+                    price: featuredService.price,
+                  });
+                  router.push(localizePath('/book'));
+                }}
                 className={`group cursor-pointer overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.08)] transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.12)] hover:scale-[1.01] ${
                   servicesInView ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
                 }`}
@@ -1422,7 +1493,14 @@ export default function Home() {
                 {regularServices.map((service, index) => (
                   <article
                     key={service.id}
-                    onClick={() => router.push(localizePath('/book'))}
+                    onClick={() => {
+                      trackBehaviorEvent('service_card_click', {
+                        serviceId: service.id,
+                        servicePosition: index + 1,
+                        price: service.price,
+                      });
+                      router.push(localizePath('/book'));
+                    }}
                     className={`group flex w-[min(300px,calc(100vw-2.5rem))] max-w-full shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-[#ebe0e6]/80 bg-white shadow-[0_8px_24px_-12px_rgba(60,40,52,0.06)] transition-all duration-400 ease-out hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(60,40,52,0.1)] lg:w-auto lg:min-w-0 lg:max-w-none ${
                       servicesInView ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
                     }`}
@@ -2133,7 +2211,14 @@ export default function Home() {
                                 {getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
                               </button>
                               <button
-                                onClick={() => goToProduct(featuredProduct.id)}
+                                onClick={() => {
+                                  trackBehaviorEvent('product_card_click', {
+                                    productId: featuredProduct.id,
+                                    productPosition: 0,
+                                    price: featuredProduct.price,
+                                  });
+                                  goToProduct(featuredProduct.id);
+                                }}
                                 className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-transparent px-4 py-2.5 text-sm font-semibold text-[#6a4c64] transition-all duration-200 hover:bg-[#fdf4f9] hover:scale-[1.01] active:scale-[0.99] sm:w-auto"
                               >
                                 {getI18nTextOrFallback('homepage.products.ctaViewProduct', language === 'en' ? 'View product details' : 'Vaata toote detaile')}
@@ -2163,7 +2248,15 @@ export default function Home() {
                         {supportingProducts.slice(0, 3).map((product) => (
                           <button
                             key={`quick-${product.id}`}
-                            onClick={() => goToProduct(product.id)}
+                            onClick={() => {
+                              const idx = supportingProducts.findIndex((p) => p.id === product.id);
+                              trackBehaviorEvent('product_card_click', {
+                                productId: product.id,
+                                productPosition: idx >= 0 ? idx + 1 : undefined,
+                                price: product.price,
+                              });
+                              goToProduct(product.id);
+                            }}
                             className="group flex w-[min(100%,280px)] shrink-0 items-center gap-2.5 rounded-xl bg-white/60 p-2.5 transition-colors hover:bg-[#fdf6fa]/80 lg:w-auto lg:min-w-0 lg:rounded-lg lg:bg-transparent lg:py-2.5 lg:hover:bg-[#fdf6fa]/70"
                           >
                             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#f8edf3]">
@@ -2207,7 +2300,14 @@ export default function Home() {
                       >
                         <div
                           className={`relative cursor-pointer overflow-hidden rounded-t-[24px] bg-[#f8edf3] ${aspectClass}`}
-                          onClick={() => goToProduct(product.id)}
+                          onClick={() => {
+                            trackBehaviorEvent('product_card_click', {
+                              productId: product.id,
+                              productPosition: index + 1,
+                              price: product.price,
+                            });
+                            goToProduct(product.id);
+                          }}
                         >
                           {product.imageUrl || product.images?.[0] ? (
                             <Image
@@ -2245,7 +2345,14 @@ export default function Home() {
                           <div className="mt-auto flex flex-col gap-2 pt-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                             <span className={`font-semibold text-[#b04b80] ${isTall ? 'text-base' : 'text-[15px]'}`}>EUR {product.price}</span>
                             <button
-                              onClick={() => goToProduct(product.id)}
+                              onClick={() => {
+                                trackBehaviorEvent('product_card_click', {
+                                  productId: product.id,
+                                  productPosition: index + 1,
+                                  price: product.price,
+                                });
+                                goToProduct(product.id);
+                              }}
                               className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-3.5 py-2.5 text-[11px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(139,51,100,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
                             >
                               {getI18nTextOrFallback('homepage.products.ctaRetailTile', language === 'en' ? 'Buy now' : 'Osta kohe')}
@@ -2289,7 +2396,11 @@ export default function Home() {
 
           {feedbackItems.length === 0 ? (
             <div className="rounded-3xl border border-[#efe0e8] bg-white/90 px-6 py-14 text-center shadow-[0_12px_40px_-20px_rgba(70,40,60,0.08)]">
-              <p className="text-[#7e6376]">{t('homepage.testimonials.subtitle')}</p>
+              <p className="text-[#7e6376]">
+                {language === 'en'
+                  ? 'New client feedback appears here as soon as it’s published.'
+                  : 'Uued kliendi tagasisided ilmuvad siia kohe, kui need on avaldatud.'}
+              </p>
             </div>
           ) : (
             <>

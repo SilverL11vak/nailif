@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import type { Service } from '@/store/booking-types';
@@ -8,6 +8,10 @@ import { useServices } from '@/hooks/use-services';
 import { useBookingContent } from '@/hooks/use-booking-content';
 import { useBookingAddOns } from '@/hooks/use-booking-addons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import { PremiumImage as Image } from '@/components/ui/PremiumImage';
+import { trackEvent, touchBookingActivity } from '@/lib/analytics-client';
+import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 function toIsoDate(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -68,7 +72,16 @@ export function ServiceStep() {
   const nextStep = useBookingStore((state) => state.nextStep);
   const selectedStyle = useBookingStore((state) => state.selectedStyle);
   const continueButtonRef = useRef<HTMLDivElement>(null);
+  const servicesViewAtRef = useRef<number | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (loading) return;
+    if (services.length === 0) return;
+    if (servicesViewAtRef.current == null) servicesViewAtRef.current = Date.now();
+    trackBehaviorEvent('booking_services_view', { numberOfServicesVisible: services.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, services.length]);
 
   const prefetchSlots = () => {
     const now = new Date();
@@ -78,7 +91,27 @@ export function ServiceStep() {
   };
 
   const handleChooseTime = (service: Service) => {
+    const hesitationTime =
+      servicesViewAtRef.current != null ? Math.max(0, Math.round((Date.now() - servicesViewAtRef.current) / 1000)) : undefined;
+    trackBehaviorEvent('booking_service_selected', {
+      serviceId: service.id,
+      servicePrice: service.price,
+      hesitationTime,
+    });
     selectService(service);
+    touchBookingActivity();
+    trackEvent({
+      eventType: 'booking_service_selected',
+      step: 1,
+      serviceId: service.id,
+      metadata: { serviceName: service.name, duration: service.duration, price: service.price },
+    });
+    trackFunnelEvent({
+      event: 'service_selected',
+      serviceId: service.id,
+      metadata: { serviceName: service.name, duration: service.duration, price: service.price, source: 'booking_step_1' },
+      language,
+    });
     prefetchSlots();
     nextStep();
     window.requestAnimationFrame(() => {
@@ -201,6 +234,21 @@ export function ServiceStep() {
               }`}
               style={{ padding: 20 }}
             >
+              <div className="relative mb-4 overflow-hidden rounded-[16px] border border-[#f1e6ec] bg-[linear-gradient(135deg,#fbf3f7_0%,#f6eef2_55%,#f3eaee_100%)]">
+                <div className="relative aspect-[4/3] w-full">
+                  <Image
+                    src={service.imageUrl ?? ''}
+                    alt={service.name}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 768px) 100vw, 420px"
+                    className="object-cover"
+                    revealEnabled
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(18,12,18,0.00)_0%,rgba(18,12,18,0.28)_72%,rgba(18,12,18,0.40)_100%)]" aria-hidden />
+                </div>
+              </div>
+
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a8899c]">
                   {smallLabel}

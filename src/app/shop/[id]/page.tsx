@@ -201,7 +201,7 @@ export default function ProductDetailPage() {
 
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => addToCart(product.id)}
+                onClick={() => addToCart(product.id, 1, product.price)}
                 className="rounded-full bg-[linear-gradient(120deg,#d4669e_0%,#c24d86_52%,#a93d71_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_22px_34px_-26px_rgba(139,51,100,0.75)]"
               >
                 {copy.addToBag}

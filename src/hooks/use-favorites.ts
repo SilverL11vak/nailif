@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { trackEvent } from '@/lib/behavior-tracking';
 
 const FAVORITES_KEY = 'nailify_favorites_v1';
 const FAVORITES_EVENT = 'nailify:favorites-changed';
@@ -49,6 +50,7 @@ export function useFavorites() {
         ? previous.filter((id) => id !== productId)
         : [...previous, productId];
       writeFavorites(next);
+      trackEvent('product_favourite_toggle', { productId, newState: next.includes(productId) });
       return next;
     });
   }, []);

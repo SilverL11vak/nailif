@@ -12,6 +12,16 @@ import { ConfirmStep } from '@/components/booking/ConfirmStep';
 import { useServices } from '@/hooks/use-services';
 import { useBookingAddOns } from '@/hooks/use-booking-addons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
+import {
+  clearBookingSession,
+  getLastFunnelStep,
+  hasBookingSuccess,
+  setLastFunnelStep,
+  touchBookingActivity,
+  trackEvent,
+  trackSessionStart,
+} from '@/lib/analytics-client';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 const nailStyles = [
   { id: '1', name: 'Glossy Pink French', slug: 'glossy-pink-french', recommendedServiceId: 'gel-manicure', emoji: 'P' },
@@ -53,6 +63,12 @@ function BookingContent() {
   const serviceRef = useRef<HTMLDivElement>(null);
   const step3Ref = useRef<HTMLDivElement>(null);
   const transitionsEnabled = true;
+  const abandonSentRef = useRef(false);
+  const inactivityTimerRef = useRef<number | null>(null);
+  const INACTIVITY_MS = 90_000;
+  const stepStartedAtRef = useRef<number>(Date.now());
+  const hesitationSentForStepRef = useRef<number | null>(null);
+  const hesitationTimerRef = useRef<number | null>(null);
 
   const copy = useMemo(
     () =>
@@ -160,6 +176,138 @@ function BookingContent() {
       }
     }
   }, [searchParams, setSelectedStyle, selectService, selectedService, nextStep, services, selectDate, setStep]);
+
+  // Analytics: session lifecycle start + booking open
+  useEffect(() => {
+    trackSessionStart({
+      locale: language,
+      path: typeof window !== 'undefined' ? window.location.pathname : '/book',
+      referrer: typeof document !== 'undefined' ? document.referrer : '',
+    });
+    trackEvent({ eventType: 'booking_open', step: 0 });
+    touchBookingActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Analytics: update last step + key milestones.
+  useEffect(() => {
+    touchBookingActivity();
+    setLastFunnelStep(currentStep);
+    stepStartedAtRef.current = Date.now();
+    hesitationSentForStepRef.current = null;
+
+    if (currentStep === 1) return;
+    if (currentStep === 3) {
+      trackEvent({
+        eventType: 'booking_details_started',
+        step: 3,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep]);
+
+  // Analytics: inactivity + abandon detection (non-blocking).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const resetInactivity = () => {
+      touchBookingActivity();
+      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+      if (hesitationTimerRef.current) window.clearTimeout(hesitationTimerRef.current);
+
+      // Lightweight hesitation detection (>10s idle on step)
+      hesitationTimerRef.current = window.setTimeout(() => {
+        if (hasBookingSuccess()) return;
+        if (hesitationSentForStepRef.current === currentStep) return;
+        hesitationSentForStepRef.current = currentStep;
+        trackBehaviorEvent('hesitation_detected', { step: currentStep, duration: 10_000 });
+      }, 10_000);
+
+      inactivityTimerRef.current = window.setTimeout(() => {
+        if (abandonSentRef.current) return;
+        if (hasBookingSuccess()) return;
+        abandonSentRef.current = true;
+        trackEvent({
+          eventType: 'booking_abandon',
+          step: getLastFunnelStep() ?? currentStep,
+          serviceId: selectedService?.id,
+          slotId: selectedSlot?.id,
+          metadata: { reason: 'inactivity_timeout' },
+        });
+        trackBehaviorEvent('booking_abandon', {
+          step: getLastFunnelStep() ?? currentStep,
+          serviceId: selectedService?.id,
+          slotId: selectedSlot?.id,
+          timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
+        });
+        clearBookingSession();
+      }, INACTIVITY_MS);
+    };
+
+    const resetInactivityListener: EventListener = () => resetInactivity();
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        resetInactivity();
+        if (abandonSentRef.current) return;
+        if (hasBookingSuccess()) return;
+        trackBehaviorEvent('booking_tab_hidden', { step: getLastFunnelStep() ?? currentStep });
+      }
+    };
+
+    const onBeforeUnload = () => {
+      resetInactivity();
+      if (abandonSentRef.current) return;
+      if (hasBookingSuccess()) return;
+      abandonSentRef.current = true;
+      trackEvent({
+        eventType: 'booking_abandon',
+        step: getLastFunnelStep() ?? currentStep,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+        metadata: { reason: 'page_unload' },
+      });
+      trackBehaviorEvent('booking_abandon', {
+        step: getLastFunnelStep() ?? currentStep,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+        timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
+      });
+      clearBookingSession();
+    };
+
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    for (const e of events) window.addEventListener(e, resetInactivityListener, { passive: true } as AddEventListenerOptions);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    resetInactivity();
+
+    return () => {
+      for (const e of events) window.removeEventListener(e, resetInactivityListener);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+      if (hesitationTimerRef.current) window.clearTimeout(hesitationTimerRef.current);
+    };
+  }, [currentStep, selectedService?.id, selectedSlot?.id]);
+
+  // Analytics: route change / unmount abandon (SPA-safe)
+  useEffect(() => {
+    return () => {
+      if (abandonSentRef.current) return;
+      if (hasBookingSuccess()) return;
+      abandonSentRef.current = true;
+      trackBehaviorEvent('booking_abandon', {
+        step: getLastFunnelStep() ?? currentStep,
+        serviceId: selectedService?.id,
+        slotId: selectedSlot?.id,
+        timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setMode('guided');
@@ -279,7 +427,9 @@ function BookingContent() {
             {t('booking.back')}
           </button>
           <div className="min-w-0 text-center">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.2em] text-[#c24d86]">{copy.progressTitle}</p>
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.22em] text-[#c24d86]">
+              {copy.progressTitle} · {copy.stepLabel} {funnelStep} / 3
+            </p>
             <p className="truncate text-xs text-[#8a7a88]">{copy.header}</p>
           </div>
           <div className="w-14 shrink-0 sm:w-20" aria-hidden />
@@ -304,7 +454,9 @@ function BookingContent() {
             </div>
 
             <div className="border-b border-[#f5eaef] px-4 py-5 sm:px-6 md:px-8 md:py-8">
-              <p className="mb-4 text-center text-[10px] font-medium uppercase tracking-[0.28em] text-[#b8a0ae]">{copy.helper}</p>
+              <p className="mb-4 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-[#b8a0ae]">
+                {copy.helper}
+              </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 {funnelSteps.map(({ n, title }) => {
                   const isActive = funnelStep === n;
@@ -340,7 +492,9 @@ function BookingContent() {
 
             <div
               ref={activePanelRef}
-              className={`px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 md:px-8 md:pb-14 xl:px-10 ${transitionsEnabled ? 'booking-step-fade' : ''}`}
+              className={`px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 md:px-8 md:pb-14 xl:px-10 ${
+                transitionsEnabled ? 'booking-step-fade' : ''
+              } ${isStepTransitioning ? 'will-change-transform' : ''}`}
               key={currentStep}
             >
               <div

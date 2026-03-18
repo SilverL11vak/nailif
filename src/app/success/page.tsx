@@ -8,6 +8,9 @@ import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
 import type { TimeSlot } from '@/store/booking-types';
 import { getLocaleFromPathname, withLocale, type LocaleCode } from '@/lib/i18n/locale-path';
+import { clearBookingSession, markBookingSuccessForSession, trackEvent, touchBookingActivity } from '@/lib/analytics-client';
+import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 type PaymentStatus = 'idle' | 'verifying' | 'confirmed' | 'error';
 
@@ -175,11 +178,45 @@ function SuccessPageContent() {
         setPaymentStatus('confirmed');
         setFlowType(type);
         setPaymentMessage(type === 'booking' ? copy.paymentBookingOk : copy.paymentOrderOk);
+        touchBookingActivity();
+        if (type === 'booking') {
+          markBookingSuccessForSession();
+          trackBehaviorEvent('payment_success', {
+            serviceId: selectedService?.id,
+            slotId: selectedSlot?.id,
+            price: typeof totalPrice === 'number' ? totalPrice : undefined,
+          });
+          trackEvent({
+            eventType: 'booking_success',
+            step: 6,
+            serviceId: selectedService?.id,
+            slotId: selectedSlot?.id,
+            metadata: {
+              source: 'stripe_confirm',
+              totalPrice: typeof totalPrice === 'number' ? totalPrice : null,
+              totalDuration: typeof totalDuration === 'number' ? totalDuration : null,
+              deposit: DEPOSIT_EUROS,
+              remaining: typeof totalPrice === 'number' ? Math.max(0, Number((totalPrice - DEPOSIT_EUROS).toFixed(2))) : null,
+              serviceName: selectedService?.name ?? null,
+            },
+          });
+          trackFunnelEvent({
+            event: 'payment_success',
+            serviceId: selectedService?.id,
+            slotId: selectedSlot?.id,
+            metadata: { totalPrice, totalDuration, deposit: DEPOSIT_EUROS },
+            language,
+          });
+          clearBookingSession();
+        } else {
+          trackBehaviorEvent('shop_payment_success');
+        }
       } catch (error) {
         console.error('Stripe confirm error:', error);
         if (!isMounted) return;
         setPaymentStatus('error');
         setPaymentMessage(copy.paymentFail);
+        trackBehaviorEvent('payment_failed', { reason: error instanceof Error ? error.message : 'verification_failed' });
       }
     };
 

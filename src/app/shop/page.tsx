@@ -9,6 +9,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { Globe, ArrowLeft, Package, ShoppingBag } from 'lucide-react';
+import { trackEvent } from '@/lib/behavior-tracking';
 
 interface Product {
   id: string;
@@ -122,6 +123,7 @@ export default function ShopPage() {
     if (cart.length === 0) return;
     setError(null);
     setIsPaying(true);
+    trackEvent('shop_checkout_start');
     try {
       const response = await fetch('/api/cart/checkout', {
         method: 'POST',
@@ -417,7 +419,7 @@ export default function ShopPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => addToCart(product.id)}
+                            onClick={() => addToCart(product.id, 1, product.price)}
                             className="flex h-[42px] w-[42px] items-center justify-center rounded-full border border-[#ead6e2] bg-white/95 text-[#6f5d6d] shadow-[0_10px_24px_-16px_rgba(60,40,55,0.35)] transition-transform duration-200 hover:scale-[1.05] hover:border-[#d8b3ca] active:scale-[0.98]"
                             aria-label={language === 'en' ? 'Add to cart' : 'Lisa korvi'}
                           >
@@ -442,7 +444,7 @@ export default function ShopPage() {
                         <div className="mt-4 grid gap-2">
                           <button
                             type="button"
-                            onClick={() => addToCart(product.id)}
+                            onClick={() => addToCart(product.id, 1, product.price)}
                             className="w-full rounded-[16px] bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_55%,#8f3362_100%)] py-3 text-[13px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(194,77,134,0.62)] transition-all duration-200 hover:brightness-[1.03] active:scale-[0.99]"
                           >
                             {language === 'en' ? 'Add to cart' : 'Lisa korvi'}

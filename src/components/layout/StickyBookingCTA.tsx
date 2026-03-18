@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
+import type { TimeSlot as TimeSlotType } from '@/store/booking-types';
+import { trackEvent } from '@/lib/funnel-track';
+import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 interface StickyBookingCTAProps {
   hideOnPaths?: string[];
@@ -13,13 +16,15 @@ interface StickyBookingCTAProps {
 export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { text } = useBookingContent();
   const [isVisible, setIsVisible] = useState(false);
+  const [nextSlot, setNextSlot] = useState<TimeSlotType | null>(null);
 
   const { selectedService, totalPrice } = useBookingStore();
 
   const shouldHide = hideOnPaths.some((path) => pathname.startsWith(path));
+  const isHome = pathname === '/' || pathname === '/et' || pathname === '/en';
 
   const handleScroll = useCallback(() => {
     if (shouldHide) {
@@ -40,14 +45,72 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll, shouldHide, pathname]);
 
+  useEffect(() => {
+    if (!isHome) return;
+    let mounted = true;
+    void (async () => {
+      try {
+        const res = await fetch('/api/slots?upcoming=1&limit=1');
+        if (!res.ok) return;
+        const data = (await res.json()) as { slots?: TimeSlotType[] };
+        const slot = (data.slots ?? []).find((s) => s.available) ?? null;
+        if (mounted) setNextSlot(slot);
+      } catch {
+        if (mounted) setNextSlot(null);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [isHome]);
+
+  const nextSlotLabel = useMemo(() => {
+    if (!nextSlot) return null;
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowIso = tomorrow.toISOString().slice(0, 10);
+    if (nextSlot.date === today) return `${t('widget.todayAt')} ${nextSlot.time}`;
+    if (nextSlot.date === tomorrowIso) return `${t('widget.tomorrowAt')} ${nextSlot.time}`;
+    return `${nextSlot.date} ${nextSlot.time}`;
+  }, [nextSlot, t]);
+
   const handleClick = () => {
+    trackBehaviorEvent('hero_booking_click', { source: 'sticky_cta' });
+    if (isHome && nextSlot) {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const slotDay = new Date(`${nextSlot.date}T00:00:00`);
+        const daysAhead = Math.max(0, Math.round((slotDay.getTime() - today.getTime()) / 86400000));
+        trackBehaviorEvent('quick_slot_click', {
+          slotTime: nextSlot.time,
+          daysAhead,
+          slotPosition: 1,
+        });
+      } catch {
+        // ignore analytics failures
+      }
+      trackEvent({
+        event: 'booking_cta_click',
+        slotId: nextSlot.id,
+        metadata: { source: 'sticky_home_bar', date: nextSlot.date, time: nextSlot.time },
+        language,
+      });
+      const params = new URLSearchParams();
+      params.set('date', nextSlot.date);
+      params.set('time', nextSlot.time);
+      router.push(`/book?${params.toString()}`);
+      return;
+    }
     const heroElement = document.getElementById('hero-booking');
     if (heroElement) {
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       heroElement.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
-    } else {
-      router.push('/book');
+      return;
     }
+    router.push('/book');
   };
 
   if (!isVisible) return null;
@@ -56,7 +119,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
   const defaultHelper = t('widget.selectTime');
   const configuredPrimary = text('sticky_cta_label', defaultPrimary);
   const configuredHelper = text('sticky_cta_helper', defaultHelper);
-  const nextSlotLabel = t('services.nextTimeLabel');
+  const nextSlotTitle = t('services.nextTimeLabel');
   const trustSignal = `${t('trust.rating')} · ${t('trust.clients')}`;
 
   return (
@@ -69,7 +132,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
           >
             {selectedService && (
               <div className="px-4 pt-3 pb-1">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-[#8a6b7e]">{nextSlotLabel}</p>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-[#8a6b7e]">{nextSlotTitle}</p>
                 <p className="mt-0.5 text-[13px] font-semibold text-[#2d232d]">{selectedService.name}</p>
                 {totalPrice > 0 && <p className="mt-0.5 text-[11px] text-[#6f5e66]">€{totalPrice}</p>}
               </div>
@@ -84,7 +147,11 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 )}
-                <span>{configuredPrimary}</span>
+                <span>
+                  {isHome && nextSlotLabel
+                    ? `${language === 'en' ? 'Next slot' : 'Järgmine aeg'} ${nextSlotLabel} → ${language === 'en' ? 'Reserve' : 'Broneeri'}`
+                    : configuredPrimary}
+                </span>
                 <svg className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>

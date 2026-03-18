@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
+import { trackEvent, touchBookingActivity } from '@/lib/analytics-client';
 
 const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -68,6 +69,14 @@ export function ContactStep() {
 
   useEffect(() => {
     firstNameRef.current?.focus();
+    touchBookingActivity();
+    trackEvent({
+      eventType: 'booking_details_started',
+      step: 3,
+      serviceId: selectedService?.id,
+      slotId: selectedSlot?.id,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -271,7 +280,7 @@ export function ContactStep() {
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
-            className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+            className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
               errors.firstName && touched.firstName ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
             }`}
           />
@@ -280,7 +289,13 @@ export function ContactStep() {
 
         <label className="block text-sm font-medium text-[#443630]">
           {t('contact.lastName')} ({t('contact.optional')})
-          <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="mt-1 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 outline-none transition focus:border-[#c79c84]" />
+          <input
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            className="mt-1 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-[16px] outline-none transition focus:border-[#c79c84] sm:text-sm"
+          />
         </label>
 
         <label className="block text-sm font-medium text-[#443630]">
@@ -289,7 +304,7 @@ export function ContactStep() {
             <select
               value={countryCode}
               onChange={(event) => setCountryCode(event.target.value)}
-              className={`rounded-2xl border-2 bg-white px-3 py-3 outline-none transition ${
+              className={`rounded-2xl border-2 bg-white px-3 py-3 text-[16px] outline-none transition sm:text-sm ${
                 errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
               }`}
               aria-label={language === 'en' ? 'Country code' : 'Riigikood'}
@@ -306,7 +321,7 @@ export function ContactStep() {
                 type="tel"
                 value={countryCode}
                 onChange={(event) => handleCountryCodeChange(event.target.value)}
-                className={`rounded-2xl border-2 bg-white px-3 py-3 outline-none transition ${
+                className={`rounded-2xl border-2 bg-white px-3 py-3 text-[16px] outline-none transition sm:text-sm ${
                   errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
                 }`}
                 placeholder="+372"
@@ -318,7 +333,7 @@ export function ContactStep() {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className={`rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+              className={`rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
                 errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
               }`}
               placeholder="___ ___ ____"
@@ -342,7 +357,7 @@ export function ContactStep() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 outline-none transition ${
+              className={`mt-1 w-full rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
                 errors.email && touched.email ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
               }`}
             />
@@ -396,14 +411,19 @@ export function ContactStep() {
               value={formData.inspirationNote}
               onChange={handleChange}
               placeholder={language === 'en' ? 'Shape, length, tone...' : 'Kuju, pikkus, toon...'}
-              className="mt-1 w-full rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-sm outline-none focus:border-[#c79c84]"
+              className="mt-1 w-full rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-[16px] outline-none focus:border-[#c79c84] sm:text-sm"
             />
           </label>
         </section>
 
         <label className="block text-sm font-medium text-[#443630]">
           {language === 'en' ? 'Client notes' : 'Kliendi markused'} ({t('contact.optional')})
-          <textarea name="notes" value={formData.notes} onChange={handleChange} className="mt-1 min-h-20 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#c79c84]" />
+          <textarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            className="mt-1 min-h-20 w-full rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-[16px] outline-none transition focus:border-[#c79c84] sm:text-sm"
+          />
         </label>
       </div>
 
