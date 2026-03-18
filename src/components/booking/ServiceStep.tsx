@@ -177,7 +177,7 @@ export function ServiceStep() {
         )}
       </div>
 
-      <div className="mx-auto grid max-w-[880px] grid-cols-1 gap-6 md:grid-cols-2 md:gap-6">
+      <div className="mx-auto grid max-w-[640px] grid-cols-1 gap-6 md:grid-cols-2 md:gap-6">
         {loading &&
           services.length === 0 &&
           Array.from({ length: 4 }).map((_, index) => (
@@ -264,7 +264,7 @@ export function ServiceStep() {
                 {service.name}
               </h3>
 
-              <p className="mt-2 line-clamp-2 text-[13px] leading-snug text-[#6b5a66]">{shortBlurb}</p>
+              <p className="mt-2 line-clamp-1 sm:line-clamp-2 text-[13px] leading-snug text-[#6b5a66]">{shortBlurb}</p>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <span className="inline-flex items-center rounded-full bg-[#faf6f8] px-2.5 py-1 text-[11px] font-medium text-[#715b69]">
@@ -349,7 +349,7 @@ export function ServiceStep() {
       </div>
 
       {addOns.length > 0 && (
-        <div className="mx-auto mt-10 max-w-[880px]">
+        <div className="mx-auto mt-10 max-w-[640px]">
           <p className="mb-2 text-center text-xs font-medium text-[#8a7a88]">
             {text('service_addons_title', en ? 'Optional add-ons next:' : 'Valikulised lisad järgmisena:')}
           </p>

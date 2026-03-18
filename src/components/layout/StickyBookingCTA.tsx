@@ -19,6 +19,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
   const { t, language } = useTranslation();
   const { text } = useBookingContent();
   const [isVisible, setIsVisible] = useState(false);
+  const [heroBookingInView, setHeroBookingInView] = useState(true);
   const [nextSlot, setNextSlot] = useState<TimeSlotType | null>(null);
 
   const { selectedService, totalPrice } = useBookingStore();
@@ -31,8 +32,33 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
       setIsVisible(false);
       return;
     }
-    setIsVisible(window.scrollY > 420);
-  }, [shouldHide]);
+    // Prevent a second competing booking CTA while the hero booking card is still visible.
+    setIsVisible(window.scrollY > 420 && !heroBookingInView);
+  }, [shouldHide, heroBookingInView]);
+
+  useEffect(() => {
+    if (!isHome || shouldHide) {
+      setHeroBookingInView(false);
+      return;
+    }
+
+    const heroEl = document.getElementById('hero-booking');
+    if (!heroEl) return;
+
+    setHeroBookingInView(true);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setHeroBookingInView(Boolean(entry?.isIntersecting));
+      },
+      // If any part is visible, keep hero CTA as the only dominant booking action.
+      { threshold: [0, 0.01, 0.08] }
+    );
+
+    observer.observe(heroEl);
+    return () => observer.disconnect();
+  }, [isHome, shouldHide]);
 
   useEffect(() => {
     if (shouldHide) {

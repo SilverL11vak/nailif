@@ -365,6 +365,59 @@ function BookingContent() {
     }
   };
 
+  // Mobile polish: avoid dual-primary CTA (hero card CTA + bottom sticky CTA).
+  // The sticky CTA shows only after the hero CTA button scrolls out of view.
+  // Assume hero CTA exists for steps 3/4 where it is rendered inside the form.
+  const [heroPrimaryCtaFound, setHeroPrimaryCtaFound] = useState(currentStep === 3 || currentStep === 4);
+  const [heroPrimaryCtaInView, setHeroPrimaryCtaInView] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (currentStep === 2 || currentStep === 5) {
+      setHeroPrimaryCtaFound(false);
+      return;
+    }
+
+    let observer: IntersectionObserver | null = null;
+    let rafId = 0;
+    let attempts = 0;
+
+    const tryAttach = () => {
+      attempts += 1;
+      const el = document.getElementById('booking-sticky-primary-action');
+      if (!el) {
+        if (attempts < 25) {
+          rafId = window.setTimeout(tryAttach, 40);
+          return;
+        }
+        setHeroPrimaryCtaFound(false);
+        setHeroPrimaryCtaInView(true);
+        return;
+      }
+
+      setHeroPrimaryCtaFound(true);
+      observer?.disconnect();
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          const ratio = entry?.intersectionRatio ?? 0;
+          setHeroPrimaryCtaInView(ratio > 0.12);
+        },
+        { threshold: [0, 0.12, 0.25], root: null, rootMargin: '0px 0px 0px 0px' }
+      );
+      observer.observe(el);
+    };
+
+    tryAttach();
+
+    return () => {
+      if (observer) observer.disconnect();
+      if (rafId) window.clearTimeout(rafId);
+    };
+  }, [currentStep]);
+
+  const showMobileStickyPrimary = !heroPrimaryCtaFound || !heroPrimaryCtaInView;
+
   const mobileCtaDisabled =
     (currentStep === 1 && !selectedService) || (currentStep === 2 && !selectedSlot);
 
@@ -436,7 +489,7 @@ function BookingContent() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 md:pt-10 lg:px-8 lg:pt-[48px] xl:pt-20">
+      <main className="mx-auto w-full max-w-[1200px] px-5 pt-6 sm:px-6 md:pt-10 lg:px-8 lg:pt-[48px] xl:pt-20">
         <div
           className={`grid items-start gap-8 xl:gap-10 ${currentStep === 2 ? '' : 'xl:grid-cols-[minmax(0,1fr)_300px]'}`}
         >
@@ -472,12 +525,12 @@ function BookingContent() {
                       onClick={() => {
                         if (canJumpBack) handleFunnelStepClick(n);
                       }}
-                      className={`rounded-2xl px-4 py-3 text-left transition-all duration-[180ms] sm:py-3.5 ${
+                      className={`rounded-2xl px-4 py-2.5 text-left transition-all duration-[180ms] sm:py-3 ${
                         isActive
-                          ? 'bg-[linear-gradient(180deg,#fffdfb_0%,#fff5f9_100%)] shadow-[0_12px_32px_-20px_rgba(194,77,134,0.35)] ring-2 ring-[#c24d86]/20'
+                          ? 'bg-white/70 border border-[#c24d86]/25 ring-1 ring-[#f0e8ed]'
                           : isDone
-                            ? 'bg-white/70 opacity-90 ring-1 ring-[#eee5ea] hover:bg-[#fffafc] hover:opacity-100'
-                            : 'pointer-events-none bg-[#faf8f9]/80 opacity-[0.38] ring-1 ring-transparent'
+                            ? 'bg-white/55 opacity-85 ring-1 ring-[#eee5ea] hover:bg-[#fffafc] hover:opacity-95'
+                            : 'pointer-events-none bg-[#faf8f9]/70 opacity-[0.28] ring-1 ring-transparent'
                       } ${canJumpBack ? 'cursor-pointer' : isActive ? 'cursor-default' : ''}`}
                     >
                       <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-[#c24d86]">
@@ -492,7 +545,7 @@ function BookingContent() {
 
             <div
               ref={activePanelRef}
-              className={`px-4 pb-10 pt-6 sm:px-6 sm:pb-12 sm:pt-8 md:px-8 md:pb-14 xl:px-10 ${
+              className={`px-4 pb-14 pt-14 sm:px-6 sm:pb-12 sm:pt-8 md:px-8 md:pb-14 xl:px-10 ${
                 transitionsEnabled ? 'booking-step-fade' : ''
               } ${isStepTransitioning ? 'will-change-transform' : ''}`}
               key={currentStep}
@@ -507,7 +560,7 @@ function BookingContent() {
             </div>
           </section>
 
-          <aside className={currentStep === 2 || currentStep === 5 ? 'hidden' : 'hidden xl:block'}>
+          <aside className={currentStep === 2 || currentStep === 3 || currentStep === 5 ? 'hidden' : 'hidden xl:block'}>
             <div className="sticky top-24 rounded-2xl bg-white/75 p-6 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.18)] backdrop-blur-xl">
               <div className="mb-5 flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-xs font-bold text-white">
@@ -548,15 +601,22 @@ function BookingContent() {
         </div>
       </main>
 
-      {currentStep !== 2 && currentStep !== 5 && (
+      {currentStep !== 2 && currentStep !== 3 && currentStep !== 5 && (
         <>
       <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-28 bg-[linear-gradient(180deg,transparent_0%,rgba(255,250,252,0.92)_45%,#fff8fb_100%)] xl:hidden"
+        className={`pointer-events-none fixed inset-x-0 bottom-0 z-[55] h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,250,252,0.92)_45%,#fff8fb_100%)] xl:hidden booking-mobile-sticky-grad ${
+          showMobileStickyPrimary ? 'booking-mobile-sticky-grad-show' : 'booking-mobile-sticky-grad-hide'
+        }`}
         aria-hidden
       />
 
-      <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 xl:hidden pointer-events-none">
-        <div className="pointer-events-auto flex h-16 w-full max-w-lg items-center gap-3 rounded-full border border-white/60 bg-white/65 px-4 shadow-[0_12px_40px_-12px_rgba(57,33,52,0.25)] backdrop-blur-xl">
+      <div
+        className={`fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pt-2 xl:hidden booking-mobile-sticky-outer ${
+          showMobileStickyPrimary ? 'booking-mobile-sticky-outer-show' : 'booking-mobile-sticky-outer-hide'
+        }`}
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="pointer-events-auto flex h-14 w-full max-w-lg items-center gap-2 rounded-full border border-white/60 bg-white/65 px-4 shadow-[0_10px_28px_-16px_rgba(57,33,52,0.22)] backdrop-blur-xl">
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-[#2f2530]">{selectedService?.name || copy.pickService}</p>
             <p className="text-sm font-semibold tabular-nums text-[#c24d86]">€{totalPrice || selectedService?.price || 0}</p>
@@ -565,10 +625,10 @@ function BookingContent() {
             type="button"
             disabled={mobileCtaDisabled}
             onClick={handleMobileStickyCta}
-            className={`shrink-0 rounded-full px-5 py-2.5 text-[13px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(194,77,134,0.55)] transition-all duration-[180ms] ${
+            className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold text-white shadow-[0_6px_18px_-10px_rgba(194,77,134,0.55)] transition-all duration-[180ms] ${
               mobileCtaDisabled
                 ? 'cursor-not-allowed bg-[#e8dce2] text-[#9a8a94] shadow-none'
-                : 'bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] hover:shadow-[0_10px_28px_-6px_rgba(194,77,134,0.5)] active:scale-[0.98]'
+                : 'bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] hover:shadow-[0_10px_24px_-10px_rgba(194,77,134,0.45)] active:scale-[0.98]'
             }`}
           >
             {mobileCtaLabel}
@@ -599,6 +659,38 @@ function BookingContent() {
         }
         .booking-cta-primary:hover:not(:disabled) {
           box-shadow: 0 16px 40px -10px rgba(194, 77, 134, 0.45);
+        }
+
+        .booking-mobile-sticky-grad {
+          transition: opacity 220ms ease, transform 220ms ease;
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        .booking-mobile-sticky-grad-show {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .booking-mobile-sticky-grad-hide {
+          opacity: 0;
+          transform: translateY(16px);
+          pointer-events: none;
+        }
+
+        .booking-mobile-sticky-outer {
+          transition: opacity 220ms ease, transform 220ms ease;
+          opacity: 0;
+          transform: translateY(16px);
+          pointer-events: none;
+        }
+        .booking-mobile-sticky-outer-show {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+        .booking-mobile-sticky-outer-hide {
+          opacity: 0;
+          transform: translateY(16px);
+          pointer-events: none;
         }
       `}</style>
     </div>

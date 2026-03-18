@@ -1159,14 +1159,14 @@ export default function Home() {
               >
                 <button
                   onClick={focusHeroBooking}
-                  className="group inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_100%)] px-10 py-4 text-base font-semibold text-white shadow-[0_20px_40px_-12px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-12px_rgba(194,77,134,0.6)] active:scale-[0.98]"
+                  className="hidden group inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_100%)] px-10 py-4 text-base font-semibold text-white shadow-[0_20px_40px_-12px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-12px_rgba(194,77,134,0.6)] active:scale-[0.98] md:inline-flex"
                 >
                   {getI18nTextOrFallback('homepage.hero.luxuryCta', language === 'en' ? 'Choose your time' : 'Vali oma aeg')}
                   <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2.2} />
                 </button>
                 <button
                   onClick={() => scrollToSection('services')}
-                  className="inline-flex items-center rounded-full border-2 border-[#c8b3bf] bg-transparent px-8 py-4 text-base font-medium text-[#5c4a54] transition-all duration-300 hover:bg-[#faf5f8] hover:border-[#bfa6b3] hover:-translate-y-0.5 active:scale-[0.98]"
+                  className="hidden items-center rounded-full border-2 border-[#c8b3bf] bg-transparent px-8 py-4 text-base font-medium text-[#5c4a54] transition-all duration-300 hover:bg-[#faf5f8] hover:border-[#bfa6b3] hover:-translate-y-0.5 active:scale-[0.98] md:inline-flex"
                 >
                   {getI18nTextOrFallback('homepage.hero.viewServices', language === 'en' ? 'View services' : 'Vaata teenuseid')}
                 </button>
@@ -1375,6 +1375,27 @@ export default function Home() {
               {t('services.title')}
             </h2>
             <p className={`mx-auto max-w-[32rem] text-[1rem] leading-relaxed text-[#6b5a62] ${headerSubtitleGap}`}>{t('services.subtitle')}</p>
+            {showDiscountPill && !discountPillDismissed && (
+              <div className="mx-auto mt-5 flex max-w-[22rem] items-center justify-center gap-2 rounded-full border border-[#eadce5] bg-white/60 px-4 py-2 text-[12px] font-medium text-[#5c4a54] md:hidden">
+                <span className="rounded-full bg-[#fdf2f8] px-2 py-0.5 text-[10px] font-semibold text-[#b04376]">
+                  {t('discountPill.discount')}
+                </span>
+                <span>{t('discountPill.firstVisit')}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDiscountPillDismissed(true);
+                    setShowDiscountPill(false);
+                  }}
+                  className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full text-[#8a6b7e] transition-colors hover:bg-[#faf5f8]"
+                  aria-label="Close"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </header>
 
           <div className="space-y-12 lg:space-y-16">
@@ -2966,35 +2987,6 @@ export default function Home() {
 
       {/* Mobile Sticky CTA */}
       <StickyBookingCTA hideOnPaths={['/book', '/success']} />
-
-      {/* Discount pill — above sticky CTA, soft style, no overlap (z below CTA + chat) */}
-      {showDiscountPill && !discountPillDismissed && (
-        <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-4 right-14 z-[42] md:hidden">
-          <div
-            onClick={() => router.push(localizePath('/book'))}
-            className="mx-auto flex max-w-sm cursor-pointer items-center justify-between gap-2 rounded-full border border-[#e8d4e0] bg-white/90 px-3 py-2 shadow-[0_4px_16px_-8px_rgba(90,55,78,0.12)] backdrop-blur-sm transition-all duration-200 active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[#fdf2f8] px-2 py-0.5 text-[10px] font-semibold text-[#b04376]">−15%</span>
-              <span className="text-xs font-medium text-[#5c4a54]">{t('discountPill.firstVisit')}</span>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setDiscountPillDismissed(true);
-                setShowDiscountPill(false);
-              }}
-              className="flex h-8 min-h-[44px] w-8 min-w-[44px] items-center justify-center rounded-full text-[#8a6b7e] transition-colors hover:bg-[#faf5f8]"
-              aria-label="Close"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

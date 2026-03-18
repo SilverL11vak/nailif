@@ -389,7 +389,7 @@ export function ConfirmStep() {
   const BookingSummaryPremiumCard = ({ className }: { className?: string }) => (
     <div
       className={[
-        'booking-summary-premium relative overflow-hidden rounded-[26px] border border-[#f0e8ed] bg-[radial-gradient(ellipse_at_top,_rgba(194,77,134,0.14)_0%,_rgba(255,250,252,0.95)_50%,_rgba(255,255,255,1)_100%)] p-5 shadow-[0_26px_66px_-40px_rgba(57,33,52,0.28)] ring-1 ring-[#f3e8f0]/40 transition-all duration-300 hover:shadow-[0_40px_92px_-60px_rgba(194,77,134,0.22)]',
+        'booking-summary-premium relative overflow-hidden rounded-[26px] border border-[#f0e8ed] bg-[radial-gradient(ellipse_at_top,_rgba(194,77,134,0.14)_0%,_rgba(255,250,252,0.95)_50%,_rgba(255,255,255,1)_100%)] p-5 shadow-[0_26px_66px_-40px_rgba(57,33,52,0.22)] ring-1 ring-[#f3e8f0]/40 transition-all duration-300 hover:shadow-[0_40px_92px_-60px_rgba(194,77,134,0.18)]',
         className ?? '',
       ].join(' ')}
     >
@@ -399,7 +399,7 @@ export function ConfirmStep() {
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a898a8]">{en ? 'Your appointment' : 'Sinu broneering'}</p>
           <p className="mt-2 font-brand text-lg font-semibold leading-tight text-[#2f2530]">{selectedService.name}</p>
-          <p className="mt-1 text-sm font-semibold text-[#8a7a88]">
+            <p className="mt-1 text-xs font-medium text-[#8a7a88]">
             {dateShort} · {selectedSlot.time}
           </p>
         </div>
@@ -416,7 +416,7 @@ export function ConfirmStep() {
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Time' : 'Aeg'}</p>
-          <p className="mt-0.5 font-semibold text-[#c24d86]">{selectedSlot.time}</p>
+          <p className="mt-0.5 font-semibold text-[#8a7a88]">{selectedSlot.time}</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.12em] text-[#b8a8b0]">{en ? 'Duration' : 'Kestus'}</p>
@@ -462,7 +462,7 @@ export function ConfirmStep() {
   );
 
   return (
-    <div className="animate-fade-in mx-auto w-full max-w-[1100px] pb-40 lg:pb-10">
+    <div className="animate-fade-in mx-auto w-full max-w-[640px] pb-40 lg:pb-10">
       {toast && (
         <div
           className="fixed left-1/2 top-24 z-[60] max-w-sm -translate-x-1/2 rounded-2xl border border-[#e8dce4] bg-white px-5 py-3.5 text-center text-sm font-medium text-[#4a3d44] shadow-[0_20px_50px_-24px_rgba(57,33,52,0.35)]"
@@ -476,10 +476,10 @@ export function ConfirmStep() {
         {/* LEFT: emotional confirmation + form */}
         <div>
           <header className="mb-5 text-center">
-            <h1 className="font-brand text-[1.85rem] font-semibold tracking-tight text-[#1f171d] md:text-[2.05rem]">
+            <h1 className="font-brand text-[28px] font-medium leading-[1.25] tracking-tight text-[#1f171d]">
               {copy.title}
             </h1>
-            <p className="mt-2 text-lg font-medium text-[#5d4a56]">{copy.subtitle}</p>
+            <p className="mt-2 text-[15px] leading-[1.65] font-medium text-[#5d4a56]">{copy.subtitle}</p>
 
             {/* Loss framing bar */}
             <div className="mx-auto mt-4 flex max-w-[560px] items-start gap-3 rounded-[22px] border-l-4 border-l-[#c24d86]/30 border border-[#f0d6e3] bg-[#fff4fb]/90 px-4 py-3 shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)]">
@@ -536,10 +536,16 @@ export function ConfirmStep() {
             )}
           </div>
 
+          {/* Hero -> next section transition (subtle blur line) */}
+          <div
+            className="xl:hidden mb-5 h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(194,77,134,0.28)_50%,transparent_100%)] blur-[0.2px]"
+            aria-hidden
+          />
+
           {/* Deposit framing */}
           <section className="mb-5 rounded-[22px] border border-[#ead6e2] bg-[linear-gradient(180deg,#fff7fb_0%,#fffafd_60%,#ffffff_100%)] p-5 shadow-[0_18px_44px_-36px_rgba(194,77,134,0.35)]">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a898a8]">{en ? 'Deposit' : 'Ettemaks'}</p>
+              <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">{en ? 'Deposit' : 'Ettemaks'}</p>
               <p className="mt-2 font-brand text-[20px] font-semibold text-[#2f2530]">{copy.depositTitle}</p>
               <p className="mt-2 text-sm font-medium text-[#7a6a72]">{copy.depositSub}</p>
 
@@ -591,7 +597,7 @@ export function ConfirmStep() {
             }}
           >
             <div className="mb-4 flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#a898a8]">{copy.formTitle}</p>
+              <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">{copy.formTitle}</p>
               {!canPay && (
                 <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50/90 px-3 py-1 text-[12px] font-semibold text-amber-900/90">
                   <Lock className="h-4 w-4 text-[#9d6b8a]" strokeWidth={2} aria-hidden />
@@ -600,11 +606,12 @@ export function ConfirmStep() {
               )}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-8">
+              <div className="space-y-4">
               {/* First name */}
               <label className="block">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-[#443630]">
+                  <span className="text-[14px] font-medium text-[#443630]">
                     {copy.firstName} <span className="text-[#c24d86]">*</span>
                   </span>
                   {touched.firstName && firstNameValid ? (
@@ -621,8 +628,10 @@ export function ConfirmStep() {
                     setFormErrors((prev) => ({ ...prev, firstName: '' }));
                   }}
                   onBlur={() => setTouched((prev) => ({ ...prev, firstName: true }))}
-                  className={`mt-2 w-full rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
-                    touched.firstName && !firstNameValid ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+                  className={`mt-2 h-[56px] w-full rounded-[14px] border bg-white px-4 text-[16px] outline-none transition sm:text-sm ${
+                    touched.firstName && !firstNameValid
+                      ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-300/20'
+                      : 'border-[#e3dbd4] focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20'
                   }`}
                   placeholder={en ? 'Your first name' : 'Eesnimi'}
                   aria-invalid={Boolean(formErrors.firstName)}
@@ -635,7 +644,7 @@ export function ConfirmStep() {
               {/* Phone */}
               <label className="block">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-[#443630]">
+                  <span className="text-[14px] font-medium text-[#443630]">
                     {copy.phone} <span className="text-[#c24d86]">*</span>
                   </span>
                   {touched.phone && phoneValid ? (
@@ -652,8 +661,10 @@ export function ConfirmStep() {
                     setFormErrors((prev) => ({ ...prev, phone: '' }));
                   }}
                   onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
-                  className={`mt-2 w-full rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
-                    touched.phone && !phoneValid ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+                  className={`mt-2 h-[56px] w-full rounded-[14px] border bg-white px-4 text-[16px] outline-none transition sm:text-sm ${
+                    touched.phone && !phoneValid
+                      ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-300/20'
+                      : 'border-[#e3dbd4] focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20'
                   }`}
                   placeholder={en ? '+372 5xx xxx' : '+372 5xx xxx'}
                   aria-invalid={Boolean(formErrors.phone)}
@@ -661,10 +672,13 @@ export function ConfirmStep() {
                 {touched.phone && formErrors.phone ? <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p> : null}
               </label>
 
+              </div>
+
+              <div className="space-y-4">
               {/* Email */}
               <label className="block">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-[#443630]">{copy.email}</span>
+                  <span className="text-[14px] font-medium text-[#443630]">{copy.email}</span>
                   {touched.email && emailInput && emailValid ? (
                     <CheckCircle2 className="h-5 w-5 text-[#2d8a5e]" aria-hidden />
                   ) : null}
@@ -679,8 +693,10 @@ export function ConfirmStep() {
                     setFormErrors((prev) => ({ ...prev, email: '' }));
                   }}
                   onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
-                  className={`mt-2 w-full rounded-2xl border-2 bg-white px-4 py-3 text-[16px] outline-none transition sm:text-sm ${
-                    touched.email && emailInput && !emailValid ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
+                  className={`mt-2 h-[56px] w-full rounded-[14px] border bg-white px-4 text-[16px] outline-none transition sm:text-sm ${
+                    touched.email && emailInput && !emailValid
+                      ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-300/20'
+                      : 'border-[#e3dbd4] focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20'
                   }`}
                   placeholder={en ? 'name@email.com' : 'nimi@email.com'}
                   aria-invalid={Boolean(formErrors.email)}
@@ -691,7 +707,7 @@ export function ConfirmStep() {
               {/* Notes */}
               <label className="block">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-[#443630]">{copy.notes}</span>
+                  <span className="text-[14px] font-medium text-[#443630]">{copy.notes}</span>
                 </div>
                 <textarea
                   name="notes"
@@ -701,17 +717,21 @@ export function ConfirmStep() {
                     setForm((prev) => ({ ...prev, notes: v }));
                   }}
                   onBlur={() => setTouched((prev) => ({ ...prev, notes: true }))}
-                  className="mt-2 min-h-[88px] w-full resize-none rounded-2xl border-2 border-[#e3dbd4] bg-white px-4 py-3 text-[16px] outline-none transition focus:border-[#c79c84] sm:text-sm"
+                  className="mt-2 min-h-[88px] w-full resize-none rounded-[14px] border border-[#e3dbd4] bg-white px-4 py-4 text-[16px] outline-none transition focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20 sm:text-sm"
                   placeholder={en ? 'Anything you want us to know…' : 'Kõik, mida peaks teadma…'}
                 />
               </label>
 
+              </div>
+
               {/* Inspiration upload */}
-              <div className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-4">
+              <div>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#443630]">{copy.inspiration}</p>
-                    <p className="mt-1 text-xs font-medium text-[#7d6275]">{en ? 'Optional, but helps us prepare.' : 'Valikuline, aga aitab ette valmistada.'}</p>
+                    <p className="text-[14px] font-medium text-[#443630]">{en ? 'Inspiration photos' : 'Inspiratsioon'}</p>
+                    <p className="mt-1 text-[13px] font-medium text-[#7d6275]">
+                      {en ? 'Optional — helps us prepare.' : 'Valikuline — aitab meil ette valmistada.'}
+                    </p>
                   </div>
                   {form.inspirationImage ? (
                     <CheckCircle2 className="mt-1 h-5 w-5 text-[#2d8a5e]" aria-hidden />
@@ -726,39 +746,64 @@ export function ConfirmStep() {
                   onChange={(e) => void handleInspirationUpload(e.target.files)}
                 />
 
-                {!form.inspirationImage ? (
+                <div className="mt-3 grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => inspirationInputRef.current?.click()}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#e1d6cd] bg-white px-4 py-3 text-[14px] font-semibold text-[#6f5d69] transition hover:border-[#c79c84] hover:bg-[#fff6fb]"
-                    aria-busy={inspirationUploading}
                     disabled={inspirationUploading}
+                    className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#e1d6cd] bg-white/60 px-4 py-4 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
+                    aria-busy={inspirationUploading}
                   >
                     <UploadCloud className="h-5 w-5 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                    {inspirationUploading ? (en ? 'Uploading…' : 'Laen üles…') : en ? 'Upload photo' : 'Lisa foto'}
+                    <span className="text-[13px] font-semibold text-[#6f5d69]">{en ? 'Upload inspiration photo' : 'Lisa inspiratsioonipilt'}</span>
                   </button>
-                ) : (
+
+                  <button
+                    type="button"
+                    onClick={() => inspirationInputRef.current?.click()}
+                    disabled={inspirationUploading}
+                    className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#e1d6cd] bg-white/60 px-4 py-4 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
+                    aria-busy={inspirationUploading}
+                  >
+                    <UploadCloud className="h-5 w-5 text-[#c24d86]" strokeWidth={2} aria-hidden />
+                    <span className="text-[13px] font-semibold text-[#6f5d69]">{en ? 'Upload current nails photo' : 'Lisa pilt praegustest küüntest'}</span>
+                  </button>
+                </div>
+
+                {form.inspirationImage ? (
                   <div className="mt-3">
-                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-[#eadce5] bg-white">
-                      <Image src={form.inspirationImage} alt={en ? 'Inspiration preview' : 'Inspiratsiooni eelvaade'} fill className="object-cover" unoptimized />
+                    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#eadce5] bg-white">
+                      <Image
+                        src={form.inspirationImage}
+                        alt={en ? 'Inspiration preview' : 'Inspiratsiooni eelvaade'}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
                     </div>
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                       <button
                         type="button"
                         onClick={() => inspirationInputRef.current?.click()}
-                        className="flex-1 rounded-2xl border border-[#e3dbd4] bg-white px-4 py-2 text-[14px] font-semibold text-[#6f5d69] transition hover:border-[#c79c84]"
+                        className="text-[14px] font-semibold text-[#c24d86] underline decoration-[#c24d86]/30 underline-offset-4 transition hover:decoration-[#c24d86]"
                       >
                         {en ? 'Replace' : 'Asenda'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setForm((prev) => ({ ...prev, inspirationImage: '' }))}
-                        className="rounded-2xl border border-red-200 bg-white px-4 py-2 text-[14px] font-semibold text-red-600 transition hover:bg-[#fff5f5]"
+                        className="text-[14px] font-semibold text-[#d24f61] underline decoration-[#d24f61]/30 underline-offset-4 transition hover:decoration-[#d24f61]"
                       >
                         {en ? 'Remove' : 'Eemalda'}
                       </button>
                     </div>
                   </div>
+                ) : (
+                  inspirationUploading ? (
+                    <p className="mt-2 text-[13px] font-medium text-[#7d6275]">
+                      {en ? 'Uploading…' : 'Laen üles…'}
+                    </p>
+                  ) : null
                 )}
 
                 {formErrors.inspiration ? <p className="mt-2 text-xs text-red-500">{formErrors.inspiration}</p> : null}
@@ -766,35 +811,7 @@ export function ConfirmStep() {
             </div>
           </form>
 
-          {/* Emotional trust strip */}
-          <section className="mb-6">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[#f0e6ec] bg-[#fff7fb] px-4 py-3 shadow-[0_16px_40px_-32px_rgba(194,77,134,0.18)]">
-                <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
-                  <span className="text-sm font-semibold text-[#2f2530]">{copy.trustStrip1}</span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-[#f0e6ec] bg-[#fff7fb] px-4 py-3 shadow-[0_16px_40px_-32px_rgba(194,77,134,0.18)]">
-                <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-[#c24d86]" strokeWidth={1.8} aria-hidden />
-                  <span className="text-sm font-semibold text-[#2f2530]">{copy.trustStrip2}</span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-[#f0e6ec] bg-[#fff7fb] px-4 py-3 shadow-[0_16px_40px_-32px_rgba(194,77,134,0.18)]">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
-                  <span className="text-sm font-semibold text-[#2f2530]">{copy.trustStrip3}</span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-[#f0e6ec] bg-[#fff7fb] px-4 py-3 shadow-[0_16px_40px_-32px_rgba(194,77,134,0.18)]">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
-                  <span className="text-sm font-semibold text-[#2f2530]">{copy.trustStrip4}</span>
-                </div>
-              </div>
-            </div>
-          </section>
+          {/* Trust micro block is shown directly under CTA */}
 
           {/* Desktop CTA (mobile uses sticky bar) */}
           <div className="hidden lg:block">
@@ -809,19 +826,34 @@ export function ConfirmStep() {
                 void handleSubmit();
               }}
               disabled={!canPay}
-              className={`w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] py-4 text-[15px] font-semibold text-white shadow-[0_16px_36px_-14px_rgba(194,77,134,0.55)] transition-all duration-200 hover:shadow-[0_20px_40px_-12px_rgba(194,77,134,0.45)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${
+              className={`h-[56px] w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] px-6 py-0 text-[15px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(194,77,134,0.45)] transition-all duration-200 hover:shadow-[0_16px_36px_-18px_rgba(194,77,134,0.38)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${
                 ctaGlowOnce ? 'booking-cta-glow-once' : ''
               }`}
             >
               {isLoading ? copy.ctaLoading : copy.cta}
             </button>
+            {/* Trust micro block under CTA */}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+                <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
+                {en ? '⭐ 4.9 rating' : '⭐ 4.9 hinnang'}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+                <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
+                {en ? '🧼 Medical level hygiene' : '🧼 Meditsiiniline hügieen'}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+                <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
+                {en ? '🔁 Free rescheduling' : '🔁 Tasuta ümberbroneerimine'}
+              </span>
+            </div>
             <p className="mt-3 text-center text-xs font-medium text-[#9a8a94]">{copy.ctaSub}</p>
           </div>
         </div>
 
         {/* RIGHT: sticky booking summary + urgency/trust */}
-        <aside className="hidden xl:block xl:sticky xl:top-24 self-start">
-          <div className="rounded-[28px] border border-[#f0e8ed] bg-white/75 p-5 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.18)] backdrop-blur-xl">
+        <aside className="hidden xl:block xl:sticky xl:top-[120px] self-start">
+          <div className="rounded-[28px] border border-[#f0e8ed] bg-white/75 p-5 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.14)] backdrop-blur-xl">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-[#5d4a56]">
@@ -882,12 +914,27 @@ export function ConfirmStep() {
               void handleSubmit();
             }}
             disabled={!canPay}
-            className={`w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] py-3.5 text-[15px] font-semibold text-white shadow-[0_14px_32px_-12px_rgba(194,77,134,0.5)] transition-all active:scale-[0.98] disabled:opacity-45 ${
+            className={`h-[56px] w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] px-5 py-0 text-[15px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(194,77,134,0.45)] transition-all active:scale-[0.98] disabled:opacity-45 ${
               ctaGlowOnce ? 'booking-cta-glow-once' : ''
             }`}
           >
             {isLoading ? copy.ctaLoading : copy.cta}
           </button>
+          {/* Trust micro block under CTA */}
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+              <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
+              {en ? '⭐ 4.9 rating' : '⭐ 4.9 hinnang'}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+              <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
+              {en ? '🧼 Medical level hygiene' : '🧼 Meditsiiniline hügieen'}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+              <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
+              {en ? '🔁 Free rescheduling' : '🔁 Tasuta ümberbroneerimine'}
+            </span>
+          </div>
           <p className="mt-2 text-center text-[11px] text-[#a89a9f]">{copy.ctaSub}</p>
         </div>
       </div>

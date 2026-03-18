@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
-import { useBookingContent } from '@/hooks/use-booking-content';
 import type { TimeSlot as TimeSlotType } from '@/store/booking-types';
 import { trackEvent } from '@/lib/funnel-track';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 export function HeroBookingWidget() {
   const { t, language } = useTranslation();
-  const { text } = useBookingContent();
   const router = useRouter();
   const [availableSlots, setAvailableSlots] = useState<TimeSlotType[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(true);
@@ -73,8 +71,28 @@ export function HeroBookingWidget() {
     return () => window.clearTimeout(t1);
   }, [slotsLoading, nextSlot]);
 
-  const getNextAvailableText = () => {
-    if (!nextSlot) return text('availability_no_slots', t('widget.noSlotsAvailable'));
+  const urgencyMicro = useMemo(() => {
+    if (!nextSlot) return language === 'en' ? 'Times filling fast today' : 'Ajad täituvad kiiresti täna';
+    const now = new Date();
+    const todayDate = now.toISOString().split('T')[0];
+    const isToday = nextSlot.date === todayDate;
+    const h = Number(nextSlot.time.split(':')[0] ?? 0);
+    if (isToday) {
+      if (h >= 9 && h < 12) return language === 'en' ? 'Last morning slots available' : 'Viimased hommikused ajad täna';
+      if (h >= 17) return language === 'en' ? 'Evening nearly full' : 'Õhtused ajad on peaaegu täis';
+      return language === 'en' ? 'Times filling fast today' : 'Ajad täituvad kiiresti täna';
+    }
+    return language === 'en' ? 'Limited openings ahead' : 'Avamisi on piiratud';
+  }, [nextSlot, language]);
+
+  const bookingHeadlineParts = useMemo(() => {
+    if (!nextSlot) {
+      return {
+        label: language === 'en' ? 'Next available time' : 'Järgmine vaba aeg',
+        time: '—',
+      };
+    }
+
     const now = new Date();
     const todayDate = now.toISOString().split('T')[0];
     const tomorrow = new Date();
@@ -82,32 +100,30 @@ export function HeroBookingWidget() {
     const tomorrowDate = tomorrow.toISOString().split('T')[0];
 
     if (nextSlot.date === todayDate) {
-      return `${t('widget.todayAt')} ${nextSlot.time}`;
+      return {
+        label: language === 'en' ? 'Next available time today' : 'Järgmine vaba aeg täna',
+        time: nextSlot.time,
+      };
     }
+
     if (nextSlot.date === tomorrowDate) {
-      return `${t('widget.tomorrowAt')} ${nextSlot.time}`;
+      return {
+        label: language === 'en' ? 'Next available time tomorrow' : 'Järgmine vaba aeg homme',
+        time: nextSlot.time,
+      };
     }
+
     const formatted = new Date(`${nextSlot.date}T00:00:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
     });
-    return `${formatted} ${t('confirm.at')} ${nextSlot.time}`;
-  };
 
-  const bookingCardTitle = () => {
-    if (!nextSlot) return language === 'en' ? 'Next slot' : 'Järgmine vaba aeg';
-    const now = new Date();
-    const todayDate = now.toISOString().split('T')[0];
-    if (nextSlot.date === todayDate) {
-      return language === 'en'
-        ? `Next available time today at ${nextSlot.time}`
-        : `Järgmine vaba aeg täna kell ${nextSlot.time}`;
-    }
-    return language === 'en'
-      ? `Next available time: ${getNextAvailableText()}`
-      : `Järgmine vaba aeg: ${getNextAvailableText()}`;
-  };
+    return {
+      label: language === 'en' ? `Next available: ${formatted}` : `Järgmine vaba aeg: ${formatted}`,
+      time: nextSlot.time,
+    };
+  }, [nextSlot, language]);
 
   const reserveLabel = () => {
     if (!nextSlot) return language === 'en' ? 'Reserve time' : 'Broneeri aeg';
@@ -149,7 +165,7 @@ export function HeroBookingWidget() {
   return (
     <div
       id="hero-booking-widget"
-      className="group relative overflow-hidden rounded-2xl border border-[#f0e6ec] bg-white p-6 shadow-[0_24px_64px_-44px_rgba(95,38,77,0.32)] transition-all duration-200 md:hover:-translate-y-0.5 md:hover:shadow-[0_32px_72px_-50px_rgba(95,38,77,0.38)] lg:p-8"
+      className="group relative overflow-hidden rounded-2xl border border-[#f0e6ec] bg-white p-5 shadow-[0_24px_64px_-44px_rgba(95,38,77,0.32)] transition-all duration-200 md:p-6 md:hover:-translate-y-0.5 md:hover:shadow-[0_32px_72px_-50px_rgba(95,38,77,0.38)] lg:p-8"
     >
       <div className="absolute left-0 right-0 top-0 h-1 bg-[linear-gradient(90deg,#e8b8d4_0%,#c24d86_55%,#a93d71_100%)]" aria-hidden />
       <div className="pointer-events-none absolute right-0 top-0 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(215,157,192,0.22)_0%,transparent_70%)]" aria-hidden />
@@ -160,8 +176,13 @@ export function HeroBookingWidget() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">
             {language === 'en' ? 'Next Premium Slot Available' : 'Järgmine premium aeg'}
           </p>
-          <p className="mt-2 font-brand text-[34px] font-semibold tracking-tight text-[#1f171d]">
-            {slotsLoading ? '—' : slotVisible ? bookingCardTitle() : '—'}
+          <p className="mt-2 font-brand leading-[1.22] tracking-tight text-[#1f171d]">
+            <span className="block text-[16px] font-semibold leading-[1.22]">
+              {slotsLoading ? '—' : slotVisible ? bookingHeadlineParts.label : '—'}
+            </span>
+            <span className="block text-[30px] font-semibold leading-[1.22]">
+              {slotsLoading ? '—' : slotVisible ? bookingHeadlineParts.time : '—'}
+            </span>
           </p>
         </div>
         <span className="rounded-full border border-[#f0dfe9] bg-white/90 px-3 py-1 text-[11px] font-medium text-[#7f6275]">
@@ -188,7 +209,7 @@ export function HeroBookingWidget() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c24d86] opacity-45" aria-hidden />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[#c24d86]" aria-hidden />
           </span>
-          {language === 'en' ? 'Times fill fast' : 'Ajad täituvad kiiresti'}
+          {urgencyMicro}
         </span>
       </div>
 

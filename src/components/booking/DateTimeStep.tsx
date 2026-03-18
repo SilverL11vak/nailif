@@ -480,8 +480,32 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
     const totalSec = Math.floor(lockRemainingMs / 1000);
     const mm = Math.floor(totalSec / 60);
     const ss = totalSec % 60;
-    return `${en ? 'Time locked for you' : 'Aeg lukus sinu jaoks'} — ${String(mm).padStart(1, '0')}:${String(ss).padStart(2, '0')}`;
-  }, [selectedSlot, lockRemainingMs, en]);
+    const av = sortedAvailable ?? [];
+    const count = av.length;
+    const morningCount = av.filter((s) => {
+      const h = Number(s.time.split(':')[0] ?? 0);
+      return Number.isFinite(h) && h >= 9 && h < 12;
+    }).length;
+    const eveningCount = av.filter((s) => {
+      const h = Number(s.time.split(':')[0] ?? 0);
+      return Number.isFinite(h) && h >= 17;
+    }).length;
+
+    let micro: string;
+    if (count <= 3) {
+      micro = en ? '3 people are viewing this time' : '3 inimest vaatab seda aega täna';
+    } else if (morningCount > 0 && count <= 6) {
+      micro = en ? 'Last morning slots available' : 'Viimased hommikused ajad täna';
+    } else if (eveningCount > 0 && eveningCount <= 2) {
+      micro = en ? 'Evening nearly full' : 'Õhtused ajad on peaaegu täis';
+    } else if (count <= 6) {
+      micro = en ? 'Times filling fast today' : 'Ajad täituvad kiiresti täna';
+    } else {
+      micro = en ? 'Time locked for you' : 'Aeg lukus sinu jaoks';
+    }
+
+    return `${micro} — ${String(mm).padStart(1, '0')}:${String(ss).padStart(2, '0')}`;
+  }, [selectedSlot, lockRemainingMs, en, sortedAvailable]);
 
   const availabilityContext = useMemo(() => {
     const av = currentSlots.filter((s) => s.available);
@@ -491,9 +515,15 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       const h = Number(s.time.split(':')[0] ?? 0);
       return Number.isFinite(h) && h >= 17;
     }).length;
-    if (count <= 3) return en ? `Only ${count} slots left today` : `Täna on jäänud ainult ${count} aega`;
+    const morning = av.filter((s) => {
+      const h = Number(s.time.split(':')[0] ?? 0);
+      return Number.isFinite(h) && h >= 9 && h < 12;
+    }).length;
+
+    if (morning > 0 && count <= 3) return en ? 'Last morning slots available' : 'Viimased hommikused ajad täna';
+    if (count <= 6) return en ? 'Times filling fast today' : 'Ajad täituvad kiiresti täna';
     if (evening > 0 && evening <= 2) return en ? 'Evening nearly full' : 'Õhtused ajad on peaaegu täis';
-    return en ? 'Times fill fast — choose your favourite' : 'Ajad täituvad kiiresti — vali endale sobiv';
+    return en ? 'Choose your favourite time' : 'Vali endale sobiv aeg';
   }, [currentSlots, en]);
 
   // Reservation expiry (UI-only): if countdown reaches 0, deselect and prompt user.
@@ -669,7 +699,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   );
 
   return (
-    <div className="animate-fade-in mx-auto max-w-[1100px]">
+    <div className="animate-fade-in mx-auto max-w-[640px]">
       {/* Sticky progress + trust strip (Step 2) */}
       <div className="sticky top-0 z-30 -mx-4 mb-5 border-b border-[#f0e8ec] bg-white/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-2xl lg:border lg:border-[#f0e8ec] lg:shadow-[0_10px_30px_-22px_rgba(57,33,52,0.18)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">
@@ -711,7 +741,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       )}
 
       <div className="lg:grid lg:grid-cols-[minmax(260px,280px)_1fr] lg:items-start lg:gap-10">
-        <aside className="mb-8 hidden lg:sticky lg:top-24 lg:mb-0 lg:block">
+        <aside className="mb-8 hidden lg:sticky lg:top-[120px] lg:mb-0 lg:block">
           <SummaryCard />
         </aside>
 
@@ -1015,13 +1045,28 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               </p>
 
               {/* Safe reassurance */}
-              <div className="mt-4 rounded-2xl border border-[#f0e6ea] bg-white/90 p-4 shadow-[0_16px_40px_-30px_rgba(57,33,52,0.18)]">
-                <p className="text-sm font-semibold text-[#2f2530]">{en ? 'Safe booking' : 'Turvaline broneering'}</p>
-                <ul className="mt-2 space-y-1 text-[13px] text-[#6f6168]">
-                  <li>✓ {en ? 'You can change your time later' : 'Aega saab hiljem muuta'}</li>
-                  <li>✓ {en ? 'Deposit only confirms reservation' : 'Ettemaks kinnitab broneeringu'}</li>
-                  <li>✓ {en ? 'No hidden fees' : 'Peidetud tasusid ei ole'}</li>
-                </ul>
+              <div className="mt-4 rounded-2xl border border-[#f0e6ea] bg-white/90 p-5 shadow-[0_12px_32px_-30px_rgba(57,33,52,0.16)]">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.2} />
+                  <p className="text-sm font-semibold text-[#2f2530]">
+                    {en ? 'Safe booking' : 'Turvaline broneering'}
+                  </p>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="flex items-center gap-2 text-[13px] text-[#6f6168]">
+                    <Check className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.4} />
+                    <span>{en ? 'Change later' : 'Muuda hiljem'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[13px] text-[#6f6168]">
+                    <Check className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.4} />
+                    <span>{en ? 'Deposit confirms' : 'Ettemaks kinnitab'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[13px] text-[#6f6168]">
+                    <Check className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2.4} />
+                    <span>{en ? 'No hidden fees' : 'Peidetud tasusid ei ole'}</span>
+                  </div>
+                </div>
               </div>
             </>
           )}

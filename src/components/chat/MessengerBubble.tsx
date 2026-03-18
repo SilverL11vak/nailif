@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 function sanitizePageId(raw: string) {
@@ -13,6 +14,51 @@ export function MessengerBubble() {
 
   const pageId = sanitizePageId(process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID ?? '');
   if (!pageId) return null;
+
+  const isHome = pathname === '/' || pathname === '/en' || pathname === '/et';
+  const [isAllowedToRender, setIsAllowedToRender] = useState(!isHome);
+
+  useEffect(() => {
+    if (!isHome) {
+      setIsAllowedToRender(true);
+      return;
+    }
+
+    // Delay messenger until user scrolls deeper into the homepage.
+    // This prevents an aggressive chat bubble in the hero / first fold.
+    setIsAllowedToRender(false);
+
+    const servicesEl = document.getElementById('services');
+    const testimonialsEl = document.getElementById('testimonials');
+    if (!servicesEl && !testimonialsEl) {
+      // Fallback: if the page structure isn't present yet, use scroll position.
+      const timeout = window.setTimeout(() => setIsAllowedToRender(window.scrollY > 420), 250);
+      return () => window.clearTimeout(timeout);
+    }
+
+    if (typeof window !== 'undefined' && window.scrollY > 420) {
+      setIsAllowedToRender(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.some((e) => e.isIntersecting && (e.intersectionRatio ?? 0) >= 0.08);
+        if (hit) {
+          setIsAllowedToRender(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: [0, 0.08, 0.15] }
+    );
+
+    if (servicesEl) observer.observe(servicesEl);
+    if (testimonialsEl) observer.observe(testimonialsEl);
+
+    return () => observer.disconnect();
+  }, [isHome]);
+
+  if (!isAllowedToRender) return null;
 
   const messengerUrl = `https://m.me/${pageId}`;
 
