@@ -6,7 +6,7 @@ import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
 import type { TimeSlot } from '@/store/booking-types';
-import type { SlotPillBadge } from './DateTimeSlotPill';
+// (no badge types needed on mobile time grid)
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { Check, ChevronLeft, ChevronRight, ShieldCheck, Star } from 'lucide-react';
 import { trackEvent, trackSlotClick, touchBookingActivity } from '@/lib/analytics-client';
@@ -44,22 +44,6 @@ function dayDensity(slots: TimeSlot[] | undefined): Density {
 const BOOKING_SLOT_LOCK_KEY = 'booking_slot_lock';
 const SLOT_LOCK_MS = 5 * 60 * 1000;
 
-function computeBadge(
-  slot: TimeSlot,
-  av: TimeSlot[],
-  recommendedIds: Set<string>,
-  fastestId: string | undefined,
-  middayId: string | undefined
-): SlotPillBadge {
-  if (!slot.available) return null;
-  if (recommendedIds.has(slot.id)) return 'recommended';
-  if (slot.id === fastestId) return 'fastest';
-  if (slot.isPopular) return 'popular';
-  if (av.length >= 3 && slot.id === middayId) return 'midday';
-  if (slot.count != null && slot.count <= 2) return 'limited';
-  return null;
-}
-
 const HEADER_STICKY_PX = 76;
 const SLOT_SELECT_SCROLL_DELAY_MS = 120;
 const PROGRAMMATIC_SCROLL_GRACE_MS = 520;
@@ -94,6 +78,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   const [slotAreaShake, setSlotAreaShake] = useState(false);
   const [lockExpiresAt, setLockExpiresAt] = useState<number | null>(null);
   const [lockRemainingMs, setLockRemainingMs] = useState<number | null>(null);
+  const [lockTickPulse, setLockTickPulse] = useState(false);
   const [reservationToast, setReservationToast] = useState<string | null>(null);
   const confirmationPanelRef = useRef<HTMLDivElement>(null);
   const continueButtonRef = useRef<HTMLDivElement>(null);
@@ -139,35 +124,10 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
     [allSlots]
   );
 
-  const recommendedIds = useMemo(() => new Set(recommendedSlots.map((s) => s.id)), [recommendedSlots]);
-
-  const { fastestId, middayId, sortedAvailable } = useMemo(() => {
-    const av = currentSlots.filter((s) => s.available).sort((a, b) => a.time.localeCompare(b.time));
-    const fastest = av[0]?.id;
-    let mid: string | undefined;
-    if (av.length > 0) {
-      const target = 12 * 60;
-      let bestDiff = Infinity;
-      for (const s of av) {
-        const [h, m] = s.time.split(':').map(Number);
-        const mins = (h || 0) * 60 + (m || 0);
-        const d = Math.abs(mins - target);
-        if (d < bestDiff) {
-          bestDiff = d;
-          mid = s.id;
-        }
-      }
-    }
-    return { fastestId: fastest, middayId: mid, sortedAvailable: av };
+  const sortedAvailable = useMemo(() => {
+    // Used by the countdown microcopy to estimate how full the day is.
+    return currentSlots.filter((s) => s.available).sort((a, b) => a.time.localeCompare(b.time));
   }, [currentSlots]);
-
-  const slotBadges = useMemo(() => {
-    const m = new Map<string, SlotPillBadge>();
-    for (const slot of currentSlots) {
-      m.set(slot.id, computeBadge(slot, sortedAvailable, recommendedIds, fastestId, middayId));
-    }
-    return m;
-  }, [currentSlots, sortedAvailable, recommendedIds, fastestId, middayId]);
 
   useEffect(() => {
     let mounted = true;
@@ -461,6 +421,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
     let raf: number | null = null;
     const tick = () => {
       const remaining = Math.max(0, nextExpires - Date.now());
+      setLockTickPulse((p) => !p);
       setLockRemainingMs(remaining);
       raf = window.setTimeout(tick, 1000) as unknown as number;
     };
@@ -621,10 +582,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       ? 'Pick a time'
       : 'Vali aeg';
 
-  const serviceShort =
-    selectedService && selectedService.name.length > 22
-      ? `${selectedService.name.slice(0, 20)}…`
-      : selectedService?.name ?? '';
+  const selectedTimeLineDash = selectedTimeLine.replace(' · ', ' — ');
 
   const showEmptyDay =
     !isLoading && currentSlots.length > 0 && !currentSlots.some((s) => s.available) && nextAvailableSlot;
@@ -700,9 +658,9 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
   );
 
   return (
-    <div className="animate-fade-in w-full">
+    <div className="animate-fade-in w-full pb-[104px] lg:pb-0">
       {/* Sticky progress + trust strip (Step 2) */}
-      <div className="sticky top-0 z-30 -mx-4 mb-5 border-b border-[#f0e8ec] bg-white/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:mx-0 lg:static lg:rounded-2xl lg:border lg:border-[#f0e8ec] lg:shadow-[0_10px_30px_-22px_rgba(57,33,52,0.18)]">
+      <div className="sticky top-0 z-30 -mx-4 mb-3 border-b border-[#f0e8ec] bg-white/85 px-4 py-3 backdrop-blur-md sm:-mx-6 sm:px-6 lg:mx-0 lg:static lg:rounded-2xl lg:border lg:border-[#f0e8ec] lg:shadow-[0_10px_30px_-22px_rgba(57,33,52,0.18)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">
           {en ? 'Step 2 of 3 — Choose Time' : 'Samm 2/3 — Vali aeg'}
         </p>
@@ -720,9 +678,12 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
           {lockLine && (
             <>
               <span className="h-1 w-1 rounded-full bg-[#d4c8cc] lg:hidden" aria-hidden />
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[11px] font-semibold text-[#6a3b57] lg:hidden">
+              <span
+                className={`inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[11px] font-semibold text-[#6a3b57] lg:hidden ${
+                  lockTickPulse ? 'booking-countdown-tick-pulse' : ''
+                }`}
+              >
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c24d86] opacity-50" aria-hidden />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[#c24d86]" aria-hidden />
                 </span>
                 {lockLine}
@@ -747,7 +708,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
         </aside>
 
         <div className="min-w-0">
-          <div className="mb-6 text-center lg:text-left">
+          <div className="mb-4 text-center lg:text-left">
             <h2 className="font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2530] md:text-[1.85rem]">
               {t('datetime.choose')}
             </h2>
@@ -755,7 +716,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
           </div>
 
           {lockUrgencyLine && (
-            <div className="booking-urgency-pulse lg:sticky lg:top-[120px] z-20 mb-4 w-full rounded-full border border-[#ead6e2]/90 bg-white/70 px-5 py-2.5 text-[13px] font-semibold text-[#6a3b57] backdrop-blur-xl shadow-[0_14px_34px_-22px_rgba(57,33,52,0.22)]">
+            <div className="booking-urgency-pulse hidden lg:sticky lg:top-[120px] z-20 mb-4 w-full rounded-full border border-[#ead6e2]/90 bg-white/70 px-5 py-2.5 text-[13px] font-semibold text-[#6a3b57] backdrop-blur-xl shadow-[0_14px_34px_-22px_rgba(57,33,52,0.22)]">
               <span className="inline-flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c24d86] opacity-50" aria-hidden />
@@ -857,7 +818,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             })}
           </div>
 
-          <div className="mb-6 flex flex-wrap items-center gap-3 text-[10px] text-[#9a8a94]">
+          <div className="hidden lg:flex mb-6 flex-wrap items-center gap-3 text-[10px] text-[#9a8a94]">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[#5cb88a]" />
               {en ? 'Many openings' : 'Palju vabu'}
@@ -874,12 +835,12 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
           <div className={slotAreaShake ? 'booking-slot-area-shake rounded-2xl' : ''} id="booking-datetime-slot-area">
           {availabilityContext && !isLoading && currentSlots.length > 0 && (
-            <div className="mb-4 rounded-2xl border border-[#efe0e8] bg-white/80 px-4 py-3 text-sm font-medium text-[#5d4558] shadow-[0_12px_30px_-24px_rgba(57,33,52,0.16)]">
+            <div className="hidden lg:block mb-4 rounded-2xl border border-[#efe0e8] bg-white/80 px-4 py-3 text-sm font-medium text-[#5d4558] shadow-[0_12px_30px_-24px_rgba(57,33,52,0.16)]">
               {availabilityContext}
             </div>
           )}
           {isLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
               {Array.from({ length: 12 }).map((_, i) => (
                 <SkeletonBlock key={i} className="h-[68px] rounded-2xl lg:h-[72px]" />
               ))}
@@ -938,38 +899,11 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {currentSlots.map((slot) => {
                   const isSelected = selectedSlot?.id === slot.id;
-                  const badge = slotBadges.get(slot.id) ?? null;
                   const isAvailable = slot.available;
                   const dimOthers = Boolean(selectedSlot) && !isSelected;
-                  const hour = Number(slot.time.split(':')[0] ?? 0);
-                  const isEvening = Number.isFinite(hour) && hour >= 17;
-                  const isMorning = Number.isFinite(hour) && hour >= 9 && hour <= 11;
-                  const isMidday = Number.isFinite(hour) && hour >= 12 && hour <= 14;
-                  const eveningAvailable = sortedAvailable.filter((s) => {
-                    const h = Number(s.time.split(':')[0] ?? 0);
-                    return Number.isFinite(h) && h >= 17;
-                  });
-                  const isLastEveningSlot = isEvening && eveningAvailable.length === 1 && eveningAvailable[0]?.id === slot.id;
-
-                  const label =
-                    badge === 'popular'
-                      ? en ? 'Most Popular' : 'Populaarseim'
-                      : isLastEveningSlot
-                        ? en ? 'Last Evening Slot' : 'Viimane õhtune aeg'
-                        : isMorning
-                          ? en ? 'Relaxed Morning' : 'Rahulik hommik'
-                          : isMidday
-                            ? en ? 'Quick Visit' : 'Kiire külastus'
-                            : badge === 'fastest'
-                              ? en ? 'Booked often' : 'Broneeritakse tihti'
-                              : badge === 'limited'
-                                ? en ? 'Almost full' : 'Peaaegu täis'
-                                : badge === 'recommended'
-                                  ? en ? 'Recommended' : 'Soovitus'
-                                  : null;
 
                   return (
                     <button
@@ -998,12 +932,12 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
                         }
                       }}
                       className={[
-                        'relative min-h-[68px] lg:min-h-[72px] rounded-2xl border px-3 py-3 text-left transition-all duration-200 motion-reduce:transition-none',
+                        'relative min-h-[72px] rounded-2xl border px-4 py-3.5 text-left transition-all duration-200 motion-reduce:transition-none',
                         isAvailable
-                          ? 'bg-white shadow-[0_10px_26px_-18px_rgba(57,33,52,0.22)] hover:-translate-y-0.5 hover:shadow-[0_16px_34px_-22px_rgba(57,33,52,0.26)]'
-                          : 'cursor-not-allowed border-[#eeeaeb] bg-[#faf9f9] text-[#b5a8ad] opacity-75',
+                          ? 'bg-white shadow-[0_10px_26px_-18px_rgba(57,33,52,0.14)] hover:-translate-y-0.5 hover:shadow-[0_16px_34px_-22px_rgba(57,33,52,0.20)]'
+                          : 'cursor-not-allowed border-[#eeeaeb] bg-[#f7f7f7] text-[#b5a8ad]',
                         isSelected
-                          ? 'border-[#e8b8d0] bg-[linear-gradient(135deg,#fff2f9_0%,#ffe9f3_45%,#fffdfc_100%)] ring-2 ring-[#c24d86]/20 scale-[1.03]'
+                          ? 'border-[#e8b8d0] bg-[linear-gradient(135deg,#fff2f9_0%,#ffe9f3_45%,#fffdfc_100%)] ring-2 ring-[#c24d86]/25 shadow-[0_18px_40px_-28px_rgba(194,77,134,0.35)] scale-[1.02]'
                           : 'border-[#ebe5e8]',
                         dimOthers ? 'opacity-80' : '',
                       ].join(' ')}
@@ -1011,34 +945,19 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-[14px] font-semibold tabular-nums text-[#2f2530]">
+                          <p className="text-[18px] font-semibold leading-[1.2] tabular-nums text-[#2f2530] lg:text-[14px]">
                             {slot.time}
                           </p>
-                          {label && (
-                            <p
-                              className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                                badge === 'popular'
-                                  ? 'bg-amber-50 text-amber-800'
-                                  : isLastEveningSlot
-                                    ? 'bg-[#fff4fb] text-[#8b3b62]'
-                                    : badge === 'limited'
-                                    ? 'bg-rose-50 text-rose-700'
-                                    : 'bg-[#fff2f9] text-[#8b4d6a]'
-                              }`}
-                            >
-                              {label}
-                            </p>
-                          )}
                         </div>
                         {isSelected && (
-                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-white shadow-[0_12px_24px_-14px_rgba(194,77,134,0.65)]">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c24d86] text-white shadow-[0_12px_24px_-14px_rgba(194,77,134,0.65)]">
                             <Check className="h-4 w-4" strokeWidth={2.4} />
                           </span>
                         )}
                       </div>
-                      {isAvailable && (
-                        <p className="mt-2 text-[11px] font-medium text-[#7a6a72]">
-                          {en ? 'Tap to select' : 'Vali aeg'}
+                      {isAvailable && !isSelected && (
+                        <p className="mt-2 text-[12px] font-semibold text-[#7a6a72]">
+                          {en ? 'Select time' : 'Vali aeg'}
                         </p>
                       )}
                     </button>
@@ -1047,7 +966,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               </div>
 
               {/* Optional subtle popularity signal */}
-              <p className="mt-4 text-center text-[12px] text-[#9a8a94] lg:hidden">
+              <p className="hidden">
                 {sortedAvailable.length > 0
                   ? en
                     ? 'Some times book fastest — choose quickly to secure your preferred slot.'
@@ -1133,37 +1052,38 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       </div>
 
       <div ref={continueButtonRef} className="h-1 w-full lg:hidden" aria-hidden />
+      {selectedSlot && (
+        <div className="mx-auto mt-4 w-full max-w-lg px-3 lg:hidden">
+          <div className="rounded-[22px] border border-[#f0e8ed] bg-white/80 p-4 shadow-[0_16px_36px_-30px_rgba(57,33,52,0.18)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">
+              {en ? 'Your selection' : 'Sinu valik'}
+            </p>
+            <p className="mt-2 text-[16px] font-brand font-semibold text-[#2f2530]">{selectedService?.name ?? '—'}</p>
+            <p className="mt-1 text-[13px] font-medium text-[#5d4a56]">{selectedTimeLineDash}</p>
+            <p className="mt-2 text-[18px] font-semibold tabular-nums text-[#c24d86]">€{price}</p>
+          </div>
+        </div>
+      )}
 
-      <div className="h-24 shrink-0 lg:hidden" aria-hidden />
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[45] h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,252,253,0.92)_50%,#fff9fb_100%)] lg:hidden" />
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[45] h-20 bg-[linear-gradient(180deg,transparent_0%,rgba(255,252,253,0.92)_45%,#fff9fb_100%)] shadow-[0_-20px_40px_-30px_rgba(57,33,52,0.28)] lg:hidden" />
 
       {/* Sticky bottom confirmation panel (mobile) */}
       <div className="fixed inset-x-0 bottom-0 z-[50] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
         <div
-          className={`pointer-events-auto w-full max-w-lg overflow-hidden rounded-[22px] border border-white/70 bg-white/72 shadow-[0_18px_48px_-18px_rgba(57,33,52,0.28)] backdrop-blur-xl transition-transform duration-[160ms] ease-out motion-reduce:transition-none ${
+          className={`pointer-events-auto w-full max-w-lg rounded-[22px] border border-white/70 bg-white/90 p-3 shadow-[0_18px_48px_-18px_rgba(57,33,52,0.28)] backdrop-blur-xl transition-transform duration-[160ms] ease-out motion-reduce:transition-none ${
             mobileStickyLift ? 'booking-mobile-sticky-lift' : ''
           }`}
         >
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold text-[#2f2530]">{serviceShort || (en ? 'Service' : 'Teenus')}</p>
-              <p className="truncate text-[13px] font-bold tabular-nums text-[#c24d86]">{selectedTimeLine}</p>
-              {selectedService?.duration ? (
-                <p className="mt-0.5 text-[11px] font-medium text-[#7a6a72]">
-                  {selectedService.duration} {en ? 'min' : 'min'}
-                </p>
-              ) : null}
-            </div>
+          <div className="w-full">
             <button
               id="booking-sticky-primary-action"
               type="button"
               disabled={!selectedSlot}
               onClick={handleContinue}
-              className={`shrink-0 rounded-2xl px-5 py-3 text-[13px] font-semibold transition-all duration-[160ms] ${
+              className={`h-[56px] w-full rounded-[22px] px-5 text-[15px] font-semibold transition-all duration-[200ms] ${
                 selectedSlot
-                  ? 'bg-[linear-gradient(135deg,#1f171d_0%,#2a2228_55%,#1c151b_100%)] text-white shadow-[0_12px_28px_-14px_rgba(31,23,29,0.55)] active:scale-[0.98]'
-                  : 'cursor-not-allowed bg-[#e8e4e6] text-[#a09a9c]'
+                  ? 'bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] text-white shadow-[0_12px_28px_-14px_rgba(194,77,134,0.45)] active:scale-[0.99] opacity-100 translate-y-0'
+                  : 'cursor-not-allowed bg-[#e8e4e6] text-[#a09a9c] opacity-60 translate-y-[1px]'
               }`}
             >
               {en ? 'Continue Booking →' : 'Jätka broneerimist →'}
@@ -1230,11 +1150,30 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
         .booking-mobile-sticky-lift {
           animation: bookingMobileStickyLift 160ms ease-out both;
         }
+
+        @keyframes bookingCountdownTickPulse {
+          0%,
+          100% {
+            transform: translateY(0) scale(1);
+            box-shadow: 0 14px 34px -22px rgba(57, 33, 52, 0.22);
+          }
+          50% {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow:
+              0 20px 48px -24px rgba(194, 77, 134, 0.28),
+              0 0 0 2px rgba(194, 77, 134, 0.14);
+          }
+        }
+
+        .booking-countdown-tick-pulse {
+          animation: bookingCountdownTickPulse 650ms ease-in-out both;
+        }
         @media (prefers-reduced-motion: reduce) {
           .booking-desktop-summary-pulse,
           .booking-desktop-cta-pulse,
           .booking-mobile-sticky-lift,
-          .booking-urgency-pulse {
+          .booking-urgency-pulse,
+          .booking-countdown-tick-pulse {
             animation: none;
           }
         }
