@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import { Calendar, Clock, Pencil, CheckCircle, XCircle, Plus, Phone } from 'lucide-react';
+import { Calendar, Pencil, CheckCircle, XCircle, Plus, Phone } from 'lucide-react';
 
 interface Booking {
   id: string;

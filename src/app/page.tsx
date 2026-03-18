@@ -497,9 +497,6 @@ export default function Home() {
   ];
   // Show all active services - no arbitrary slice limits
   const regularServices = services.filter((service) => service.id !== featuredService?.id);
-  const staggeredLeftService = regularServices[0];
-  const staggeredStackServices = regularServices.slice(1, 3);
-  const centeredWideService = regularServices[3];
   const orderedGalleryItems =
     galleryItems.length > 0
       ? [...galleryItems].sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
