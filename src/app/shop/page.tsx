@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
-import { Globe, Heart, ArrowLeft, Package } from 'lucide-react';
+import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
+import { Globe, ArrowLeft, Package } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -200,7 +201,7 @@ export default function ShopPage() {
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#fdf8fb] hover:text-[#4b5563]"
                 aria-label={copy.favorites}
               >
-                <Heart size={18} strokeWidth={1.8} fill={favoritesCount > 0 ? 'currentColor' : 'none'} />
+                <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
                 {favoritesCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[10px] font-semibold text-white">
                     {favoritesCount > 9 ? '9+' : favoritesCount}
@@ -283,7 +284,7 @@ export default function ShopPage() {
                           }`}
                           aria-label={language === 'en' ? 'Toggle favourite' : 'Muuda lemmikut'}
                         >
-                          <Heart size={16} strokeWidth={1.8} fill={isFavorite(product.id) ? 'currentColor' : 'none'} />
+                          <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
                         </button>
                       </div>
                       <div className="p-5">

@@ -109,11 +109,12 @@ export function HeroBookingWidget() {
   return (
     <div
       id="hero-booking-widget"
-      className="relative overflow-hidden rounded-[30px] border border-[#f0dbe7] bg-[linear-gradient(180deg,#fffdfd_0%,#fff5fb_100%)] p-6 shadow-[0_48px_84px_-12px_rgba(109,69,97,0.18),0_24px_40px_-16px_rgba(109,69,97,0.12)] lg:p-8"
+      className="relative overflow-hidden rounded-3xl bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_50%,#fff5f9_100%)] p-6 lg:p-8"
     >
-      <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(215,157,192,0.28)_0%,rgba(215,157,192,0)_70%)]" />
-      <div className="pointer-events-none absolute inset-x-8 bottom-3 h-12 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(207,124,172,0.22)_0%,rgba(207,124,172,0)_70%)] blur-sm" />
+      <div className="pointer-events-none absolute right-0 top-0 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(215,157,192,0.22)_0%,transparent_70%)]" aria-hidden />
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-[radial-gradient(ellipse_80%_100%_at_50%_100%,rgba(207,124,172,0.15)_0%,transparent_70%)] blur-sm" aria-hidden />
 
+      {/* 1. Identity row */}
       <div className="mb-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="relative h-10 w-10 rounded-full bg-[linear-gradient(145deg,#f9dfee,#e5b7d3)] shadow-[0_10px_24px_-14px_rgba(133,72,117,0.46)]">
@@ -129,25 +130,33 @@ export function HeroBookingWidget() {
         </span>
       </div>
 
-      <p className="mb-4 text-center text-sm font-medium text-[#826878]">{t('widget.designedEasy')}</p>
+      <p className="mb-5 text-center text-sm font-medium text-[#826878]">{t('widget.designedEasy')}</p>
 
-      <div className="mb-6 flex items-center gap-2 rounded-full border border-[#eddce7] bg-white/80 px-3 py-2 text-sm text-[#7b6776]">
-        <span className="h-2 w-2 rounded-full bg-[#c05f8f] animate-pulse" />
-        <span className="font-medium">
-          {text('availability_next_available', t('widget.nextAvailable'))} {getNextAvailableText()}
-        </span>
+      {/* 2. Next available — premium pill badge with pulse dot */}
+      <div className="mb-6 flex items-center justify-center">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#fff5fa_0%,#ffe8f2_50%,#ffddee_100%)] px-4 py-2.5 shadow-[0_4px_16px_-8px_rgba(180,90,130,0.25)]">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c24d86] opacity-60" aria-hidden />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#c24d86]" aria-hidden />
+          </span>
+          <span className="text-sm font-semibold text-[#5c3d52]">
+            {text('availability_next_available', t('widget.nextAvailable'))} {getNextAvailableText()}
+          </span>
+        </div>
       </div>
 
+      {/* 3. Service selector */}
       <div className="mb-6">
         <ServiceSelector onSelect={handleServiceSelect} selectedService={selectedService} />
       </div>
 
+      {/* 4. Slot options — tappable cards, horizontal scroll on mobile */}
       <div className="mb-6">
         <p className="mb-3 text-sm font-medium text-[#634f60]">{t('widget.selectTime')}</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible">
           {slotsLoading &&
             Array.from({ length: 3 }).map((_, index) => (
-              <div key={`slot-skeleton-${index}`} className="premium-skeleton-card h-12 w-24 rounded-xl" />
+              <div key={`slot-skeleton-${index}`} className="premium-skeleton-card h-12 min-w-[100px] flex-1 rounded-xl md:min-w-0" />
             ))}
           {!slotsLoading && availableSlots.slice(0, 3).map((slot) => (
             <TimeSlot
@@ -164,19 +173,25 @@ export function HeroBookingWidget() {
         </div>
       </div>
 
+      {/* 5. Primary booking CTA — gradient, shine, press */}
       <button
         onClick={handleSecureSlot}
         disabled={!selectedService}
-        className={`btn-primary btn-primary-lg w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-semibold transition-all duration-140
+        className={`relative w-full overflow-hidden rounded-2xl py-4 font-semibold uppercase tracking-wider transition-all duration-200
           ${selectedService
-            ? 'bg-[#c24d86] text-white shadow-[0_24px_34px_-24px_rgba(141,60,108,0.62)] hover:-translate-y-0.5 hover:bg-[#a93d71] hover:shadow-[0_28px_38px_-24px_rgba(141,60,108,0.68)] active:scale-[0.995]'
-            : 'bg-[#ececec] text-[#999]/60 border border-[#e0e0e0]'
+            ? 'bg-[linear-gradient(135deg,#d4669e_0%,#c24d86_45%,#a93d71_100%)] text-white shadow-[0_20px_40px_-16px_rgba(139,51,100,0.5)] hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-16px_rgba(139,51,100,0.55)] active:scale-[0.98] active:shadow-[0_16px_32px_-16px_rgba(139,51,100,0.45)]'
+            : 'cursor-not-allowed bg-[#ececec] text-[#999]/60 border border-[#e0e0e0]'
           }`}
       >
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        {selectedService ? t('widget.secureThisSlot') : t('widget.selectService')}
+        {selectedService && (
+          <span className="pointer-events-none absolute inset-0 -translate-x-full animate-[shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" style={{ width: '60%' }} aria-hidden />
+        )}
+        <span className="relative flex items-center justify-center gap-2">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          {selectedService ? t('widget.secureThisSlot') : t('widget.selectService')}
+        </span>
       </button>
 
       <p className="mt-2 text-center text-xs text-[#856f80]">

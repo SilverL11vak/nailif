@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { Globe } from 'lucide-react';
 import type { Language } from '@/lib/i18n';
 
@@ -83,9 +84,7 @@ export function ShopNavBar({ language, setLanguage, localizePath, copy, favorite
               className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#6b7280] hover:bg-[#fdf8fb] hover:text-[#4b5563]"
               aria-label={language === 'en' ? 'Favourites' : 'Lemmikud'}
             >
-              <svg className="h-[18px] w-[18px]" fill={favoritesCount > 0 ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s-7.5-4.35-9.5-8.6C.9 9.05 2.15 5.5 5.9 5.5c2.1 0 3.4 1.1 4.1 2.15.7-1.05 2-2.15 4.1-2.15 3.75 0 5 3.55 3.4 6.9C19.5 16.65 12 21 12 21z" />
-              </svg>
+              <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
               {favoritesCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#c24d86] px-1 text-[10px] font-semibold text-white">
                   {favoritesCount > 9 ? '9+' : favoritesCount}

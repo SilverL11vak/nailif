@@ -26,10 +26,17 @@
   "services": {
     "title": "Our Services",
     "subtitle": "Choose your service and book in less than 30 seconds.",
+    "eyebrow": "Services",
+    "nextTimeLabel": "Next available",
+    "veryPopular": "Very popular",
     "from": "from",
     "minutes": "min",
     "viewAll": "View All Services",
-    "book": "Book"
+    "book": "Book",
+    "categoryManicure": "Manicure",
+    "categoryPedicure": "Pedicure",
+    "categoryExtensions": "Nail extensions",
+    "categoryNailArt": "Nail art"
   },
   "howItWorks": {
     "title": "How It Works",
@@ -276,7 +283,13 @@
       "eyebrow": "Editorial beauty booking",
       "nextAvailableLine": "Next available today at",
       "loyalClients": "120+ loyal clients",
-      "trustAnchor": "Personal consultation, careful hygiene and a result that stays beautiful for weeks."
+      "trustAnchor": "Personal consultation, careful hygiene and a result that stays beautiful for weeks.",
+      "luxuryOverline": "PRIVATE NAIL STUDIO MUSTAMÄE",
+      "luxuryHeadline": "Beautiful nails.\nEffortlessly.",
+      "luxurySupport": "Meticulous detail, elevated hygiene, and a calm appointment experience in a private Mustamäe studio.",
+      "luxuryCta": "Choose your time",
+      "viewServices": "View services",
+      "cancelTrust": "Free cancellation up to 24h"
     },
     "trust": {
       "premium": "Premium"
@@ -297,7 +310,9 @@
       "trustCue": "Certified care, premium products and a hygienic work process.",
       "trustTag1": "Premium materials",
       "trustTag2": "Personalized shaping",
-      "cardCta": "Book this service"
+      "cardCta": "Book this service",
+      "viewDetails": "View details",
+      "confirmTime": "Confirm time"
     },
     "localAuthority": {
       "eyebrow": "Local trust",
@@ -308,7 +323,13 @@
       "item3": "Convenient public transport"
     },
     "gallery": {
-      "subtitle": "Curated signature looks designed to inspire your next appointment.",
+      "eyebrow": "OUR WORK",
+      "realResultsTitle": "Real results.",
+      "subtitle": "Curated styles for everyday inspiration.",
+      "signatureLook": "Signature look",
+      "bookStyleCta": "Book this style",
+      "bookTime": "Book time",
+      "ctaLead": "Find your next favorite style.",
       "inspirationLook": "Inspiration look",
       "styleNames": {
         "glossy-pink-french": "Glossy Pink French",

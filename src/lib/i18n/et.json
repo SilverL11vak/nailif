@@ -26,10 +26,17 @@
   "services": {
     "title": "Meie teenused",
     "subtitle": "Valige oma teenus ja broneerige vähem kui 30 sekundiga.",
+    "eyebrow": "Teenused",
+    "nextTimeLabel": "Järgmine aeg",
+    "veryPopular": "Väga populaarne",
     "from": "alates",
     "minutes": "min",
     "viewAll": "Vaata kõiki teenuseid",
-    "book": "Broneeri"
+    "book": "Broneeri",
+    "categoryManicure": "Maniküür",
+    "categoryPedicure": "Pediküür",
+    "categoryExtensions": "Küüne pikendus",
+    "categoryNailArt": "Küünekunst"
   },
   "howItWorks": {
     "title": "Kuidas see toimib",
@@ -276,7 +283,13 @@
       "eyebrow": "Toimetuslik ilubroneering",
       "nextAvailableLine": "Järgmine vaba aeg täna kell",
       "loyalClients": "120+ püsiklienti",
-      "trustAnchor": "Personaalne konsultatsioon, hoolikas hügieen ja tulemus, mis püsib kaunis nädalateks."
+      "trustAnchor": "Personaalne konsultatsioon, hoolikas hügieen ja tulemus, mis püsib kaunis nädalateks.",
+      "luxuryOverline": "PRIVATE KÜÜNESTUUDIO MUSTAMÄEL",
+      "luxuryHeadline": "Ilusad küüned.\nPingutuseta.",
+      "luxurySupport": "Metoodiline detailitöö, kõrgetasemeline hügieen ja rahulik vastuvõtt privaatses Mustamäe stuudios.",
+      "luxuryCta": "Vali oma aeg",
+      "viewServices": "Vaata teenuseid",
+      "cancelTrust": "Tühistamine tasuta kuni 24h"
     },
     "trust": {
       "premium": "Premium"
@@ -297,7 +310,9 @@
       "trustCue": "Sertifitseeritud hooldus, premium tooted ja puhas tootsoon.",
       "trustTag1": "Premium materjalid",
       "trustTag2": "Personaalne kuju",
-      "cardCta": "Broneeri see teenus"
+      "cardCta": "Broneeri see teenus",
+      "viewDetails": "Vaata detaile",
+      "confirmTime": "Kinnita aeg"
     },
     "localAuthority": {
       "eyebrow": "Kohalik usaldus",
@@ -308,7 +323,13 @@
       "item3": "Hea ühistranspordi ühendus"
     },
     "gallery": {
-      "subtitle": "Hoolikalt valitud signatuurstiilid, mis inspireerivad su järgmist broneeringut.",
+      "eyebrow": "MEIE TÖÖ",
+      "realResultsTitle": "Päris tulemused.",
+      "subtitle": "Valitud stiilid igapäevaseks inspiratsiooniks.",
+      "signatureLook": "Signatuurstiil",
+      "bookStyleCta": "Broneeri see stiil",
+      "bookTime": "Broneeri aeg",
+      "ctaLead": "Leia oma järgmine lemmik stiil.",
       "inspirationLook": "Inspiratsioonistiil",
       "styleNames": {
         "glossy-pink-french": "Laikiv roosa French",

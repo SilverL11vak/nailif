@@ -406,6 +406,33 @@ textarea {
   }
 }
 
+/* Hero booking CTA shine sweep */
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+/* Very subtle pulse glow for final CTA primary button */
+@keyframes final-cta-glow {
+  0%,
+  100% {
+    box-shadow: 0 4px 20px -4px rgba(194, 77, 134, 0.35);
+  }
+  50% {
+    box-shadow: 0 6px 24px -4px rgba(194, 77, 134, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .final-cta-primary {
+    animation: final-cta-glow 2.5s ease-in-out infinite;
+  }
+}
+
 .animate-premium-shimmer {
   background-size: 240px 100%;
   animation: premium-shimmer 1.2s ease-in-out infinite;

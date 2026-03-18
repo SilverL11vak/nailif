@@ -292,37 +292,40 @@ export default function AdminSlotsPage() {
     setSosLabel(existing?.sosLabel || sosLabels[0]);
   }, [selectedTime, slotMap]);
 
-  const upsertSlot = async (date: string, time: string, available: boolean, extras?: Partial<TimeSlot>) => {
-    const existing = slots.find((s) => s.date === date && s.time === time);
-    if (existing) {
+  const upsertSlot = useCallback(
+    async (date: string, time: string, available: boolean, extras?: Partial<TimeSlot>) => {
+      const existing = slots.find((s) => s.date === date && s.time === time);
+      if (existing) {
+        await fetch('/api/slots', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: existing.id,
+            available,
+            count: available ? Math.max(existing.count ?? 1, 1) : 0,
+            isSos: available ? extras?.isSos ?? existing.isSos ?? false : false,
+            sosSurcharge: available ? extras?.sosSurcharge ?? existing.sosSurcharge ?? null : null,
+            sosLabel: available ? extras?.sosLabel ?? existing.sosLabel ?? null : null,
+          }),
+        });
+        return;
+      }
       await fetch('/api/slots', {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: existing.id,
+          date,
+          time,
           available,
-          count: available ? Math.max(existing.count ?? 1, 1) : 0,
-          isSos: available ? extras?.isSos ?? existing.isSos ?? false : false,
-          sosSurcharge: available ? extras?.sosSurcharge ?? existing.sosSurcharge ?? null : null,
-          sosLabel: available ? extras?.sosLabel ?? existing.sosLabel ?? null : null,
+          count: available ? 1 : 0,
+          isSos: extras?.isSos ?? false,
+          sosSurcharge: extras?.sosSurcharge ?? null,
+          sosLabel: extras?.sosLabel ?? null,
         }),
       });
-      return;
-    }
-    await fetch('/api/slots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        date,
-        time,
-        available,
-        count: available ? 1 : 0,
-        isSos: extras?.isSos ?? false,
-        sosSurcharge: extras?.sosSurcharge ?? null,
-        sosLabel: extras?.sosLabel ?? null,
-      }),
-    });
-  };
+    },
+    [slots]
+  );
 
   const getSlotPreviousState = useCallback(
     (time: string) => {
@@ -337,26 +340,29 @@ export default function AdminSlotsPage() {
     [slotMap]
   );
 
-  const setSlotStatus = async (time: string, available: boolean, sosExtras?: { isSos: boolean; sosSurcharge?: number; sosLabel?: string }) => {
-    if (bookedMap.has(time)) return;
-    const prev = getSlotPreviousState(time);
-    setIsSaving(true);
-    setError(null);
-    try {
-      await upsertSlot(selectedDate, time, available, sosExtras);
-      await loadSlots();
-      showToast(available ? 'Aeg vabastatud' : 'Aeg blokeeritud', {
-        type: available ? 'unblock' : 'block',
-        times: [time],
-        previousStates: { [time]: prev },
-      });
-    } catch (err) {
-      console.error(err);
-      setError('Aja muutmine ebaonnestus.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const setSlotStatus = useCallback(
+    async (time: string, available: boolean, sosExtras?: { isSos: boolean; sosSurcharge?: number; sosLabel?: string }) => {
+      if (bookedMap.has(time)) return;
+      const prev = getSlotPreviousState(time);
+      setIsSaving(true);
+      setError(null);
+      try {
+        await upsertSlot(selectedDate, time, available, sosExtras);
+        await loadSlots();
+        showToast(available ? 'Aeg vabastatud' : 'Aeg blokeeritud', {
+          type: available ? 'unblock' : 'block',
+          times: [time],
+          previousStates: { [time]: prev },
+        });
+      } catch (err) {
+        console.error(err);
+        setError('Aja muutmine ebaonnestus.');
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [bookedMap, getSlotPreviousState, selectedDate, loadSlots, showToast, upsertSlot]
+  );
 
   const applyPresetDay = async (makeAvailable: boolean) => {
     setIsSaving(true);
@@ -483,7 +489,7 @@ export default function AdminSlotsPage() {
         setIsSaving(false);
       }
     },
-    [selectedDate, bookedMap, getSlotPreviousState, loadSlots, showToast]
+    [selectedDate, bookedMap, getSlotPreviousState, loadSlots, showToast, upsertSlot]
   );
 
   const performUndo = useCallback(
@@ -515,7 +521,7 @@ export default function AdminSlotsPage() {
         toastTimerRef.current = null;
       }
     },
-    [selectedDate, loadSlots, showToast]
+    [selectedDate, loadSlots, showToast, upsertSlot]
   );
 
   const selectedBooking = selectedTime ? bookedMap.get(selectedTime) : undefined;
@@ -610,7 +616,7 @@ export default function AdminSlotsPage() {
     if (!selectedTime || bookedMap.has(selectedTime)) return;
     void setSlotStatus(selectedTime, false);
     clearSelection();
-  }, [selectedTime, bookedMap, clearSelection]);
+  }, [selectedTime, bookedMap, clearSelection, setSlotStatus]);
 
   return (
     <main className="min-h-screen bg-[#fafafa]">

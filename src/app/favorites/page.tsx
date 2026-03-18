@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
 
@@ -122,9 +123,7 @@ export default function FavoritesPage() {
                         }`}
                         aria-label={language === 'en' ? 'Toggle favourite' : 'Muuda lemmikut'}
                       >
-                        <svg className="h-4 w-4" fill={isFavorite(product.id) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21s-7.5-4.35-9.5-8.6C.9 9.05 2.15 5.5 5.9 5.5c2.1 0 3.4 1.1 4.1 2.15.7-1.05 2-2.15 4.1-2.15 3.75 0 5 3.55 3.4 6.9C19.5 16.65 12 21 12 21z" />
-                        </svg>
+                        <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
                       </button>
                     </div>
                     <div className="space-y-2 p-4">

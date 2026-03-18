@@ -12,6 +12,7 @@
     "build": "node -e \"const cp=require('node:child_process');const path=require('node:path');const root=path.dirname(process.env.npm_package_json||path.join(process.cwd(),'package.json'));const bin=path.join(root,'node_modules','next','dist','bin','next');const res=cp.spawnSync(process.execPath,[bin,'build'],{stdio:'inherit'});process.exit(res.status??1);\"",
     "start": "node -e \"const cp=require('node:child_process');const path=require('node:path');const root=path.dirname(process.env.npm_package_json||path.join(process.cwd(),'package.json'));const bin=path.join(root,'node_modules','next','dist','bin','next');const res=cp.spawnSync(process.execPath,[bin,'start'],{stdio:'inherit'});process.exit(res.status??1);\"",
     "lint": "node ./node_modules/eslint/bin/eslint.js",
+    "clean": "node -e \"const fs=require('fs');const path=require('path');const dir=path.join(process.cwd(),'.next');if(fs.existsSync(dir)){fs.rmSync(dir,{recursive:true});console.log('Removed .next');}else{console.log('.next not found');}\"",
     "ship": "powershell -ExecutionPolicy Bypass -File ./scripts/build-deploy-restart.ps1"
   },
   "dependencies": {

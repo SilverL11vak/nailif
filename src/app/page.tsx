@@ -12,7 +12,8 @@ import { useBookingStore } from '@/store/booking-store';
 import { useTranslation, type Language } from '@/lib/i18n';
 import type { NailStyle } from '@/store/booking-types';
 import type { Product } from '@/lib/catalog';
-import { Globe, Heart, ShoppingBag, Menu, ArrowRight } from 'lucide-react';
+import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
+import { Globe, ShoppingBag, Menu, ArrowRight, MapPin, Clock, Car, Building2, CheckCircle2, RefreshCw, Bus } from 'lucide-react';
 interface ServiceCard {
   id: string;
   name: string;
@@ -76,11 +77,25 @@ export default function Home() {
   const [activeSpecialistImageIndex, setActiveSpecialistImageIndex] = useState<number | null>(null);
   const [isSandraInView, setIsSandraInView] = useState(false);
   const [heroBookingFocused, setHeroBookingFocused] = useState(false);
+  const [locationInView, setLocationInView] = useState(false);
+  const [testimonialsInView, setTestimonialsInView] = useState(false);
+  const [heroContentVisible, setHeroContentVisible] = useState(false);
+  const [localTrustInView, setLocalTrustInView] = useState(false);
+  const [servicesInView, setServicesInView] = useState(false);
+  const [galleryInView, setGalleryInView] = useState(false);
+  const gallerySectionRef = useRef<HTMLElement | null>(null);
+  const galleryScrollRef = useRef<HTMLDivElement | null>(null);
+  const [galleryScrollIndex, setGalleryScrollIndex] = useState(0);
   const scrollTickingRef = useRef(false);
   const showDiscountPillRef = useRef(showDiscountPill);
   const discountDismissedRef = useRef(discountPillDismissed);
   const sandraImageRef = useRef<HTMLDivElement | null>(null);
   const sandraSectionRef = useRef<HTMLElement | null>(null);
+  const locationSectionRef = useRef<HTMLElement | null>(null);
+  const testimonialsSectionRef = useRef<HTMLElement | null>(null);
+  const localTrustSectionRef = useRef<HTMLElement | null>(null);
+  const servicesSectionRef = useRef<HTMLElement | null>(null);
+  const heroBookingCardRef = useRef<HTMLDivElement | null>(null);
   const mobileMenuPanelRef = useRef<HTMLDivElement | null>(null);
   const previousFocusedElementRef = useRef<HTMLElement | null>(null);
   const media = (key: string) => homepageMedia[key]?.trim() ?? '';
@@ -377,18 +392,158 @@ export default function Home() {
   useEffect(() => {
     const sectionEl = sandraSectionRef.current;
     if (!sectionEl) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setIsSandraInView(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsSandraInView(true);
-          }
+          if (entry.isIntersecting) setIsSandraInView(true);
         });
       },
-      { threshold: 0.25 }
+      { threshold: 0.2 }
     );
     observer.observe(sectionEl);
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const sectionEl = locationSectionRef.current;
+    if (!sectionEl) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setLocationInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setLocationInView(true);
+        });
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(sectionEl);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const sectionEl = testimonialsSectionRef.current;
+    if (!sectionEl) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setTestimonialsInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setTestimonialsInView(true);
+        });
+      },
+      { threshold: 0.12 }
+    );
+    observer.observe(sectionEl);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setHeroContentVisible(true), 80);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const sectionEl = localTrustSectionRef.current;
+    if (!sectionEl) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setLocalTrustInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setLocalTrustInView(true);
+        });
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(sectionEl);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const sectionEl = servicesSectionRef.current;
+    if (!sectionEl) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setServicesInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setServicesInView(true);
+        });
+      },
+      { threshold: 0.12 }
+    );
+    observer.observe(sectionEl);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const sectionEl = gallerySectionRef.current;
+    if (!sectionEl) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setGalleryInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setGalleryInView(true);
+        });
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sectionEl);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = galleryScrollRef.current;
+    const cardCount = 5;
+    if (!el || cardCount === 0) return;
+    const cardWidth = 280 + 16;
+    const onScroll = () => {
+      const index = Math.round(el.scrollLeft / cardWidth);
+      setGalleryScrollIndex(Math.min(index, cardCount - 1));
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const cardEl = heroBookingCardRef.current;
+    if (!cardEl) return;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        const offset = Math.max(-6, Math.min(6, window.scrollY * 0.012));
+        cardEl.style.transform = `translate3d(0, ${offset}px, 0)`;
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
@@ -454,16 +609,17 @@ export default function Home() {
   };
   const openGallery = (index: number) => setActiveGalleryIndex(index);
   const closeGallery = () => setActiveGalleryIndex(null);
+  const galleryCardCount = 5;
   const nextGallery = () => {
     setActiveGalleryIndex((prev) => {
       if (prev === null) return 0;
-      return (prev + 1) % galleryCards.length;
+      return (prev + 1) % galleryCardCount;
     });
   };
   const prevGallery = () => {
     setActiveGalleryIndex((prev) => {
       if (prev === null) return 0;
-      return (prev - 1 + galleryCards.length) % galleryCards.length;
+      return (prev - 1 + galleryCardCount) % galleryCardCount;
     });
   };
   const getStyleLabel = (style: NailStyle) => {
@@ -487,16 +643,16 @@ export default function Home() {
     return localized === key ? genericFallback : localized;
   };
 
-  // Services: Only use API data - no mockServices fallback
-  // If API returns empty, the section will show an empty state
-  const servicesSource = serviceCards.length > 0 ? serviceCards : [];
-  const featuredService = servicesSource.find((service) => Boolean(service.isPopular)) ?? servicesSource[0];
-  const services = [
-    ...(featuredService ? [featuredService] : []),
-    ...servicesSource.filter((service) => service.id !== featuredService?.id),
-  ];
-  // Show all active services - no arbitrary slice limits
-  const regularServices = services.filter((service) => service.id !== featuredService?.id);
+  const getServiceCategoryLabel = (category: ServiceCard['category'] | undefined) => {
+    if (!category) return '';
+    const key =
+      category === 'nail-art'
+        ? 'services.categoryNailArt'
+        : `services.category${category.charAt(0).toUpperCase()}${category.slice(1)}` as 'services.categoryManicure' | 'services.categoryPedicure' | 'services.categoryExtensions';
+    return t(key);
+  };
+
+  // Gallery data — defined before any useEffects/callbacks that might close over it (SSR)
   const orderedGalleryItems =
     galleryItems.length > 0
       ? [...galleryItems].sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
@@ -513,6 +669,17 @@ export default function Home() {
     imageUrl: galleryUrls[index] ?? galleryUrls[0] ?? '',
     caption: getStyleCaption(style) || orderedGalleryItems[index]?.caption || t('homepage.gallery.inspirationLook'),
   }));
+
+  // Services: Only use API data - no mockServices fallback
+  // If API returns empty, the section will show an empty state
+  const servicesSource = serviceCards.length > 0 ? serviceCards : [];
+  const featuredService = servicesSource.find((service) => Boolean(service.isPopular)) ?? servicesSource[0];
+  const services = [
+    ...(featuredService ? [featuredService] : []),
+    ...servicesSource.filter((service) => service.id !== featuredService?.id),
+  ];
+  // Show all active services - no arbitrary slice limits
+  const regularServices = services.filter((service) => service.id !== featuredService?.id);
   const specialistGallery = Array.from({ length: 3 }).map((_, index) => ({
     imageUrl: orderedGalleryItems[index]?.imageUrl ?? galleryUrls[index] ?? media('team_portrait') ?? galleryUrls[0] ?? '',
     caption:
@@ -557,7 +724,7 @@ export default function Home() {
       window.setTimeout(() => setHeroBookingFocused(false), 1300);
       return;
     }
-    router.push('/book');
+    router.push(localizePath('/book'));
   };
   /* Design system: use globals.css tokens; colors kept for one-off inline use only */
   const colors = {
@@ -578,8 +745,12 @@ export default function Home() {
   const utilityIconClass =
     'type-navbar-icon-btn relative hidden lg:inline-flex';
 
+  /* Premium layout: max 1280px, section spacing 120/80/64 */
+  const sectionClass = 'py-16 md:py-20 lg:py-[120px]';
+  const contentMax = 'mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8';
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#fff_0%,_#fff5fa_40%,_#fffafc_100%)]">
+    <div className="min-h-screen bg-[#fafafa]">
       {/* ===================== */}
       {/* 1. STICKY HEADER */}
       {/* ===================== */}
@@ -590,7 +761,7 @@ export default function Home() {
             : 'bg-white/75 backdrop-blur-lg'
         } border-b border-[#f1e1ea]`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={contentMax}>
           <div className={`flex items-center justify-between transition-all duration-300 ${
             isScrolled ? 'h-16' : 'h-20'
           }`}>
@@ -646,7 +817,7 @@ export default function Home() {
                 aria-label={language === 'en' ? 'Open favourites' : 'Ava lemmikud'}
                 title={language === 'en' ? 'Favourites' : 'Lemmikud'}
               >
-                <Heart size={18} strokeWidth={1.8} fill={favoritesCount > 0 ? 'currentColor' : 'none'} />
+                <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
                 {favoritesCount > 0 && (
                   <span className="absolute right-0 top-0 -translate-y-1/2 translate-x-1/4 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-[#c24d86] px-0.5 text-[9px] font-semibold text-white">
                     {favoritesCount > 9 ? '9+' : favoritesCount}
@@ -680,7 +851,7 @@ export default function Home() {
               
               {/* Book Now Button */}
               <button 
-                onClick={() => router.push('/book')}
+                onClick={() => router.push(localizePath('/book'))}
                 className="type-navbar-cta btn-primary h-11 hidden lg:inline-flex px-6 text-white"
               >
                 {t('nav.bookNow')}
@@ -782,7 +953,7 @@ export default function Home() {
                     onClick={() => goToPage(localizePath('/favorites'))}
                     className="type-navbar-utility inline-flex min-h-11 items-center gap-2 text-[#6e5c6c] transition-colors duration-200 active:text-[#4d3c4b]"
                   >
-                    <svg aria-hidden="true" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.35-9.5-8.6C.9 9.05 2.15 5.5 5.9 5.5c2.1 0 3.4 1.1 4.1 2.15.7-1.05 2-2.15 4.1-2.15 3.75 0 5 3.55 3.4 6.9C19.5 16.65 12 21 12 21z" /></svg>
+                    <FavoriteHeartIcon active={favoritesCount > 0} size={16} />
                     <span>{language === 'en' ? 'Favourites' : 'Lemmikud'}</span>
                     {favoritesCount > 0 && (
                       <span className="rounded-full bg-[#c24d86] px-1.5 text-[10px] font-semibold text-white">
@@ -873,227 +1044,363 @@ export default function Home() {
         }
       `}</style>
 
-      {/* ===================== */}
-      {/* 2. HERO SECTION - LUXURY EDITORIAL */}
-      {/* ===================== */}
-      <section className={`relative overflow-hidden border-b border-[#f2e3eb] pt-28 pb-16 transition-all duration-300 lg:pt-28 lg:pb-22 ${
-        isScrolled ? 'pt-20' : ''
-      }`}>
-        <div className="pointer-events-none absolute -left-24 top-4 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(224,171,200,0.18)_0%,rgba(224,171,200,0)_74%)]" />
-        <div className="pointer-events-none absolute right-[-5rem] top-20 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(244,219,234,0.45)_0%,rgba(244,219,234,0)_76%)]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-6 lg:grid-cols-12 lg:gap-12">
-            
-            {/* Left: Hero message */}
-            <div className="order-1 lg:col-span-7 lg:order-1">
-              <div className="max-w-[620px] lg:pr-10" data-motion="hero-copy">
-                <p className="type-overline text-[#8a6378]">
-                  {getI18nTextOrFallback(
-                    'homepage.hero.luxuryOverline',
-                    language === 'en' ? 'PRIVATE NAIL STUDIO · MUSTAMÄE' : 'PRIVATE KÜÜNESTUUDIO · MUSTAMÄEL'
-                  )}
-                </p>
+      <style jsx global>{`
+        @keyframes heroDrift {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(2px, -3px); }
+        }
+        @keyframes heroGrain {
+          0% { transform: translate(0, 0); }
+          100% { transform: translate(-5%, -5%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-drift, .hero-grain { animation: none !important; }
+        }
+      `}</style>
 
-                <h1 className="type-display measure-headline mt-4 text-[#2d2229]">
-                  {getI18nTextOrFallback(
-                    'homepage.hero.luxuryHeadline',
-                    language === 'en' ? 'Beautiful nails. Effortlessly reserved.' : 'Ilusad küüned. Pingutuseta broneeritud.'
-                  )}
-                </h1>
+      {/* 2. HERO — Premium luxury nail studio conversion: editorial left + floating glass booking card right */}
+      <section className={`relative min-h-[85vh] overflow-hidden pt-24 md:pt-28 lg:min-h-[90vh] lg:pt-32 ${isScrolled ? 'pt-20' : ''}`}>
+        {/* Background: subtle radial from top-left, light pink/cream, soft vignette */}
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,#fdf6f9_0%,#faf5f8_35%,#f6f0f4_70%,#f2ecf0_100%)]" aria-hidden />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_50%,transparent_50%,rgba(240,230,235,0.4)_100%)]" aria-hidden />
+        <div className="pointer-events-none absolute -left-[20%] top-[10%] z-0 h-[600px] w-[600px] rounded-full bg-[#f0e6ec]/50 blur-[100px]" aria-hidden />
+        <div className="pointer-events-none absolute right-[-10%] top-[20%] z-0 h-[400px] w-[400px] rounded-full bg-[#eadce4]/35 blur-[80px]" aria-hidden />
+        {/* Soft grain overlay — luxury editorial feel */}
+        <div className="hero-grain pointer-events-none absolute inset-0 z-[1] opacity-[0.035] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', animation: 'heroGrain 20s linear infinite' }} aria-hidden />
 
-                <p className="type-body measure-copy mt-7 text-[#6a5766]">
-                  {getI18nTextOrFallback(
-                    'homepage.hero.luxurySupport',
-                    language === 'en'
-                      ? 'Meticulous detail, elevated hygiene, and a calm appointment experience in a private Mustamäe studio.'
-                      : 'Metoodiline detailitöö, kõrgetasemeline hügieen ja rahulik vastuvõtt privaatses Mustamäe stuudios.'
-                  )}
-                </p>
-
-                <button
-                  onClick={focusHeroBooking}
-                  className="btn-primary btn-primary-lg mt-6 inline-flex gap-2"
-                >
-                  <span>{getI18nTextOrFallback('homepage.hero.luxuryCta', language === 'en' ? 'Choose your time' : 'Vali oma aeg')}</span>
-                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M4 10h11" />
-                    <path d="M11.5 6.5L15 10l-3.5 3.5" />
-                  </svg>
-                </button>
-
-                <div className="hidden mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-[#7b6677]/75">
-                  <span className="font-semibold text-[#6f4e66]">★ 4.9</span>
-                  <span className="h-3 w-px bg-[#c2a5b8]/40" />
-                  <span>{getI18nTextOrFallback('homepage.hero.trustClients', language === 'en' ? '120+ loyal clients' : '120+ püsiklienti')}</span>
-                  <span className="h-3 w-px bg-[#c2a5b8]/40" />
-                  <span>{getI18nTextOrFallback('homepage.hero.trustHygiene', language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid')}</span>
-                  <span className="h-3 w-px bg-[#c2a5b8]/40" />
-                  <span>{getI18nTextOrFallback('homepage.hero.trustStudio', language === 'en' ? 'Mustamäe studio' : 'Mustamäe stuudio')}</span>
-                </div>
-                <p className="mt-4 max-w-[56ch] text-[0.82rem] leading-6 text-[#7b6876]">
-                  {getI18nTextOrFallback(
-                    'homepage.hero.luxuryTrustSignature',
-                    language === 'en'
-                      ? '4.9 rated · 120+ returning clients · Sterile tools · Private studio'
-                      : '4.9 hinnang · 120+ püsiklienti · Steriilsed töövahendid · Privaatne stuudio'
-                  )}
-                </p>
-
-              </div>
-            </div>
-
-            {/* Right: Booking Widget */}
-            <div className="order-2 lg:col-span-5 lg:order-2 lg:sticky lg:top-24">
-              <div className="group relative">
-                <div className="pointer-events-none absolute -inset-3 rounded-[34px] bg-[radial-gradient(circle,rgba(224,146,191,0.12)_0%,rgba(224,146,191,0)_74%)]" />
+        <div className={`relative z-10 ${contentMax}`}>
+          <div className="grid grid-cols-1 grid-rows-[auto_auto_auto] items-center gap-10 lg:min-h-[88vh] lg:grid-cols-[1fr_minmax(400px,0.5fr)] lg:grid-rows-1 lg:gap-16">
+            {/* LEFT — Luxury editorial (mobile: row 1; desktop: col 1) */}
+            <div className="order-1 flex flex-col justify-center lg:row-span-1">
               <div
-                id="hero-booking"
-                data-motion="hero-booking"
-                className={`relative transition-transform duration-300 group-hover:scale-[1.01] ${
-                  heroBookingFocused ? 'scale-[1.01] ring-2 ring-[#cc6a9b]/45 ring-offset-4 ring-offset-white' : ''
+                className={`transition-all duration-700 ease-out ${
+                  heroContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                 }`}
               >
-                <HeroBookingWidget />
+                <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[#8a6b7e]">
+                  {getI18nTextOrFallback('homepage.hero.luxuryOverline', language === 'en' ? 'PRIVATE NAIL STUDIO MUSTAMÄE' : 'PRIVATE KÜÜNESTUUDIO MUSTAMÄEL')}
+                </p>
+                <h1 className="mt-6 font-brand max-w-[520px] text-[clamp(2.5rem,5vw,4.25rem)] font-semibold leading-[1.12] tracking-[-0.02em] text-[#1f171d] lg:text-[56px] xl:text-[64px] xl:leading-[1.08]">
+                  {(() => {
+                    const headline = getI18nTextOrFallback('homepage.hero.luxuryHeadline', language === 'en' ? 'Beautiful nails.\nEffortlessly.' : 'Ilusad küüned.\nPingutuseta.');
+                    const lines = headline.split('\n').filter(Boolean);
+                    return lines.length >= 2 ? (
+                      <>
+                        {lines[0]}
+                        <br />
+                        {lines[1]}
+                      </>
+                    ) : (
+                      headline
+                    );
+                  })()}
+                </h1>
               </div>
+
+              <p
+                className={`mt-8 max-w-[480px] text-[1.05rem] leading-[1.65] text-[#6b5a62] transition-all duration-700 ease-out ${
+                  heroContentVisible ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{ transitionDelay: '120ms' }}
+              >
+                {getI18nTextOrFallback('homepage.hero.luxurySupport', language === 'en' ? 'Meticulous detail, elevated hygiene, and a calm appointment experience in a private Mustamäe studio.' : 'Metoodiline detailitöö, kõrgetasemeline hügieen ja rahulik vastuvõtt privaatses Mustamäe stuudios.')}
+              </p>
+
+              <div
+                className={`mt-10 flex flex-wrap gap-4 transition-all duration-700 ease-out lg:mt-12 ${
+                  heroContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+                style={{ transitionDelay: '220ms' }}
+              >
+                <button
+                  onClick={focusHeroBooking}
+                  className="group inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_100%)] px-10 py-4 text-base font-semibold text-white shadow-[0_20px_40px_-12px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-12px_rgba(194,77,134,0.6)] active:scale-[0.98]"
+                >
+                  {getI18nTextOrFallback('homepage.hero.luxuryCta', language === 'en' ? 'Choose your time' : 'Vali oma aeg')}
+                  <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2.2} />
+                </button>
+                <button
+                  onClick={() => scrollToSection('services')}
+                  className="inline-flex items-center rounded-full border-2 border-[#d4c4ce] bg-transparent px-8 py-4 text-base font-medium text-[#5c4a54] transition-all duration-300 hover:bg-[#faf5f8] hover:border-[#c9b5c1] hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  {getI18nTextOrFallback('homepage.hero.viewServices', language === 'en' ? 'View services' : 'Vaata teenuseid')}
+                </button>
+              </div>
+
+              {/* Trust row — visible on desktop only (mobile has its own below card) */}
+              <p
+                className={`mt-10 hidden flex-wrap items-center gap-x-4 gap-y-2 text-[14px] text-[#6f5e66] transition-all duration-700 ease-out lg:mt-12 lg:flex ${
+                  heroContentVisible ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{ transitionDelay: '340ms' }}
+              >
+                <span className="flex items-center gap-1.5">⭐ {language === 'en' ? '4.9 rated' : '4.9 hinnang'}</span>
+                <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
+                <span>{language === 'en' ? '1200+ clients' : '1200+ klienti'}</span>
+                <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
+                <span>{language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}</span>
+                <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
+                <span>{language === 'en' ? 'Private studio' : 'Privaatne stuudio'}</span>
+              </p>
+            </div>
+
+            {/* RIGHT — Floating booking glass card (mobile: row 2) */}
+            <div className="order-2 w-full lg:sticky lg:top-24 lg:self-center">
+              {/* Faint floating shape behind card — ambient drift */}
+              <div className="hero-drift pointer-events-none absolute -right-4 -top-4 z-0 h-[120%] w-[90%] rounded-[48px] bg-[#f0e4eb]/30 blur-[40px]" style={{ animation: 'heroDrift 8s ease-in-out infinite' }} aria-hidden />
+              <div
+                ref={heroBookingCardRef}
+                className={`relative z-10 transition-all duration-[800ms] ease-out ${
+                  heroContentVisible ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'
+                } ${heroContentVisible ? 'lg:scale-105' : ''}`}
+                style={{ transitionDelay: '380ms' }}
+              >
+                <div
+                  id="hero-booking"
+                  data-motion="hero-booking"
+                  className={`relative overflow-hidden rounded-[28px] border border-white/60 bg-white/75 shadow-[0_32px_64px_-20px_rgba(70,45,60,0.28),0_0_0_1px_rgba(255,255,255,0.5)_inset backdrop-blur-xl transition ${
+                    heroBookingFocused ? 'ring-2 ring-[#b07a9a] ring-offset-2' : ''
+                  }`}
+                  style={{ boxShadow: '0 32px 64px -20px rgba(70,45,60,0.28), 0 16px 48px -16px rgba(70,45,60,0.2), inset 0 1px 0 rgba(255,255,255,0.6)' }}
+                >
+                  <HeroBookingWidget />
+                  <p className="px-6 pb-5 pt-1 text-center text-xs text-[#7a6572]">
+                    {getI18nTextOrFallback('homepage.hero.cancelTrust', language === 'en' ? 'Free cancellation up to 24h' : 'Tühistamine tasuta kuni 24h')}
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* Trust row — mobile only (order 3: after headline, CTA, card) */}
+            <p className="order-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[14px] text-[#6f5e66] lg:hidden">
+              <span className="flex items-center gap-1.5">⭐ {language === 'en' ? '4.9 rated' : '4.9 hinnang'}</span>
+              <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
+              <span>{language === 'en' ? '1200+ clients' : '1200+ klienti'}</span>
+              <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
+              <span>{language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}</span>
+              <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
+              <span>{language === 'en' ? 'Private studio' : 'Privaatne stuudio'}</span>
+            </p>
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-[#fff4f9]" />
       </section>
 
-      {/* ===================== */}
-      {/* 3. TRUST PROOF STRIP */}
-      {/* ===================== */}
-      <section className="border-y border-[#f0e4eb] bg-white/70 py-8 backdrop-blur-[1px]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 3. Trust strip + Local Trust / Mustamäe — premium 3-column, editorial continuation of hero */}
+      <section className="border-y border-slate-200/80 bg-white/80 py-8 backdrop-blur-sm">
+        <div className={contentMax}>
           <div className="flex flex-wrap items-center justify-center gap-8 lg:gap-16">
-            {/* Rating */}
             <div className="flex items-center gap-2 text-gray-500 text-sm">
               <span className="font-medium text-gray-700">4.9</span>
               <span>{t('trust.googleRating')}</span>
             </div>
-            
-            {/* Appointments */}
             <div className="flex items-center gap-2 text-gray-500 text-sm">
               <span className="font-medium text-gray-700">150+</span>
               <span>{t('trust.appointmentsThisWeek')}</span>
             </div>
-            
-            {/* Hygiene */}
             <div className="flex items-center gap-2 text-gray-500 text-sm">
               <span className="font-medium text-gray-700">100%</span>
               <span>{t('trust.sterileEquipment')}</span>
             </div>
-            
-            {/* Products */}
             <div className="flex items-center gap-2 text-gray-500 text-sm">
               <span className="font-medium text-gray-700">{t('homepage.trust.premium')}</span>
               <span>{t('trust.premiumProducts')}</span>
             </div>
           </div>
-          <div className={`mx-auto mt-7 max-w-4xl px-6 py-5 card-premium-soft`}>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-[#ad7898]">{t('homepage.localAuthority.eyebrow')}</p>
-            <h3 className="mt-2 text-xl font-semibold text-[#2f2530]">{t('homepage.localAuthority.title')}</h3>
-            <p className="mt-2 text-sm leading-6 text-[#6c596b]">{t('homepage.localAuthority.subtitle')}</p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-[#765c70]">
-              <span className="rounded-full border border-[#ead3df] bg-white px-3 py-1">{t('homepage.localAuthority.item1')}</span>
-              <span className="rounded-full border border-[#ead3df] bg-white px-3 py-1">{t('homepage.localAuthority.item2')}</span>
-              <span className="rounded-full border border-[#ead3df] bg-white px-3 py-1">{t('homepage.localAuthority.item3')}</span>
+        </div>
+      </section>
+      <section
+        ref={localTrustSectionRef}
+        className="relative overflow-hidden border-t border-[#e8dce4]/60 bg-gradient-to-b from-[#faf8f9] via-[#f8f5f7] to-[#f6f2f5] py-20 lg:py-[120px]"
+      >
+        {/* Optional very low opacity texture */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.03]" aria-hidden>
+          {media('location_studio') && (
+            <Image src={media('location_studio')} alt="" fill className="object-cover blur-[80px]" unoptimized />
+          )}
+        </div>
+
+        <div className={`relative z-10 ${contentMax}`}>
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12 lg:items-center">
+            {/* LEFT — Label, heading, subtext */}
+            <div
+              className={`transition-all duration-700 ease-out ${
+                localTrustInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              }`}
+            >
+              <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e]">
+                {t('homepage.localAuthority.eyebrow')}
+              </p>
+              <h2 className="mt-3 font-brand max-w-[420px] text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[#2d232d] lg:text-[32px]">
+                {t('homepage.localAuthority.title')}
+              </h2>
+              <p className="mt-4 max-w-[420px] text-[15px] leading-relaxed text-[#6b5a62]">
+                {t('homepage.localAuthority.subtitle')}
+              </p>
+            </div>
+
+            {/* CENTER — Trust indicators: address, parking, transport (pill badges, hover lift) */}
+            <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-col lg:overflow-visible lg:gap-4">
+              <a
+                href="https://maps.google.com/?q=Mustamäe+tee+55+Tallinn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex min-w-[260px] shrink-0 items-center gap-3 rounded-xl border border-[#ead8e2] bg-white/80 px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#dfc8d4] hover:bg-[#fdf8fb] lg:min-w-0"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5ebf0] text-[#9b7590] transition-colors group-hover:bg-[#f0e2eb]">
+                  <MapPin className="h-5 w-5" strokeWidth={1.8} />
+                </span>
+                <span className="text-sm font-medium text-[#4d3d47]">{t('homepage.localAuthority.item1')}</span>
+              </a>
+              <div className="flex min-w-[260px] shrink-0 items-center gap-3 rounded-xl border border-[#ead8e2] bg-white/80 px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#dfc8d4] hover:bg-[#fdf8fb] lg:min-w-0">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5ebf0] text-[#9b7590]">
+                  <Car className="h-5 w-5" strokeWidth={1.8} />
+                </span>
+                <span className="text-sm font-medium text-[#4d3d47]">{t('homepage.localAuthority.item2')}</span>
+              </div>
+              <div className="flex min-w-[260px] shrink-0 items-center gap-3 rounded-xl border border-[#ead8e2] bg-white/80 px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#dfc8d4] hover:bg-[#fdf8fb] lg:min-w-0">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5ebf0] text-[#9b7590]">
+                  <Bus className="h-5 w-5" strokeWidth={1.8} />
+                </span>
+                <span className="text-sm font-medium text-[#4d3d47]">{t('homepage.localAuthority.item3')}</span>
+              </div>
+            </div>
+
+            {/* RIGHT — Studio credibility: rating, clients, studio (stacked with dividers, stagger) */}
+            <div className="flex flex-wrap items-center justify-center gap-6 border-t border-[#ead8e2]/60 pt-8 lg:flex-col lg:items-start lg:justify-center lg:border-t-0 lg:border-l lg:border-[#ead8e2]/60 lg:pl-10 lg:pt-0">
+              <div
+                className={`flex items-center gap-2 transition-all duration-500 ease-out ${
+                  localTrustInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                }`}
+                style={{ transitionDelay: localTrustInView ? '0ms' : '0ms' }}
+              >
+                <span className="text-[#c24d86]" aria-hidden>⭐</span>
+                <span className="text-sm font-semibold text-[#2d232d]">{t('trust.rating')}</span>
+                <span className="text-sm text-[#6f5e66]">{t('trust.googleRating')}</span>
+              </div>
+              <div className="hidden h-px w-12 bg-[#e0d0d8] lg:block" aria-hidden />
+              <div
+                className={`flex items-center gap-2 transition-all duration-500 ease-out ${
+                  localTrustInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                }`}
+                style={{ transitionDelay: localTrustInView ? '80ms' : '0ms' }}
+              >
+                <span className="text-[#c24d86]" aria-hidden>⭐</span>
+                <span className="text-sm font-semibold text-[#2d232d]">{t('trust.clients')}</span>
+              </div>
+              <div className="hidden h-px w-12 bg-[#e0d0d8] lg:block" aria-hidden />
+              <div
+                className={`flex items-center gap-2 transition-all duration-500 ease-out ${
+                  localTrustInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                }`}
+                style={{ transitionDelay: localTrustInView ? '160ms' : '0ms' }}
+              >
+                <span className="text-[#c24d86]" aria-hidden>⭐</span>
+                <span className="text-sm font-semibold text-[#2d232d]">{t('trust.mustamaeStudio')}</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="services" className="relative border-t border-[#efe0e8] py-24 lg:py-28" style={{ background: 'linear-gradient(180deg, #fef9fc 0%, #fdf3f8 35%, #fef9fc 100%)' }}>
-        <div className="absolute inset-0 pointer-events-none opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(200,140,170,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(220,160,190,0.06) 0%, transparent 45%)' }} />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14 lg:mb-16">
-            <h2 className={`mb-4 section-title`}>{t('services.title')}</h2>
-            <p className="section-lead measure-copy mx-auto">{t('services.subtitle')}</p>
-          </div>
+      <section
+        id="services"
+        ref={servicesSectionRef}
+        className={`relative bg-gradient-to-b from-[#faf8f9] to-[#f5f2f4] ${sectionClass}`}
+      >
+        <div className={`relative ${contentMax}`}>
+          <header className="mb-14 text-center md:mb-16">
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e]">{t('services.eyebrow')}</p>
+            <h2 className="mt-3 font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] md:text-[42px] lg:text-[44px]">
+              {t('services.title')}
+            </h2>
+            <p className="mx-auto mt-4 max-w-[42ch] text-base leading-relaxed text-[#6b5a62]">{t('services.subtitle')}</p>
+          </header>
 
-          <div className="space-y-8 lg:space-y-10">
+          <div className="space-y-14 lg:space-y-20">
+            {/* LAYER 1 — Featured service hero (horizontal on desktop, stacked on mobile) */}
             {featuredService && (
               <article
-                onClick={() => router.push('/book')}
-                className="group cursor-pointer overflow-hidden rounded-[2rem] border-2 border-[#e8dae2] bg-white shadow-[0_32px_64px_-24px_rgba(90,55,78,0.28),0_0_0_1px_rgba(255,255,255,0.8)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_48px_80px_-32px_rgba(100,60,85,0.35),0_0_0_1px_rgba(255,255,255,0.9)_inset]"
+                onClick={() => router.push(localizePath('/book'))}
+                className={`group cursor-pointer overflow-hidden rounded-[28px] bg-white shadow-[0_24px_48px_-16px_rgba(80,50,65,0.18),0_0_0_1px_rgba(0,0,0,0.04)] transition-all duration-500 ease-out hover:shadow-[0_32px_64px_-20px_rgba(80,50,65,0.22),0_0_0_1px_rgba(0,0,0,0.06)] ${
+                  servicesInView ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+                }`}
+                style={{ transitionDuration: '0.6s' }}
               >
-                <div className="grid lg:grid-cols-12">
-                  <div className="relative overflow-hidden lg:col-span-5">
-                    <div className="absolute left-6 top-6 z-10 rounded-full bg-white/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7a4d66] shadow-[0_8px_24px_-8px_rgba(100,55,80,0.35)] backdrop-blur-sm">
+                <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-0">
+                  <div className="relative aspect-[4/5] overflow-hidden lg:col-span-5 lg:aspect-[5/6] lg:min-h-[420px]">
+                    <div className="absolute left-5 top-5 z-10 rounded-full bg-white/95 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7a4d66] shadow-lg backdrop-blur-sm">
                       {t('homepage.featuredService.badge')}
                     </div>
-                    <div className="absolute inset-0 z-[1] rounded-l-[2rem] ring-1 ring-inset ring-black/5" />
+                    <div className="absolute inset-0 z-[1] rounded-t-[28px] lg:rounded-l-[28px] lg:rounded-tr-none ring-1 ring-inset ring-black/5" />
                     {featuredService.imageUrl || '' ? (
                       <Image
                         src={featuredService.imageUrl || ''}
                         alt={featuredService.name}
                         width={960}
-                        height={680}
-                        className="h-80 w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.04] lg:h-full lg:min-h-[380px]"
+                        height={720}
+                        className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                       />
                     ) : (
-                      <div className="flex h-80 items-center justify-center bg-[#f5e8ef] text-5xl text-[#9f7c91] lg:h-full lg:min-h-[380px]">MN</div>
+                      <div className="flex h-full w-full items-center justify-center bg-[#f5e8ef] text-5xl text-[#9f7c91]">MN</div>
                     )}
                   </div>
-                  <div className="flex flex-col justify-between p-7 lg:col-span-7 lg:py-10 lg:pl-10 lg:pr-12">
+                  <div className="flex flex-col justify-between p-6 lg:col-span-7 lg:p-10 lg:pl-12 lg:pr-14">
                     <div>
-                      <h3 className="font-brand text-3xl font-semibold tracking-[-0.02em] text-[#2f2530] lg:text-4xl">{featuredService.name}</h3>
-                      <p className="mt-5 text-[1.05rem] leading-[1.7] text-[#564553]">
+                      <h3 className="font-brand text-[32px] font-semibold leading-tight tracking-[-0.02em] text-[#1f171d] lg:text-[36px]">
+                        {featuredService.name}
+                      </h3>
+                      <p className="mt-4 line-clamp-4 text-[1rem] leading-[1.65] text-[#564553]">
                         {featuredService.resultDescription || getServiceFallback(featuredService.id, 'result', language === 'en' ? 'Professional result.' : 'Professionaalne tulemus.')}
+                        {featuredService.description ? ` ${featuredService.description}` : ''}
                       </p>
-                      <p className="mt-4 text-sm text-[#675463]">
-                        <span className="font-semibold text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
-                        {featuredService.suitabilityNote || getServiceFallback(featuredService.id, 'suitability', language === 'en' ? 'Suitable for everyone.' : 'Sobib kõigile.')}
-                      </p>
-                      <p className="mt-3 text-sm leading-relaxed text-[#6e5a68]">{featuredService.description}</p>
-
-                      <div className="mt-7 flex flex-wrap gap-3">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-4 py-2.5 text-sm font-medium text-[#5d4a59] shadow-sm">
-                          <svg className="h-4 w-4 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                      <div className="mt-6 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-[#f0e8ec] px-3.5 py-1.5 text-xs font-medium text-[#5d4a59]">
+                          <Clock className="mr-1.5 inline h-3.5 w-3.5" strokeWidth={1.8} />
                           {featuredService.duration} {t('common.minutes')}
                         </span>
-                        <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-4 py-2.5 text-sm font-medium text-[#5d4a59] shadow-sm">
-                          <svg className="h-4 w-4 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" />
-                          </svg>
-                          {featuredService.longevityDescription || t('homepage.featuredService.longevityFallback')}
-                        </span>
+                        {getServiceCategoryLabel(featuredService.category) && (
+                          <span className="rounded-full bg-[#f0e8ec] px-3.5 py-1.5 text-xs font-medium text-[#5d4a59]">
+                            {getServiceCategoryLabel(featuredService.category)}
+                          </span>
+                        )}
+                        {featuredService.isPopular && (
+                          <span className="rounded-full bg-[#fff0f5] px-3.5 py-1.5 text-xs font-medium text-[#9b5c7a]">
+                            {t('homepage.trust.premium')}
+                          </span>
+                        )}
                       </div>
-
-                      <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-medium text-[#765e71]">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3.5 py-2 border border-[#f5e2ed]">
-                          <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag1')}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3.5 py-2 border border-[#f5e2ed]">
-                          <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag2')}
-                        </span>
-                      </div>
-
-                      <div className="mt-5 rounded-2xl border border-[#f0dae6] bg-[#fff7fc] px-5 py-3.5 text-xs leading-relaxed text-[#6a5566]">
-                        {t('homepage.featuredService.priceTrust')}
+                      <div className="mt-8">
+                        <p className="text-[28px] lg:text-[32px] font-semibold leading-none tracking-tight text-[#c24d86]">
+                          EUR {featuredService.price}
+                        </p>
+                        <p className="mt-1.5 text-sm text-[#6f5e66]">
+                          {nextAvailable
+                            ? `${t('services.nextTimeLabel')}: ${nextAvailable}`
+                            : t('services.veryPopular')}
+                        </p>
                       </div>
                     </div>
-
-                    <div className="mt-10 flex flex-wrap items-end justify-between gap-6 border-t border-[#f0e2eb] pt-8">
-                      <div className="rounded-2xl bg-[#fdf6fa] px-5 py-3 ring-1 ring-[#f0dae6]">
-                        <p className="text-[10px] uppercase tracking-[0.14em] text-[#9d7a90]">{t('homepage.servicesUi.priceLabel')}</p>
-                        <p className="mt-1 text-[2rem] lg:text-[2.25rem] font-semibold leading-none tracking-tight text-[#2f2530]">EUR {featuredService.price}</p>
-                      </div>
+                    <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                       <button
                         type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
+                        onClick={(e) => {
+                          e.stopPropagation();
                           goToBooking();
                         }}
-                        className="inline-flex items-center gap-2 rounded-full px-8 py-4 text-base font-semibold text-white shadow-[0_12px_32px_-8px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-8px_rgba(194,77,134,0.55)] active:translate-y-0"
-                        style={{ background: 'linear-gradient(135deg, #d978a7 0%, #c24d86 50%, #ac3d72 100%)' }}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#c24d86] px-8 py-4 text-base font-semibold text-white shadow-[0_12px_28px_-8px_rgba(194,77,134,0.5)] transition-all duration-300 hover:bg-[#b04376] hover:shadow-[0_16px_32px_-8px_rgba(194,77,134,0.55)] hover:scale-[1.02] active:scale-[0.99] sm:w-auto"
                       >
-                        {t('homepage.featuredService.cta')}
+                        {t('homepage.servicesUi.confirmTime')}
                         <ArrowRight className="h-5 w-5" strokeWidth={2.2} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(localizePath('/book'));
+                        }}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#e0d0d8] bg-transparent px-8 py-4 text-base font-semibold text-[#5d4a59] transition-colors hover:bg-[#faf5f8] sm:w-auto"
+                      >
+                        {t('homepage.servicesUi.viewDetails')}
                       </button>
                     </div>
                   </div>
@@ -1101,212 +1408,257 @@ export default function Home() {
               </article>
             )}
 
-            <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-              {regularServices.map((service) => (
-                <article
-                  key={service.id}
-                  onClick={() => router.push('/book')}
-                  className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border-2 border-[#e8dce4] bg-white shadow-[0_28px_52px_-24px_rgba(90,55,78,0.3),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(100,60,85,0.38),0_0_0_1px_rgba(255,255,255,0.8)_inset]"
-                >
-                  <div className="relative aspect-[3/4] min-h-[220px] overflow-hidden rounded-t-2xl bg-[#f5e8ef]">
-                    <div className="absolute inset-0 z-[1] ring-1 ring-inset ring-black/5 rounded-t-2xl pointer-events-none" />
-                    {service.imageUrl || '' ? (
-                      <Image
-                        src={service.imageUrl || ''}
-                        alt={service.name}
-                        width={880}
-                        height={620}
-                        className="h-full w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06]"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-5xl text-[#9f7c91]">MN</div>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <h3 className="font-brand text-xl font-semibold tracking-[-0.01em] text-[#2f2530] lg:text-2xl">{service.name}</h3>
-                    <p className="mt-3 line-clamp-2 text-[0.95rem] leading-[1.6] text-[#5f4c59]">
-                      {service.resultDescription || getServiceFallback(service.id, 'result', language === 'en' ? 'Professional result.' : 'Professionaalne tulemus.')}
-                    </p>
-                    <p className="mt-2.5 text-sm text-[#665465]">
-                      <span className="font-semibold text-[#4e3f4c]">{t('homepage.servicesUi.whoForLabel')} </span>
-                      {service.suitabilityNote || getServiceFallback(service.id, 'suitability', language === 'en' ? 'Suitable for everyone.' : 'Sobib kõigile.')}
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ead6e2] bg-white px-3.5 py-2 text-xs font-medium text-[#5e4d5b] shadow-sm">
-                        <svg className="h-3.5 w-3.5 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {service.duration} {t('common.minutes')}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ead6e2] bg-white px-3.5 py-2 text-xs font-medium text-[#5e4d5b] shadow-sm">
-                        <svg className="h-3.5 w-3.5 shrink-0 text-[#9b7590]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {service.longevityDescription || getServiceFallback(service.id, 'longevity', language === 'en' ? 'Long-lasting with care.' : 'Püsiv hoolitsusega.')}
-                      </span>
+            {/* LAYER 2 — Service card grid (3 cols desktop; horizontal scroll mobile) */}
+            <div className="overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-visible lg:pb-0">
+              <div className="flex gap-6 lg:grid lg:grid-cols-3 lg:gap-10">
+                {regularServices.map((service, index) => (
+                  <article
+                    key={service.id}
+                    onClick={() => router.push(localizePath('/book'))}
+                    className={`group flex min-w-[300px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_16px_40px_-16px_rgba(70,45,58,0.14),0_0_0_1px_rgba(0,0,0,0.04)] transition-all duration-400 ease-out hover:-translate-y-1 hover:shadow-[0_24px_48px_-16px_rgba(70,45,58,0.2),0_0_0_1px_rgba(0,0,0,0.06)] lg:min-w-0 ${
+                      servicesInView ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+                    }`}
+                    style={{
+                      transitionDelay: servicesInView ? `${Math.min(index * 80, 320)}ms` : '0ms',
+                      transitionDuration: '0.5s',
+                    }}
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-[24px] bg-[#f5e8ef]">
+                      <div className="absolute inset-0 z-[1] rounded-t-[24px] ring-1 ring-inset ring-black/5 pointer-events-none" />
+                      {service.imageUrl || '' ? (
+                        <Image
+                          src={service.imageUrl || ''}
+                          alt={service.name}
+                          width={600}
+                          height={450}
+                          className="h-full w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.05]"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-4xl text-[#9f7c91]">MN</div>
+                      )}
                     </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-medium text-[#765e71]">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3 py-1.5 border border-[#f5e2ed]">
-                        <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag1')}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff5fb] px-3 py-1.5 border border-[#f5e2ed]">
-                        <span className="text-[#a17291]">✓</span>{t('homepage.servicesUi.trustTag2')}
-                      </span>
-                    </div>
-
-                    <div className="mt-6 flex items-center justify-between gap-4 border-t border-[#f0e2eb] pt-5">
-                      <div className="rounded-xl bg-[#fdf6fa] px-4 py-2.5 ring-1 ring-[#f0dae6]">
-                        <p className="text-[10px] uppercase tracking-[0.12em] text-[#9d7a90]">{t('homepage.servicesUi.priceLabel')}</p>
-                        <p className="mt-0.5 text-[1.5rem] font-semibold leading-none tracking-tight text-[#2f2530]">EUR {service.price}</p>
+                    <div className="flex flex-1 flex-col p-5 lg:p-6">
+                      <h3 className="font-brand text-lg font-semibold tracking-[-0.01em] text-[#1f171d] lg:text-xl">
+                        {service.name}
+                      </h3>
+                      <p className="mt-2 line-clamp-2 text-[0.9rem] leading-[1.55] text-[#5f4c59]">
+                        {service.resultDescription || getServiceFallback(service.id, 'result', language === 'en' ? 'Professional result.' : 'Professionaalne tulemus.')}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-[#f0e8ec] px-2.5 py-1 text-[11px] font-medium text-[#5d4a59]">
+                          {service.duration} {t('common.minutes')}
+                        </span>
+                        {getServiceCategoryLabel(service.category) && (
+                          <span className="rounded-full bg-[#f0e8ec] px-2.5 py-1 text-[11px] font-medium text-[#5d4a59]">
+                            {getServiceCategoryLabel(service.category)}
+                          </span>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          goToBooking();
-                        }}
-                        className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-6px_rgba(194,77,134,0.55)] active:translate-y-0"
-                        style={{ background: 'linear-gradient(135deg, #d978a7 0%, #c24d86 50%, #ac3d72 100%)' }}
-                      >
-                        {t('homepage.servicesUi.cardCta')}
-                        <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
-                      </button>
+                      <div className="mt-5 flex flex-1 flex-col gap-3 border-t border-[#f0e2eb] pt-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+                        <div>
+                          <p className="text-lg font-semibold leading-none tracking-tight text-[#c24d86]">EUR {service.price}</p>
+                          <p className="mt-0.5 text-xs text-[#6f5e66]">
+                            {nextAvailable ? `${t('services.nextTimeLabel')}: ${nextAvailable}` : t('services.veryPopular')}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goToBooking();
+                          }}
+                          className="w-full rounded-full bg-[#c24d86] px-5 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-[#b04376] hover:scale-[1.02] active:scale-100 sm:w-auto sm:shrink-0"
+                        >
+                          {t('homepage.servicesUi.cardCta')}
+                          <ArrowRight className="ml-1 inline h-4 w-4" strokeWidth={2.2} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ===================== */}
-      {/* 5. RESULTS GALLERY - OUR WORK / MEIE TÖÖ */}
+      {/* 5. RESULTS GALLERY — Immersive luxury nail gallery / Meie tööd */}
       {/* ===================== */}
-      <section id="gallery" className="relative border-t border-[#efe0e8] py-24 lg:py-28" style={{ background: 'linear-gradient(180deg, #fef9fc 0%, #fdf2f7 38%, #fef9fc 100%)' }}>
-        <div className="pointer-events-none absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(circle at 25% 20%, rgba(210,150,180,0.1) 0%, transparent 48%), radial-gradient(circle at 75% 80%, rgba(230,180,205,0.08) 0%, transparent 48%)' }} />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-14 text-center lg:mb-16">
-            <h2 className="font-brand text-3xl font-semibold tracking-[-0.02em] text-[#2d232d] lg:text-4xl">{t('gallery.title')}</h2>
-            <p className="mx-auto mt-4 max-w-[42ch] text-[1.02rem] leading-relaxed text-[#6f5d6d]">{t('homepage.gallery.subtitle')}</p>
-          </div>
+      <section id="gallery" ref={gallerySectionRef} className="relative w-full bg-[#faf8f9] py-20 lg:py-[120px]">
+        <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
+          {/* Section header */}
+          <header className="mb-14 text-center md:mb-16 lg:mb-[60px]">
+            <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e]">
+              {getI18nTextOrFallback('homepage.gallery.eyebrow', language === 'en' ? 'OUR WORK' : 'MEIE TÖÖ')}
+            </p>
+            <h2 className="mt-3 font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] md:text-[42px]">
+              {getI18nTextOrFallback('homepage.gallery.realResultsTitle', language === 'en' ? 'Real results.' : 'Päris tulemused.')}
+            </h2>
+            <p className="mx-auto mt-4 max-w-[42ch] text-base leading-relaxed text-[#6b5a62]">
+              {t('homepage.gallery.subtitle')}
+            </p>
+          </header>
 
-          <div className="grid gap-6 lg:grid-cols-12 lg:gap-7">
+          {/* Desktop: asymmetric masonry grid */}
+          <div className="hidden grid-cols-2 grid-rows-[300px_300px_220px] gap-6 lg:grid" style={{ gap: '24px' }}>
             {nailStyles[0] && (
               <article
-                data-motion="gallery-featured"
-                className="group relative overflow-hidden rounded-[2rem] border-2 border-[#e8dae2] bg-white shadow-[0_36px_72px_-28px_rgba(88,52,75,0.32),0_0_0_1px_rgba(255,255,255,0.7)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_48px_88px_-28px_rgba(95,55,80,0.38),0_0_0_1px_rgba(255,255,255,0.85)_inset] lg:col-span-8 lg:row-span-2"
+                className={`group relative col-start-1 row-span-2 row-start-1 overflow-hidden rounded-[24px] shadow-[0_24px_48px_-16px_rgba(60,40,55,0.2)] transition-all duration-700 ease-out hover:shadow-[0_32px_64px_-16px_rgba(60,40,55,0.28)] ${
+                  galleryInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+                }`}
+                style={{ minHeight: '600px', transitionDelay: '0ms' }}
               >
-                <button className="absolute inset-0 z-10" onClick={() => openGallery(0)} aria-label={getStyleLabel(nailStyles[0])} />
-                <div className="absolute inset-0 z-[1] rounded-[2rem] ring-1 ring-inset ring-black/[0.06]" />
+                <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(0)} aria-label={getStyleLabel(nailStyles[0])} />
                 <Image
                   src={galleryCards[0]?.imageUrl || galleryUrls[0] || ''}
                   alt={getStyleLabel(nailStyles[0])}
                   width={1200}
                   height={900}
-                  className="h-[30rem] w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.05] lg:h-full lg:min-h-[38rem]"
+                  className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.25)_70%,rgba(0,0,0,0.55)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 z-20 p-7 text-white lg:p-10">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/85">{t('homepage.gallery.featuredLabel')}</p>
-                  <h3 className="mt-3 font-brand text-2xl font-semibold tracking-[-0.02em] lg:text-3xl">{getStyleLabel(nailStyles[0])}</h3>
-                  <p className="mt-2 max-w-[50ch] text-sm leading-relaxed text-white/95">{getStyleCaption(nailStyles[0]) || t('homepage.gallery.featuredQuote')}</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 z-20 p-8 text-white">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/90">
+                    {getI18nTextOrFallback('homepage.gallery.signatureLook', language === 'en' ? 'Signature look' : 'Signatuurstiil')}
+                  </p>
+                  <h3 className="mt-2 font-brand text-3xl font-semibold tracking-[-0.02em] lg:text-4xl">{getStyleLabel(nailStyles[0])}</h3>
                   <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleBookStyle(nailStyles[0]);
-                    }}
-                    className="relative z-30 mt-5 inline-flex items-center gap-2 rounded-full bg-white/98 px-5 py-2.5 text-sm font-semibold text-[#4b3044] shadow-[0_8px_24px_-8px_rgba(60,35,50,0.4)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-8px_rgba(60,35,50,0.45)]"
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleBookStyle(nailStyles[0]); }}
+                    className="relative z-30 mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-white/95 underline-offset-4 transition-all duration-200 hover:underline hover:text-white"
                   >
-                    {getI18nTextOrFallback('gallery.bookThisStyle', language === 'en' ? 'Book a similar style' : 'Broneeri sarnane stiil')}
+                    {getI18nTextOrFallback('homepage.gallery.bookStyleCta', language === 'en' ? 'Book this style' : 'Broneeri see stiil')}
                     <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
                   </button>
                 </div>
               </article>
             )}
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1 lg:gap-7">
-              {nailStyles.slice(1, 3).map((style, idx) => (
-                <article
-                  key={style.id}
-                  data-motion="gallery-support"
-                  className="group relative overflow-hidden rounded-2xl border-2 border-[#e8dae2] bg-white shadow-[0_28px_56px_-24px_rgba(88,52,75,0.28),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(95,55,80,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset]"
-                >
-                  <button className="absolute inset-0 z-10" onClick={() => openGallery(idx + 1)} aria-label={getStyleLabel(style)} />
-                  <div className="absolute inset-0 z-[1] rounded-2xl ring-1 ring-inset ring-black/[0.06]" />
-                  <Image
-                    src={galleryCards[idx + 1]?.imageUrl || galleryUrls[idx + 1] || galleryUrls[0] || ''}
-                    alt={getStyleLabel(style)}
-                    width={700}
-                    height={860}
-                    className="h-[18rem] w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06] lg:h-[19rem]"
-                  />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.3)_70%,rgba(0,0,0,0.55)_100%)]" />
-                  <div className="absolute inset-x-0 bottom-0 z-20 p-5 text-white lg:p-6">
-                    <p className="font-brand text-lg font-semibold tracking-[-0.01em] lg:text-xl">{getStyleLabel(style)}</p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-white/90">{galleryCards[idx + 1]?.caption || t('homepage.gallery.inspirationLook')}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            {nailStyles[3] && (
+            {nailStyles[1] && (
               <article
-                data-motion="gallery-support"
-                className="group relative overflow-hidden rounded-2xl border-2 border-[#e8dae2] bg-white shadow-[0_28px_56px_-24px_rgba(88,52,75,0.28),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(95,55,80,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset] lg:col-span-5"
+                className={`group relative col-start-2 row-start-1 overflow-hidden rounded-[24px] shadow-[0_20px_40px_-16px_rgba(60,40,55,0.18)] transition-all duration-600 ease-out hover:scale-[1.03] hover:shadow-[0_28px_52px_-16px_rgba(60,40,55,0.24)] ${
+                  galleryInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+                style={{ transitionDelay: '80ms' }}
               >
-                <button className="absolute inset-0 z-10" onClick={() => openGallery(3)} aria-label={getStyleLabel(nailStyles[3])} />
-                <div className="absolute inset-0 z-[1] rounded-2xl ring-1 ring-inset ring-black/[0.06]" />
-                <Image
-                  src={galleryCards[3]?.imageUrl || galleryUrls[3] || galleryUrls[0] || ''}
-                  alt={getStyleLabel(nailStyles[3])}
-                  width={980}
-                  height={760}
-                  className="h-[20rem] w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06] lg:h-[21rem]"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.3)_70%,rgba(0,0,0,0.55)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 z-20 p-6 text-white">
-                  <p className="font-brand text-xl font-semibold tracking-[-0.01em]">{getStyleLabel(nailStyles[3])}</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/90">{galleryCards[3]?.caption || t('homepage.gallery.inspirationLook')}</p>
+                <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(1)} aria-label={getStyleLabel(nailStyles[1])} />
+                <Image src={galleryCards[1]?.imageUrl || galleryUrls[1] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[1])} width={700} height={500} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[1])}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-white/90">{getI18nTextOrFallback('homepage.gallery.bookStyleCta', 'Broneeri see stiil')} →</span>
                 </div>
               </article>
             )}
-
+            {nailStyles[2] && (
+              <article
+                className={`group relative col-start-2 row-start-2 overflow-hidden rounded-[24px] shadow-[0_20px_40px_-16px_rgba(60,40,55,0.18)] transition-all duration-600 ease-out hover:scale-[1.03] hover:shadow-[0_28px_52px_-16px_rgba(60,40,55,0.24)] ${
+                  galleryInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+                style={{ transitionDelay: '160ms' }}
+              >
+                <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(2)} aria-label={getStyleLabel(nailStyles[2])} />
+                <Image src={galleryCards[2]?.imageUrl || galleryUrls[2] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[2])} width={700} height={500} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[2])}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-white/90">{getI18nTextOrFallback('homepage.gallery.bookStyleCta', 'Broneeri see stiil')} →</span>
+                </div>
+              </article>
+            )}
+            {nailStyles[3] && (
+              <article
+                className={`group relative col-start-1 row-start-3 overflow-hidden rounded-[24px] shadow-[0_20px_40px_-16px_rgba(60,40,55,0.18)] transition-all duration-600 ease-out hover:scale-[1.03] hover:shadow-[0_28px_52px_-16px_rgba(60,40,55,0.24)] ${
+                  galleryInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+                style={{ transitionDelay: '240ms' }}
+              >
+                <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(3)} aria-label={getStyleLabel(nailStyles[3])} />
+                <Image src={galleryCards[3]?.imageUrl || galleryUrls[3] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[3])} width={900} height={400} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[3])}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-white/90">{getI18nTextOrFallback('homepage.gallery.bookStyleCta', 'Broneeri see stiil')} →</span>
+                </div>
+              </article>
+            )}
             {nailStyles[4] && (
               <article
-                data-motion="gallery-support"
-                className="group relative overflow-hidden rounded-2xl border-2 border-[#e8dae2] bg-white shadow-[0_28px_56px_-24px_rgba(88,52,75,0.28),0_0_0_1px_rgba(255,255,255,0.6)_inset] transition-all duration-400 ease-out hover:-translate-y-2 hover:border-[#d4a8be] hover:shadow-[0_40px_64px_-24px_rgba(95,55,80,0.35),0_0_0_1px_rgba(255,255,255,0.8)_inset] lg:col-span-7"
+                className={`group relative col-start-2 row-start-3 overflow-hidden rounded-[24px] shadow-[0_20px_40px_-16px_rgba(60,40,55,0.18)] transition-all duration-600 ease-out hover:scale-[1.03] hover:shadow-[0_28px_52px_-16px_rgba(60,40,55,0.24)] ${
+                  galleryInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+                style={{ transitionDelay: '320ms' }}
               >
-                <button className="absolute inset-0 z-10" onClick={() => openGallery(4)} aria-label={getStyleLabel(nailStyles[4])} />
-                <div className="absolute inset-0 z-[1] rounded-2xl ring-1 ring-inset ring-black/[0.06]" />
-                <Image
-                  src={galleryCards[4]?.imageUrl || galleryUrls[4] || galleryUrls[0] || ''}
-                  alt={getStyleLabel(nailStyles[4])}
-                  width={1200}
-                  height={760}
-                  className="h-[20rem] w-full object-cover object-center transition-transform duration-600 ease-out group-hover:scale-[1.06] lg:h-[21rem]"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(0,0,0,0.3)_70%,rgba(0,0,0,0.55)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 z-20 p-6 text-white">
-                  <p className="font-brand text-xl font-semibold tracking-[-0.01em]">{getStyleLabel(nailStyles[4])}</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/90">{galleryCards[4]?.caption || t('homepage.gallery.inspirationLook')}</p>
+                <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(4)} aria-label={getStyleLabel(nailStyles[4])} />
+                <Image src={galleryCards[4]?.imageUrl || galleryUrls[4] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[4])} width={900} height={400} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[4])}</p>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-white/90">{getI18nTextOrFallback('homepage.gallery.bookStyleCta', 'Broneeri see stiil')} →</span>
                 </div>
               </article>
             )}
           </div>
 
-          <div className="mt-14 rounded-2xl border-2 border-[#e8dae2] bg-white/95 px-8 py-7 text-center shadow-[0_28px_56px_-24px_rgba(88,52,75,0.2),0_0_0_1px_rgba(255,255,255,0.8)_inset] backdrop-blur-sm lg:px-10 lg:py-8">
-            <p className="text-[1.02rem] leading-relaxed text-[#6f5d6d]">
-              {getI18nTextOrFallback('homepage.gallery.ctaLead', language === 'en' ? 'Find your next favorite design.' : 'Leia oma järgmine lemmik disain.')}
+          {/* Mobile: horizontal scroll gallery */}
+          <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden" ref={galleryScrollRef}>
+            {galleryCards.map((card, index) => (
+              <article
+                key={card.style.id}
+                className={`relative h-[320px] min-w-[280px] shrink-0 overflow-hidden rounded-[24px] shadow-[0_20px_40px_-12px_rgba(60,40,55,0.2)] transition-all duration-500 ${
+                  galleryInView ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{ transitionDelay: `${index * 60}ms` }}
+              >
+                <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(index)} aria-label={getStyleLabel(card.style)} />
+                <Image src={card.imageUrl} alt={getStyleLabel(card.style)} width={560} height={640} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 z-20 p-5 text-white">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/85">
+                    {index === 0 ? getI18nTextOrFallback('homepage.gallery.signatureLook', 'Signature look') : ''}
+                  </p>
+                  <p className="mt-1 font-brand text-lg font-semibold">{getStyleLabel(card.style)}</p>
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs text-white/90">
+                    {getI18nTextOrFallback('homepage.gallery.bookStyleCta', 'Broneeri see stiil')} →
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* Scroll indicator dots — mobile only */}
+          <div className="mt-4 flex justify-center gap-2 lg:hidden">
+            {galleryCards.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => {
+                  const el = galleryScrollRef.current;
+                  if (el) {
+                    const cardWidth = 280 + 16;
+                    el.scrollTo({ left: index * cardWidth, behavior: 'smooth' });
+                  }
+                  setGalleryScrollIndex(index);
+                }}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  galleryScrollIndex === index ? 'w-6 bg-[#c24d86]' : 'w-2 bg-[#d4c4ce]'
+                }`}
+                aria-label={language === 'en' ? `Go to slide ${index + 1}` : `Vaata slaid ${index + 1}`}
+              />
+            ))}
+          </div>
+
+          {/* CTA panel below grid */}
+          <div className="mt-14 rounded-[24px] bg-gradient-to-b from-[#fdf5f9] to-[#f8f0f4] px-6 py-10 text-center shadow-[0_16px_40px_-20px_rgba(80,50,65,0.12)] lg:mt-16 lg:px-12 lg:py-12">
+            <p className="text-[1.05rem] leading-relaxed text-[#5d4a56]">
+              {getI18nTextOrFallback('homepage.gallery.ctaLead', language === 'en' ? 'Find your next favorite style.' : 'Leia oma järgmine lemmik stiil.')}
             </p>
             <button
-              onClick={() => router.push('/book')}
-              className="mt-4 inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-base font-semibold text-white shadow-[0_12px_32px_-8px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-8px_rgba(194,77,134,0.55)]"
-              style={{ background: 'linear-gradient(135deg, #d978a7 0%, #c24d86 50%, #ac3d72 100%)' }}
+              type="button"
+              onClick={() => router.push(localizePath('/book'))}
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#c24d86] px-10 py-4 text-base font-semibold text-white shadow-[0_20px_40px_-12px_rgba(194,77,134,0.45)] transition-all duration-300 hover:bg-[#b04376] hover:shadow-[0_24px_48px_-12px_rgba(194,77,134,0.5)] hover:-translate-y-0.5 active:scale-[0.98]"
             >
-              {t('gallery.bookYourLook')}
+              {getI18nTextOrFallback('homepage.gallery.bookTime', language === 'en' ? 'Book time' : 'Broneeri aeg')}
               <ArrowRight className="h-5 w-5" strokeWidth={2.2} />
             </button>
           </div>
@@ -1365,8 +1717,8 @@ export default function Home() {
       {/* ===================== */}
       {/* 8. SIGNATURE UPGRADES */}
       {/* ===================== */}
-      <section id="pricing" className="border-t border-[#f2e6ed] bg-[#fff5fa] py-16 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="pricing" className={`bg-slate-50/50 ${sectionClass}`}>
+        <div className={contentMax}>
           <div className="mb-10 text-center lg:mb-12">
             <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b77f9f]">{t('homepage.addons.eyebrow')}</p>
             <h2 className="section-title">{t('homepage.addons.title')}</h2>
@@ -1379,7 +1731,7 @@ export default function Home() {
               homepageAddOns.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => router.push('/book')}
+                  onClick={() => router.push(localizePath('/book'))}
                   className="inline-flex items-center gap-3 rounded-full border border-[#e8cfdd] bg-white/90 px-4 py-2 text-left text-[#5f4d5d] shadow-[0_14px_22px_-20px_rgba(101,65,90,0.45)] transition hover:-translate-y-0.5 hover:border-[#d9b4c8] hover:bg-white"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fff2fb] text-xs font-semibold text-[#7f4668]">
@@ -1392,7 +1744,7 @@ export default function Home() {
               ))
             ) : (
               <button
-                onClick={() => router.push('/book')}
+                onClick={() => router.push(localizePath('/book'))}
                 className="inline-flex items-center gap-2 rounded-full border border-[#e8cfdd] bg-white/90 px-4 py-2.5 text-sm font-medium text-[#5f4d5d] shadow-[0_14px_22px_-20px_rgba(101,65,90,0.45)] transition hover:-translate-y-0.5 hover:border-[#d9b4c8] hover:bg-white"
               >
                 {language === 'en' ? 'Add-ons available when you book' : 'Lisateenused broneerimisel'}
@@ -1403,25 +1755,25 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 8. TEAM SECTION */}
+      {/* 8. SPECIALIST / SANDRA — Premium editorial authority */}
       {/* ===================== */}
-      <section id="team" ref={sandraSectionRef} className="relative overflow-hidden border-t border-[#f2e6ed] bg-[#fffbfd] py-14 sm:py-16 lg:py-24">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/70 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white/60 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.045] [background-image:radial-gradient(#b57b9d_0.65px,transparent_0.65px)] [background-size:16px_16px]" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div data-motion="sandra-section" className={`relative mx-auto grid max-w-6xl gap-6 rounded-[30px] p-4 backdrop-blur-[2px] sm:p-6 lg:grid-cols-12 lg:items-center lg:gap-12 lg:rounded-[34px] lg:p-10 card-premium-soft`}>
-            <div className="relative lg:col-span-6">
-              <div className="pointer-events-none absolute -left-8 -top-8 h-36 w-36 rounded-full bg-[#f4d7e8]/70 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-8 -right-6 h-44 w-44 rounded-full bg-[#f7d9ea]/65 blur-3xl" />
+      <section
+        id="team"
+        ref={sandraSectionRef}
+        className="relative overflow-visible border-t border-[#e8dce4]/70 bg-gradient-to-b from-[#fdf8fa] via-[#faf5f8] to-[#f8f2f6] py-20 md:py-28 lg:py-[140px]"
+      >
+        <div className={`relative ${contentMax}`}>
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-16 lg:items-center">
+            {/* LEFT — Visual authority: tall portrait, overlap, badge */}
+            <div className="relative order-1 lg:order-1 lg:col-span-5">
               <div
                 ref={sandraImageRef}
-                className="group relative overflow-hidden rounded-[24px] shadow-[0_24px_48px_-24px_rgba(94,54,82,0.45)] transition-transform duration-300"
+                className={`relative overflow-hidden rounded-[32px] shadow-[0_32px_64px_-24px_rgba(80,48,65,0.22),0_0_0_1px_rgba(0,0,0,0.04)] transition-all duration-700 ease-out ${
+                  isSandraInView ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'
+                }`}
               >
-                <div className="absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(39,25,37,0.02)_34%,rgba(34,18,31,0.48)_100%)]" />
-                <div className="pointer-events-none absolute left-0 top-0 z-20 h-40 w-40 rounded-br-[84px] bg-[radial-gradient(circle_at_top,rgba(253,229,241,0.5),transparent_70%)]" />
-                <span className="absolute left-4 top-4 z-30 rounded-full border border-white/55 bg-white/88 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#81506a] shadow-[0_12px_18px_-16px_rgba(65,29,51,0.45)]">
+                <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#1a1218]/60 via-transparent to-transparent" />
+                <span className="absolute left-5 top-5 z-20 rounded-full bg-white/94 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7a4d66] shadow-lg backdrop-blur-sm">
                   {getI18nTextOrFallback('homepage.team.favoriteBadge', language === 'en' ? 'Client favourite' : 'Kliendi lemmik')}
                 </span>
                 <Image
@@ -1429,45 +1781,62 @@ export default function Home() {
                   alt={getI18nTextOrFallback('homepage.team.imageAlt', language === 'en' ? 'Sandra Samun at Nailify studio' : 'Sandra Samun Nailify stuudios')}
                   width={1200}
                   height={1500}
-                  className="h-full min-h-[300px] w-full rounded-[24px] object-cover transition-transform duration-700 group-hover:scale-[1.04] sm:min-h-[360px] lg:min-h-[430px]"
+                  className="aspect-[4/5] w-full object-cover lg:aspect-[5/6] lg:min-h-[520px]"
                 />
               </div>
+              {/* Overlap: image bleeds into section */}
+              <div className="pointer-events-none absolute -bottom-6 -right-4 hidden h-32 w-48 rounded-full bg-[#f5e8ef]/60 blur-3xl lg:block" aria-hidden />
             </div>
 
-            <div className="lg:col-span-6">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#b77f9f]">
-                {getI18nTextOrFallback('homepage.team.eyebrow', language === 'en' ? 'Personal nail technician' : 'Isiklik küünetehnik')}
+            {/* RIGHT — Authority content column */}
+            <div className="order-2 flex flex-col lg:col-span-7">
+              <p
+                className={`text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e] transition-all duration-600 ${
+                  isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                }`}
+                style={{ transitionDelay: '100ms' }}
+              >
+                {getI18nTextOrFallback('homepage.team.eyebrow', language === 'en' ? 'Personal specialist' : 'Isiklik spetsialist')}
               </p>
-              <h2 className="mt-2 text-[1.95rem] font-semibold leading-[1.05] tracking-[-0.02em] text-[#2d232d] sm:text-[2.2rem] lg:text-[3.05rem]">
+              <h2
+                className={`mt-3 font-brand text-[2.25rem] font-semibold leading-[1.08] tracking-[-0.02em] text-[#1f171d] transition-all duration-600 sm:text-[2.75rem] lg:text-[3.25rem] ${
+                  isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                }`}
+                style={{ transitionDelay: '180ms' }}
+              >
                 Sandra Samun
               </h2>
-              <p className="mt-2 text-sm font-medium text-[#74586e]">{t('homepage.team.subtitle')}</p>
-              <p className="mt-2 text-sm font-medium text-[#7b5f73]">{t('homepage.team.authorityLine')}</p>
 
+              {/* Trust micro row — 3 pills */}
               <div className="mt-5 flex flex-wrap gap-2.5">
-                {[
-                  t('homepage.team.exp'),
-                  t('homepage.team.clients'),
-                  t('homepage.team.rating'),
-                  getI18nTextOrFallback('homepage.team.trustPremiumProducts', language === 'en' ? 'Premium product system' : 'Premium toodetesüsteem'),
-                  getI18nTextOrFallback('homepage.team.trustHygiene', language === 'en' ? 'Medical hygiene protocol' : 'Meditsiiniline hügieen'),
-                ].map((chip, index) => (
+                {[t('homepage.team.exp'), t('homepage.team.clients'), t('homepage.team.rating')].map((chip, index) => (
                   <span
                     key={chip}
-                    className={`flex-shrink-0 rounded-full border border-[#edd8e4] bg-white px-3 py-1.5 text-xs font-medium text-[#6f5669] shadow-[0_14px_18px_-18px_rgba(86,44,70,0.42)] transition-all duration-500 ${
-                      isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
+                    className={`rounded-full bg-[#f0e8ec] px-4 py-2 text-xs font-medium text-[#5d4a59] transition-all duration-500 ${
+                      isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
                     }`}
-                    style={{ transitionDelay: `${index * 70}ms` }}
+                    style={{ transitionDelay: `${260 + index * 60}ms` }}
                   >
                     {chip}
                   </span>
                 ))}
               </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {/* Authority paragraph — max 2 lines */}
+              <p
+                className={`mt-6 line-clamp-2 text-[15px] leading-[1.6] text-[#5f4c59] transition-all duration-500 ${
+                  isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                }`}
+                style={{ transitionDelay: '440ms' }}
+              >
+                {t('homepage.team.subtitle')} {t('homepage.team.authorityLine')}
+              </p>
+
+              {/* Benefit cards — soft floating */}
+              <div className="mt-8 flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-visible lg:grid lg:grid-cols-3 lg:gap-5">
                 {[
                   {
-                    title: getI18nTextOrFallback('homepage.team.benefits.designs', language === 'en' ? 'Personalized designs' : 'Personaalsed disainid'),
+                    title: getI18nTextOrFallback('homepage.team.benefits.designs', language === 'en' ? 'Personalized design' : 'Personaalne disain'),
                     description: getI18nTextOrFallback('homepage.team.benefits.designsHint', language === 'en' ? 'Tailored to your hand shape and style.' : 'Kohandatud sinu käe kuju ja stiiliga.'),
                   },
                   {
@@ -1475,93 +1844,90 @@ export default function Home() {
                     description: getI18nTextOrFallback('homepage.team.benefits.resultsHint', language === 'en' ? 'Durability that keeps shine for weeks.' : 'Püsivus, mis hoiab läike nädalaid.'),
                   },
                   {
-                    title: getI18nTextOrFallback('homepage.team.benefits.consultation', language === 'en' ? 'Consultation first' : 'Konsultatsioon enne hooldust'),
+                    title: getI18nTextOrFallback('homepage.team.benefits.consultation', language === 'en' ? 'Consultation before service' : 'Konsultatsioon enne hooldust'),
                     description: getI18nTextOrFallback('homepage.team.benefits.consultationHint', language === 'en' ? 'Clear plan before your service starts.' : 'Selge plaan enne hoolduse algust.'),
                   },
-                ].map((item) => (
+                ].map((item, index) => (
                   <article
                     key={item.title}
-                    className="rounded-2xl border border-[#edd9e5] bg-white/90 p-3 shadow-[0_18px_26px_-24px_rgba(95,54,81,0.52)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_30px_-20px_rgba(95,54,81,0.42)]"
+                    className={`min-w-[260px] shrink-0 rounded-2xl bg-white/90 p-4 shadow-[0_12px_32px_-16px_rgba(70,45,58,0.12),0_0_0_1px_rgba(0,0,0,0.04)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_40px_-16px_rgba(70,45,58,0.16)] lg:min-w-0 ${
+                      isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+                    }`}
+                    style={{ transitionDelay: `${560 + index * 80}ms` }}
                   >
-                    <h3 className="text-sm font-semibold text-[#3b2f3a]">{item.title}</h3>
-                    <p className="mt-1 text-xs leading-5 text-[#7b6677]">{item.description}</p>
+                    <h3 className="text-sm font-semibold text-[#2d232d]">{item.title}</h3>
+                    <p className="mt-1.5 text-xs leading-[1.5] text-[#6f5e66]">{item.description}</p>
                   </article>
                 ))}
               </div>
 
-              <div className="mt-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9c6d88]">
+              {/* Signature style — fashion editorial */}
+              <div className="mt-8">
+                <p
+                  className={`text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8a6b7e] transition-all duration-500 ${
+                    isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+                  }`}
+                  style={{ transitionDelay: '800ms' }}
+                >
                   {getI18nTextOrFallback('homepage.team.signatureLabel', language === 'en' ? 'Signature style' : 'Signature stiil')}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {[
                     getI18nTextOrFallback('homepage.team.signatureTags.1', language === 'en' ? 'Nude luxury' : 'Nude luksus'),
                     getI18nTextOrFallback('homepage.team.signatureTags.2', language === 'en' ? 'Gloss finish' : 'Gloss finish'),
                     getI18nTextOrFallback('homepage.team.signatureTags.3', language === 'en' ? 'Minimal detail' : 'Minimal detail'),
                     getI18nTextOrFallback('homepage.team.signatureTags.4', language === 'en' ? 'Strong structure' : 'Tugev ehitus'),
                   ].map((tag) => (
-                    <span key={tag} className="rounded-full border border-[#ead4df] bg-[#fff6fb] px-3 py-1 text-xs font-medium text-[#765b6e]">
+                    <span key={tag} className="rounded-full bg-white/80 px-3.5 py-1.5 text-xs font-medium text-[#5d4a59] shadow-sm ring-1 ring-[#ead8e2]/80">
                       {tag}
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-6">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#9c6c88]">
+              {/* Real work mini gallery — rounded thumbs, hover zoom, slight rotation */}
+              <div className="mt-8">
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a6b7e]">
                   {getI18nTextOrFallback('homepage.team.resultsLabel', language === 'en' ? 'Real work results' : 'Päris töö tulemused')}
                 </p>
-                <div className="grid grid-cols-3 gap-2.5 sm:flex sm:overflow-x-auto sm:pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {specialistGallery.map((item, index) => (
                     <button
                       key={`${item.imageUrl}-${index}`}
+                      type="button"
                       onClick={() => openSpecialistImage(index)}
-                      className="group relative h-24 w-full overflow-hidden rounded-2xl border border-[#edd9e5] shadow-[0_14px_22px_-18px_rgba(84,46,70,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_30px_-18px_rgba(84,46,70,0.5)] sm:h-[120px] sm:w-[120px] sm:flex-shrink-0"
+                      className={`group relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-[0_8px_24px_-12px_rgba(70,45,58,0.2)] transition-all duration-300 hover:scale-105 hover:shadow-[0_12px_28px_-8px_rgba(70,45,58,0.28)] sm:h-24 sm:w-24 ${
+                        index === 0 ? '-rotate-[0.5deg]' : index === 1 ? 'rotate-[0.5deg]' : '-rotate-[0.3deg]'
+                      }`}
                     >
                       <Image
                         src={item.imageUrl}
                         alt={item.caption}
                         width={240}
                         height={240}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-2 py-1.5 text-[10px] font-medium text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                        {item.caption}
-                      </div>
+                      <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5 pointer-events-none" />
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-7 space-y-2">
+              {/* Primary CTA — dramatic booking zone */}
+              <div className="mt-10">
                 <button
-                  onClick={() => router.push('/book')}
-                  className="cta-premium inline-flex items-center gap-2 rounded-full bg-[linear-gradient(120deg,#d9669e_0%,#c24d86_50%,#a93d71_100%)] px-7 py-3.5 text-sm font-semibold text-white shadow-[0_26px_40px_-24px_rgba(146,55,104,0.62)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:shadow-[0_30px_44px_-22px_rgba(146,55,104,0.72)]"
+                  type="button"
+                  onClick={() => router.push(localizePath('/book'))}
+                  className="w-full rounded-full bg-[#c24d86] px-8 py-4 text-base font-semibold text-white shadow-[0_20px_40px_-16px_rgba(194,77,134,0.5)] transition-all duration-300 hover:bg-[#b04376] hover:shadow-[0_24px_48px_-16px_rgba(194,77,134,0.6)] hover:scale-[1.02] active:scale-[0.99] lg:w-auto lg:px-10 lg:py-4"
                 >
                   {getI18nTextOrFallback('homepage.team.ctaStrong', language === 'en' ? 'Book with Sandra' : 'Broneeri aeg Sandraga')}
-                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M4 10h11" />
-                    <path d="M11.5 6.5L15 10l-3.5 3.5" />
-                  </svg>
+                  <ArrowRight className="ml-2 inline h-5 w-5" strokeWidth={2.2} />
                 </button>
-                <p className="text-xs font-medium text-[#8a6b80]">
+                <p className="mt-3 text-xs font-medium text-[#7a6572]">
                   {getI18nTextOrFallback('homepage.team.weeklyAvailability', language === 'en' ? 'Available slots this week' : 'Vabu aegu sel nädalal')}
                 </p>
               </div>
             </div>
-          </div>
-
-          <div className="mt-5 lg:hidden">
-            <button
-              onClick={() => router.push('/book')}
-              className="mx-auto flex w-full max-w-sm items-center justify-center gap-2 rounded-full bg-[linear-gradient(120deg,#d9669e_0%,#c24d86_52%,#a93d71_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_24px_38px_-22px_rgba(142,56,105,0.62)]"
-            >
-              {getI18nTextOrFallback('homepage.team.ctaStrong', language === 'en' ? 'Book with Sandra' : 'Broneeri aeg Sandraga')}
-              <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M4 10h11" />
-                <path d="M11.5 6.5L15 10l-3.5 3.5" />
-              </svg>
-            </button>
           </div>
         </div>
       </section>
@@ -1597,7 +1963,7 @@ export default function Home() {
             <div className="bg-[linear-gradient(180deg,rgba(22,13,20,0.45)_0%,rgba(20,11,19,0.86)_100%)] px-6 py-5">
               <p className="text-sm font-medium text-white/92">{specialistGallery[activeSpecialistImageIndex].caption}</p>
               <button
-                onClick={() => router.push('/book')}
+                onClick={() => router.push(localizePath('/book'))}
                 className="mt-4 rounded-full bg-white px-5 py-2 text-xs font-semibold text-[#5e2d49] transition hover:bg-[#ffe9f5]"
               >
                 {getI18nTextOrFallback('homepage.gallery.wantThisStyle', language === 'en' ? 'I want this style' : 'Soovin seda stiili')}
@@ -1608,17 +1974,29 @@ export default function Home() {
       )}
 
       {/* ===================== */}
-      {/* 9. PRODUCT DISCOVERY */}
+      {/* 9. PRODUCT DISCOVERY — Premium editorial 3-zone layout */}
       {/* ===================== */}
-      <section id="products" className="border-t border-[#f2e6ed] bg-[#fff9fd] py-16 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
+      <section
+        id="products"
+        className={`relative overflow-hidden ${sectionClass} bg-[#f7f0f3]`}
+      >
+        {/* Layered depth: radial behind hero, pink-beige container, blurred glows, darker than page */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_20%,#fdf6f9_0%,transparent_55%)]" aria-hidden />
+        <div className="pointer-events-none absolute left-0 top-[8%] h-[380px] w-[380px] rounded-full bg-[#f0e2eb]/40 blur-[80px]" aria-hidden />
+        <div className="pointer-events-none absolute right-0 top-[35%] h-[260px] w-[260px] rounded-full bg-[#ead8e4]/30 blur-[60px]" aria-hidden />
+        <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-[200px] w-[120%] rounded-full bg-[#f5ecf0]/25 blur-[60px]" aria-hidden />
+
+        <div className={`relative z-10 ${contentMax}`}>
+          {/* Section header */}
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-6 lg:mb-10">
             <div className="max-w-3xl">
-              <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b57b9d]">{t('homepage.products.eyebrow')}</p>
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.24em] text-[#b57b9d]">
+                {t('homepage.products.eyebrow')}
+              </p>
               <h2 className="section-title">
                 {getI18nTextOrFallback('homepage.products.retailTitle', language === 'en' ? 'Keep your salon result beautiful for longer' : 'Hoia salongitulemus kauem kaunis')}
               </h2>
-              <p className="mt-3 max-w-[54ch] text-[1.01rem] leading-7 text-[#6f5d6d]">
+              <p className="mt-4 max-w-[54ch] text-[1.01rem] leading-7 text-[#6f5d6d]">
                 {getI18nTextOrFallback('homepage.products.retailSubtitle', language === 'en' ? "Sandra's recommended aftercare essentials for shine, durability and healthier nails." : 'Sandra soovitatud järelhooldus läike, püsivuse ja tervemate küünte hoidmiseks.')}
               </p>
               <p className="mt-2 text-sm font-medium text-[#8e6880]">
@@ -1627,37 +2005,36 @@ export default function Home() {
             </div>
             <button
               onClick={goToShop}
-              className="rounded-full border border-[#e5c9d9] bg-white px-6 py-3 text-sm font-semibold text-[#6a4c64] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#fff3fa] hover:shadow-[0_18px_28px_-22px_rgba(97,48,85,0.45)]"
+              className="rounded-full bg-transparent px-6 py-3 text-sm font-semibold text-[#6a4c64] transition-all duration-300 hover:bg-[#fdf4f9] hover:scale-[1.02] active:scale-[0.98]"
             >
               {t('homepage.products.explore')}
             </button>
           </div>
 
           {productsLoading ? (
-            <div className="grid items-start gap-5 lg:grid-cols-12">
-              <article className={`overflow-hidden rounded-[32px] lg:col-span-8 card-premium`}>
-                <SkeletonBlock className="aspect-[16/10]" />
-                <div className="space-y-3 p-6">
-                  <SkeletonBlock className="h-6 w-36 rounded-full" />
-                  <SkeletonBlock className="h-9 w-2/3" />
-                  <SkeletonBlock className="h-4 w-full" />
-                  <SkeletonBlock className="h-4 w-5/6" />
-                  <SkeletonBlock className="h-10 w-40 rounded-full" />
+            <div className="grid items-start gap-6 lg:grid-cols-12">
+              <article className="overflow-hidden rounded-[28px] lg:col-span-8">
+                <SkeletonBlock className="aspect-[3/4] min-h-[320px]" />
+                <div className="space-y-4 p-6">
+                  <SkeletonBlock className="h-5 w-36 rounded-full" />
+                  <SkeletonBlock className="h-10 w-3/4" />
+                  <SkeletonBlock className="h-4 w-full max-w-[42ch]" />
+                  <SkeletonBlock className="h-12 w-44 rounded-full" />
                 </div>
               </article>
-              <aside className={`space-y-3 rounded-[28px] p-5 lg:col-span-4 card-premium`}>
-                <SkeletonBlock className="h-6 w-36 rounded-full" />
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <SkeletonBlock key={`product-rail-skeleton-${index}`} className="h-20 w-full rounded-2xl" />
+              <aside className="flex gap-4 overflow-x-auto pb-2 lg:col-span-4 lg:flex-col lg:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <SkeletonBlock className="h-5 w-28 rounded-full" />
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <SkeletonBlock key={`pick-skel-${i}`} className="h-20 w-full min-w-[260px] rounded-2xl lg:min-w-0" />
                 ))}
               </aside>
               <div className="lg:col-span-12">
-                <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <article key={`product-mini-skeleton-${index}`} className={`min-w-[245px] overflow-hidden rounded-[24px] card-premium`}>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <article key={`grid-skel-${i}`} className="overflow-hidden rounded-[24px]">
                       <SkeletonBlock className="aspect-[4/3]" />
-                      <div className="space-y-2 p-4">
-                        <SkeletonBlock className="h-5 w-3/4" />
+                      <div className="space-y-3 p-4">
+                        <SkeletonBlock className="h-5 w-4/5" />
                         <SkeletonBlock className="h-4 w-full" />
                         <SkeletonBlock className="h-9 w-28 rounded-full" />
                       </div>
@@ -1667,46 +2044,56 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="space-y-5">
-              <div className="grid items-start gap-5 lg:grid-cols-12">
-                {featuredProduct && (
-                  <article className={`group overflow-hidden rounded-[32px] lg:col-span-8 card-premium`}>
-                    <div className="grid lg:grid-cols-[1.08fr_1fr]">
-                      <div className="relative min-h-[300px] overflow-hidden bg-[#f8edf3]">
-                        {featuredProduct.imageUrl ? (
-                          <Image src={featuredProduct.imageUrl} alt={featuredProduct.name} width={1200} height={800} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-sm text-[#7f6679]">{featuredProduct.name}</div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#2a1828]/45 via-transparent to-transparent" />
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            toggleFavorite(featuredProduct.id);
-                          }}
-                          className={`absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border bg-white/95 transition ${
-                            isFavorite(featuredProduct.id)
-                              ? 'border-[#c24d86] text-[#c24d86]'
-                              : 'border-[#e9d6e1] text-[#8b6c81] hover:border-[#d8b3ca]'
-                          }`}
-                          aria-label={isFavorite(featuredProduct.id) ? (language === 'en' ? 'Remove from favourites' : 'Eemalda lemmikutest') : (language === 'en' ? 'Add to favourites' : 'Lisa lemmikutesse')}
-                        >
-                          <svg className="h-4.5 w-4.5" fill={isFavorite(featuredProduct.id) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21s-7.5-4.35-9.5-8.6C.9 9.05 2.15 5.5 5.9 5.5c2.1 0 3.4 1.1 4.1 2.15.7-1.05 2-2.15 4.1-2.15 3.75 0 5 3.55 3.4 6.9C19.5 16.65 12 21 12 21z" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="flex h-full flex-col justify-between space-y-4 p-6 lg:p-7">
-                        <div className="space-y-3">
-                          <p className="text-[11px] uppercase tracking-[0.2em] text-[#a06f8d]">
+            <>
+              {/* Shared container: hero + curated picks — reduced hero height so grid rises; no right-column void */}
+              <div className="rounded-[28px] bg-[#fdf9fb]/90 p-3 shadow-none backdrop-blur-sm lg:p-4">
+                <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12 lg:gap-5">
+                  {/* ZONE 1 — Hero: magazine cover proportion — image ~15% shorter, overlay higher + wider, gradient behind card, stronger title */}
+                  {featuredProduct && (
+                    <article className="group relative overflow-hidden rounded-[24px] bg-white/95 shadow-[0_12px_36px_-16px_rgba(60,35,55,0.1),0_4px_16px_-8px_rgba(60,35,55,0.06)] transition-all duration-300 hover:-translate-y-0.5 lg:col-span-8">
+                      <div className="relative flex flex-col pb-0">
+                        {/* Hero image: reduced height ~15% so grid can rise; soft gradient behind overlay area */}
+                        <div className="relative h-[220px] overflow-hidden rounded-t-[24px] bg-[#f8edf3] sm:h-[240px] lg:h-[265px]">
+                          {featuredProduct.imageUrl ? (
+                            <Image
+                              src={featuredProduct.imageUrl}
+                              alt={featuredProduct.name}
+                              width={1200}
+                              height={900}
+                              unoptimized
+                              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-sm text-[#7f6679]">{featuredProduct.name}</div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#2a1828]/70 via-[#2a1828]/12 to-transparent" />
+                          {/* Soft gradient fade behind where overlay card sits */}
+                          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white/20 to-transparent pointer-events-none" aria-hidden />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(featuredProduct.id); }}
+                            className={`absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 transition-all duration-200 hover:scale-110 ${
+                              isFavorite(featuredProduct.id) ? 'text-[#c24d86]' : 'text-[#8b6c81] hover:text-[#b07a9a]'
+                            }`}
+                            aria-label={isFavorite(featuredProduct.id) ? (language === 'en' ? 'Remove from favourites' : 'Eemalda lemmikutest') : (language === 'en' ? 'Add to favourites' : 'Lisa lemmikutesse')}
+                          >
+                            <FavoriteHeartIcon active={isFavorite(featuredProduct.id)} size={18} />
+                          </button>
+                        </div>
+                        {/* Overlay card: higher into image, slightly wider, less padding — bottom-sheet style on mobile */}
+                        <div className="relative -mt-20 mx-2.5 w-[calc(100%-1.25rem)] max-w-[min(100%,34rem)] rounded-[20px] bg-white/92 p-4 shadow-[0_8px_32px_-12px_rgba(50,28,45,0.12)] backdrop-blur-md sm:mx-3 sm:-mt-24 lg:-mt-28 lg:mx-4 lg:max-w-[38rem] lg:p-5">
+                          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a06f8d]">
                             {featuredProduct.isFeatured
                               ? getI18nTextOrFallback('homepage.products.badgeRecommended', language === 'en' ? 'Sandra recommends' : 'Sandra soovitab')
                               : t('homepage.products.badgeBestseller')}
                           </p>
-                          <h3 className="text-[1.4rem] font-semibold tracking-[-0.015em] text-[#312631] sm:text-[1.6rem]">{featuredProduct.name}</h3>
-                          <p className="line-clamp-3 text-sm leading-6 text-[#6f5f6f]">{featuredProduct.description}</p>
-                          <p className="text-xs font-medium leading-6 text-[#8f6a84]">
+                          <h3 className="text-[1.35rem] font-bold leading-tight tracking-[-0.02em] text-[#2d232d] sm:text-[1.65rem]">
+                            {featuredProduct.name}
+                          </h3>
+                          <p className="mt-1.5 line-clamp-2 max-w-[46ch] text-[13px] leading-6 text-[#6f5f6f]">
+                            {featuredProduct.description}
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium leading-6 text-[#8f6a84]">
                             {getI18nTextOrFallback(
                               'homepage.products.useCaseFeatured',
                               language === 'en'
@@ -1714,286 +2101,144 @@ export default function Home() {
                                 : 'Sobib eriti hästi geelhoolduse ja hooldusaegadega, et säilitada läige ning tasakaalus küünenahad.',
                             )}
                           </p>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex items-end justify-between gap-3">
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <div>
-                              <p className="text-[11px] uppercase tracking-[0.18em] text-[#9b7590]">
+                              <p className="text-[10px] uppercase tracking-[0.18em] text-[#9b7590]">
                                 {getI18nTextOrFallback('homepage.products.priceFrom', language === 'en' ? 'From' : 'Alates')}
                               </p>
-                              <p className="text-3xl font-semibold tracking-[-0.02em] text-[#b04b80]">EUR {featuredProduct.price}</p>
+                              <p className="text-[1.6rem] font-bold tracking-[-0.02em] text-[#b04b80] sm:text-2xl">EUR {featuredProduct.price}</p>
                             </div>
-                            <button
-                              onClick={() => router.push(localizePath('/book'))}
-                              className="btn-primary btn-primary-sm"
-                            >
-                              {getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
-                            </button>
+                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+                              <button
+                                onClick={() => router.push(localizePath('/book'))}
+                                className="w-full rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_45%,#8f3362_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_-8px_rgba(139,51,100,0.55)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+                              >
+                                {getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
+                              </button>
+                              <button
+                                onClick={() => goToProduct(featuredProduct.id)}
+                                className="w-full rounded-full bg-transparent px-4 py-2.5 text-sm font-semibold text-[#6a4c64] transition-all duration-200 hover:bg-[#fdf4f9] hover:scale-[1.01] active:scale-[0.99] sm:w-auto"
+                              >
+                                {getI18nTextOrFallback('homepage.products.ctaViewProduct', language === 'en' ? 'View product details' : 'Vaata toote detaile')}
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            onClick={() => goToProduct(featuredProduct.id)}
-                            className="w-full rounded-full border border-[#e5c8d8] bg-white px-4 py-2 text-sm font-semibold text-[#6a4c64] transition hover:bg-[#fff2fa]"
-                          >
-                            {getI18nTextOrFallback('homepage.products.ctaViewProduct', language === 'en' ? 'View product details' : 'Vaata toote detaile')}
-                          </button>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                )}
+                    </article>
+                  )}
 
-                <aside className={`rounded-[28px] p-4 sm:p-5 lg:col-span-4 card-premium`}>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a06f8d]">
-                    {getI18nTextOrFallback('homepage.products.quickPicksLabel', language === 'en' ? 'Quick picks' : 'Kiired valikud')}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[#6f5f6f]">
-                    {getI18nTextOrFallback(
-                      'homepage.products.quickPicksDescription',
-                      language === 'en'
-                        ? 'Take-home essentials that support longer wear and healthier nails between appointments.'
-                        : 'Koduseks hoolduseks valitud tooted, mis aitavad tulemusel püsida ja hoiavad küüned tervemad.',
-                    )}
-                  </p>
-                  <div className="mt-4 space-y-3">
-                    {supportingProducts.slice(0, 3).map((product) => (
-                      <button
-                        key={`quick-${product.id}`}
-                        onClick={() => goToProduct(product.id)}
-                        className="group flex w-full items-center gap-3 rounded-2xl border border-[#eddbe5] bg-white px-3 py-3 text-left transition hover:border-[#dfbdd0] hover:bg-[#fff6fb]"
-                      >
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f8edf3]">
-                          {product.imageUrl ? (
-                            <Image src={product.imageUrl} alt={product.name} width={180} height={180} unoptimized className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[10px] text-[#7f6679]">{product.name}</div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[#312631]">{product.name}</p>
-                          <p className="mt-0.5 text-xs text-[#7f6b7c]">
-                            {getI18nTextOrFallback('homepage.products.quickPickUseCase', language === 'en' ? 'Salon aftercare pick' : 'Salongi järelhoolduse valik')}
-                          </p>
-                        </div>
-                        <p className="text-sm font-semibold text-[#b04b80]">EUR {product.price}</p>
-                      </button>
-                    ))}
-                  </div>
-                </aside>
-              </div>
-
-              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:pb-0">
-                {retailProducts.map((product) => (
-                  <article key={product.id} className={`card-premium group min-w-[245px] self-start overflow-hidden rounded-[26px] transition hover:-translate-y-0.5 hover:shadow-[0_24px_36px_-24px_rgba(118,75,102,0.45)] lg:min-w-0`}>
-                    <div
-                      className="relative h-44 cursor-pointer overflow-hidden bg-[#f8edf3]"
-                      onClick={() => goToProduct(product.id)}
-                    >
-                      {product.imageUrl ? (
-                        <Image src={product.imageUrl} alt={product.name} width={760} height={580} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-xs text-[#7f6679]">{product.name}</div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleFavorite(product.id);
-                        }}
-                        className={`absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/95 transition ${
-                          isFavorite(product.id)
-                            ? 'border-[#c24d86] text-[#c24d86]'
-                            : 'border-[#e9d6e1] text-[#8b6c81] hover:border-[#d8b3ca]'
-                        }`}
-                        aria-label={isFavorite(product.id) ? (language === 'en' ? 'Remove from favourites' : 'Eemalda lemmikutest') : (language === 'en' ? 'Add to favourites' : 'Lisa lemmikutesse')}
-                      >
-                        <svg className="h-4 w-4" fill={isFavorite(product.id) ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21s-7.5-4.35-9.5-8.6C.9 9.05 2.15 5.5 5.9 5.5c2.1 0 3.4 1.1 4.1 2.15.7-1.05 2-2.15 4.1-2.15 3.75 0 5 3.55 3.4 6.9C19.5 16.65 12 21 12 21z" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="space-y-2 p-4">
-                      <h4 className="text-base font-semibold text-[#322a33]">{product.name}</h4>
-                      <p className="line-clamp-2 text-xs leading-5 text-[#7a6677]">{product.description}</p>
-                      <p className="text-[11px] font-medium text-[#9e7690]">
-                        {getI18nTextOrFallback('homepage.products.cardUseCase', language === 'en' ? 'Supports longer-lasting salon results.' : 'Toetab kauapüsivamat salongitulemust.')}
-                      </p>
-                      <div className="mt-3 flex items-center justify-between gap-2">
-                        <span className="text-base font-semibold text-[#b04b80]">EUR {product.price}</span>
-                        <button
-                          onClick={() => goToProduct(product.id)}
-                          className="rounded-full border border-[#e4c6d7] px-3 py-1.5 text-xs font-semibold text-[#6a4c64] transition-colors hover:bg-[#fff3fa]"
-                        >
-                          {getI18nTextOrFallback('homepage.products.ctaRetailTile', language === 'en' ? 'Buy now' : 'Osta kohe')}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-
-              {false && featuredProduct && (
-                <article className={`group self-start overflow-hidden rounded-[30px] card-premium`}>
-                  <div className="grid lg:grid-cols-[1.05fr_1fr]">
-                    <div className="relative h-64 overflow-hidden bg-[#f8edf3] sm:h-80">
-                    {featuredProduct.imageUrl ? (
-                      <Image src={featuredProduct.imageUrl || ''} alt={featuredProduct.name} width={1200} height={760} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-[#7f6679]">{featuredProduct.name}</div>
-                    )}
-                    <span className="absolute left-4 top-4 rounded-full bg-white/92 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8a5272]">
-                      {featuredProduct.isFeatured
-                        ? getI18nTextOrFallback('homepage.products.badgeRecommended', language === 'en' ? 'Sandra recommends' : 'Sandra soovitab')
-                        : t('homepage.products.badgeBestseller')}
-                    </span>
-                    </div>
-                  <div className="space-y-4 p-5 sm:p-6 lg:p-7">
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-full bg-[#fff2f8] px-2.5 py-1 font-semibold text-[#83526c]">
-                        {getI18nTextOrFallback('homepage.products.forAftercare', language === 'en' ? 'Aftercare essential' : 'Järelhoolduse lemmik')}
-                      </span>
-                      <span className="rounded-full border border-[#e8d4df] bg-white px-2.5 py-1 text-[#84687b]">
-                        {featuredProduct.category}
-                      </span>
-                    </div>
-                    <h3 className="text-[1.4rem] font-semibold tracking-[-0.015em] text-[#312631] sm:text-[1.55rem]">
-                      {featuredProduct.name}
-                    </h3>
-                    <p className="line-clamp-3 max-w-[56ch] text-sm leading-6 text-[#6f5f6f]">{featuredProduct.description}</p>
-                    <p className="text-xs font-medium text-[#9a7590]">
-                      {getI18nTextOrFallback('homepage.products.useCaseFeatured', language === 'en' ? 'Recommended after gel manicure to keep gloss and cuticles balanced.' : 'Soovitatud pärast geelhooldust, et hoida läiget ja küünenahad tasakaalus.')}
+                  {/* ZONE 2 — Curated picks: mobile = horizontal swipe; desktop = sticky panel with max-height + fade */}
+                  <aside className="relative rounded-[20px] bg-white/40 p-3 backdrop-blur-sm lg:col-span-4 lg:sticky lg:top-20 lg:max-h-[min(320px,40vh)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a06f8d]">
+                      {getI18nTextOrFallback('homepage.products.quickPicksLabel', language === 'en' ? 'Quick picks' : 'Kiired valikud')}
                     </p>
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-2xl font-semibold text-[#b04b80]">EUR {featuredProduct.price}</span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => router.push('/shop')}
-                          className="rounded-full border border-[#e3c4d5] bg-white px-4 py-2 text-xs font-semibold text-[#6a4c64] transition hover:bg-[#fff2fa]"
-                        >
-                          {getI18nTextOrFallback('homepage.products.ctaViewProduct', language === 'en' ? 'View product' : 'Vaata toodet')}
-                        </button>
-                        <button
-                          onClick={() => router.push('/book')}
-                          className="rounded-full bg-[linear-gradient(120deg,#d4669e_0%,#c24d86_52%,#a93d71_100%)] px-4 py-2 text-xs font-semibold text-white shadow-[0_20px_30px_-24px_rgba(139,51,100,0.7)] transition hover:-translate-y-0.5"
-                        >
-                          {getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  </div>
-                </article>
-              )}
-
-                <div className="hidden">
-                <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:pb-0">
-                  {supportingProducts.map((product, index) => (
-                    <article key={product.id} className={`card-premium group min-w-[255px] self-start overflow-hidden rounded-3xl transition hover:-translate-y-0.5 hover:shadow-[0_24px_36px_-24px_rgba(118,75,102,0.45)] lg:min-w-0`}>
-                    <div className="relative h-44 overflow-hidden bg-[#f8edf3]">
-                      {product.imageUrl ? (
-                        <Image src={product.imageUrl} alt={product.name} width={700} height={520} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-xs text-[#7f6679]">{product.name}</div>
+                    <p className="mt-1 text-[12px] leading-5.5 text-[#6f5f6f] lg:max-w-[240px]">
+                      {getI18nTextOrFallback(
+                        'homepage.products.quickPicksDescription',
+                        language === 'en'
+                          ? 'Take-home essentials that support longer wear and healthier nails between appointments.'
+                          : 'Koduseks hoolduseks valitud tooted, mis aitavad tulemusel püsida ja hoiavad küüned tervemad.',
                       )}
-                      <span className="absolute left-3 top-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a5171]">
-                        {index === 0 ? t('homepage.products.badgeMostLoved') : t('homepage.products.badgeSalonPick')}
-                      </span>
-                    </div>
-                    <div className="space-y-2 p-4">
-                      <h4 className="text-base font-semibold text-[#322a33]">{product.name}</h4>
-                      <p className="line-clamp-2 text-xs leading-5 text-[#7a6677]">{product.description}</p>
-                      <p className="text-[11px] text-[#9e7690]">
-                        {getI18nTextOrFallback('homepage.products.cardUseCase', language === 'en' ? 'Supports longer-lasting salon results.' : 'Toetab kauapüsivamat salongitulemust.')}
-                      </p>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="text-base font-semibold text-[#b04b80]">EUR {product.price}</span>
-                        <button
-                          onClick={() => router.push('/shop')}
-                          className="rounded-lg border border-[#e4c6d7] px-3 py-1.5 text-xs font-semibold text-[#6a4c64] transition-colors hover:bg-[#fff3fa]"
-                        >
-                          {getI18nTextOrFallback('homepage.products.ctaShort', language === 'en' ? 'See product' : 'Vaata toodet')}
-                        </button>
+                    </p>
+                    <div className="mt-2 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-col lg:overflow-y-auto lg:max-h-[200px] lg:gap-0 [scrollbar-width:thin]">
+                      <div className="flex gap-3 lg:flex-col lg:gap-0 lg:divide-y lg:divide-[#eedce6]/40">
+                        {supportingProducts.slice(0, 3).map((product) => (
+                          <button
+                            key={`quick-${product.id}`}
+                            onClick={() => goToProduct(product.id)}
+                            className="group flex w-[min(100%,280px)] shrink-0 items-center gap-2.5 rounded-xl bg-white/60 p-2.5 transition-colors hover:bg-[#fdf6fa]/80 lg:w-auto lg:min-w-0 lg:rounded-lg lg:bg-transparent lg:py-2.5 lg:hover:bg-[#fdf6fa]/70"
+                          >
+                            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#f8edf3]">
+                              {product.imageUrl ? (
+                                <Image src={product.imageUrl} alt={product.name} width={180} height={180} unoptimized className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-[9px] text-[#7f6679]">{product.name}</div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1 text-left lg:flex-1">
+                              <p className="truncate text-[13px] font-semibold text-[#312631]">{product.name}</p>
+                              <p className="mt-0.5 text-[10px] text-[#7f6b7c]">
+                                {getI18nTextOrFallback('homepage.products.quickPickUseCase', language === 'en' ? 'Salon aftercare pick' : 'Salongi järelhoolduse valik')}
+                              </p>
+                            </div>
+                            <p className="shrink-0 text-right text-[13px] font-semibold text-[#b04b80]">EUR {product.price}</p>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  </article>
-                ))}
+                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 hidden h-8 bg-gradient-to-t from-[#fdf9fb] to-transparent lg:block" aria-hidden />
+                  </aside>
+                </div>
               </div>
-            </div>
-            </div>
-          )}
-        </div>
-      </section>
 
-      {/* ===================== */}
-      {/* 10. CLIENT FEEDBACK (admin-managed) */}
-      {/* ===================== */}
-      <section id="testimonials" className="border-t border-[#f2e6ed] bg-[#fffbfd] py-20 lg:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 text-center lg:mb-14">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b77f9f]">{t('homepage.testimonials.eyebrow')}</p>
-            <h2 className="section-title">{t('homepage.testimonials.title')}</h2>
-            <p className={`mx-auto mt-3 section-lead`}>{t('homepage.testimonials.subtitle')}</p>
-          </div>
-
-          {feedbackItems.length === 0 ? (
-            <div className="rounded-2xl border border-[#f0e2eb] bg-[#fef9fc] px-6 py-12 text-center">
-              <p className="text-[#7e6376]">{t('homepage.testimonials.subtitle')}</p>
-            </div>
-          ) : (
-            <>
-              {feedbackItems[0] && (
-                <article className={`mb-8 overflow-hidden rounded-[30px] bg-[linear-gradient(130deg,#fff8fc_0%,#fff2f8_52%,#ffe9f4_100%)] px-6 py-8 lg:px-8 lg:py-10 card-premium-soft`}>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#b47f9e]">{t('homepage.testimonials.heroMomentLabel')}</p>
-                  <blockquote className="mt-3 text-2xl font-medium leading-relaxed tracking-[-0.012em] text-[#3a2c37] lg:text-[2rem]">
-                    &ldquo;{feedbackItems[0].feedbackText}&rdquo;
-                  </blockquote>
-                  <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
-                    <span className="rounded-full bg-white/85 px-3 py-1 font-semibold text-[#66475b]">{feedbackItems[0].clientName}</span>
-                    {feedbackItems[0].sourceLabel && (
-                      <span className="rounded-full border border-[#ebd3e0] bg-white/80 px-3 py-1 text-[#7e6376]">{feedbackItems[0].sourceLabel}</span>
-                    )}
-                  </div>
-                </article>
-              )}
-
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {feedbackItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className="card-premium group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)]"
-                  >
-                    <div className="flex flex-1 flex-col p-6">
-                      <div className="mb-4 flex items-center gap-3">
-                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-[#f0dae6] bg-[#f8edf4]">
-                          {item.clientAvatarUrl ? (
+              {/* ZONE 3 — Masonry grid: controlled rhythm — medium landscape → small portrait → tall portrait → medium → small (no content expansion) */}
+              <div className="mt-6 lg:mt-8">
+                <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-2 md:overflow-visible md:gap-4 lg:grid-cols-4 lg:gap-5">
+                  {retailProducts.map((product, index) => {
+                    const r = index % 5;
+                    const cardSm = 'aspect-[4/3.2]';
+                    const cardMd = 'aspect-[4/3.5]';
+                    const cardLg = 'aspect-[4/3]';
+                    const cardTall = 'aspect-[4/4.2]';
+                    const aspectClass = r === 0 ? cardLg : r === 1 || r === 4 ? cardSm : r === 2 ? cardTall : cardMd;
+                    const isTall = r === 2;
+                    return (
+                      <article
+                        key={product.id}
+                        className="group flex min-w-[240px] flex-col overflow-hidden rounded-[24px] bg-white/95 shadow-[0_8px_24px_-12px_rgba(65,38,58,0.08),0_2px_10px_-4px_rgba(65,38,58,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-14px_rgba(65,38,58,0.12),0_4px_14px_-6px_rgba(65,38,58,0.06)] md:min-w-0"
+                      >
+                        <div
+                          className={`relative cursor-pointer overflow-hidden rounded-t-[24px] bg-[#f8edf3] ${aspectClass}`}
+                          onClick={() => goToProduct(product.id)}
+                        >
+                          {product.imageUrl ? (
                             <Image
-                              src={item.clientAvatarUrl}
-                              alt={item.clientName}
-                              width={56}
-                              height={56}
-                              className="h-full w-full object-cover"
+                              src={product.imageUrl}
+                              alt={product.name}
+                              width={760}
+                              height={580}
                               unoptimized
+                              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#9b7590]">
-                              {item.clientName.slice(0, 2).toUpperCase()}
-                            </div>
+                            <div className="flex h-full items-center justify-center text-xs text-[#7f6679]">{product.name}</div>
                           )}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
+                            className={`absolute right-2.5 top-2.5 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 transition-all duration-200 hover:scale-110 ${
+                              isFavorite(product.id) ? 'text-[#c24d86]' : 'text-[#8b6c81] hover:text-[#b07a9a]'
+                            }`}
+                            aria-label={isFavorite(product.id) ? (language === 'en' ? 'Remove from favourites' : 'Eemalda lemmikutest') : (language === 'en' ? 'Add to favourites' : 'Lisa lemmikutesse')}
+                          >
+                            <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
+                          </button>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-[#2f2530]">{item.clientName}</h3>
-                          {item.sourceLabel && <p className="text-xs text-[#9d7a90]">{item.sourceLabel}</p>}
-                          <div className="mt-1 flex items-center gap-0.5 text-[#c24d86]">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <span key={i} className="text-sm" aria-hidden>{i < item.rating ? '★' : '☆'}</span>
-                            ))}
-                            <span className="ml-1 text-xs text-[#6f5d6d]">{item.rating}/5</span>
+                        <div className="flex flex-1 flex-col p-3">
+                          <h4 className={`font-semibold leading-snug text-[#322a33] ${isTall ? 'text-base' : 'text-[15px]'}`}>
+                            {product.name}
+                          </h4>
+                          <p className="mt-0.5 line-clamp-2 max-w-[30ch] text-[11px] leading-[1.35] text-[#7a6677]">
+                            {product.description}
+                          </p>
+                          <p className="mt-1 text-[10px] font-medium text-[#9e7690]">
+                            {getI18nTextOrFallback('homepage.products.cardUseCase', language === 'en' ? 'Supports longer-lasting salon results.' : 'Toetab kauapüsivamat salongitulemust.')}
+                          </p>
+                          <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                            <span className={`font-semibold text-[#b04b80] ${isTall ? 'text-base' : 'text-[15px]'}`}>EUR {product.price}</span>
+                            <button
+                              onClick={() => goToProduct(product.id)}
+                              className="w-full rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-3.5 py-2 text-[11px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(139,51,100,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+                            >
+                              {getI18nTextOrFallback('homepage.products.ctaRetailTile', language === 'en' ? 'Buy now' : 'Osta kohe')}
+                            </button>
                           </div>
                         </div>
-                      </div>
-                      <p className="text-[0.95rem] leading-relaxed text-[#5f4c59] line-clamp-4">&ldquo;{item.feedbackText}&rdquo;</p>
-                    </div>
-                  </article>
-                ))}
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}
@@ -2001,54 +2246,229 @@ export default function Home() {
       </section>
 
       {/* ===================== */}
-      {/* 9. LOCATION + HOURS */}
+      {/* 10. CLIENT FEEDBACK — Premium beauty social proof (editorial 2-layer) */}
       {/* ===================== */}
-      <section id="location" className="border-t border-[#f2e6ed] bg-[#fff9fc] py-16 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
-            <div>
-              <h2 className={`mb-5 section-title`}>{t('homepage.location.title')}</h2>
-              <p className={`mb-6 section-lead`}>{t('homepage.location.subtitle')}</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-[#efdde8] bg-white px-4 py-3 text-sm text-[#5d4b58]">{t('homepage.location.badge1')}</div>
-                <div className="rounded-2xl border border-[#efdde8] bg-white px-4 py-3 text-sm text-[#5d4b58]">{t('homepage.location.badge2')}</div>
-                <div className="rounded-2xl border border-[#efdde8] bg-white px-4 py-3 text-sm text-[#5d4b58]">{t('homepage.location.badge3')}</div>
-                <div className="rounded-2xl border border-[#efdde8] bg-white px-4 py-3 text-sm text-[#5d4b58]">{t('homepage.location.badge4')}</div>
+      <section
+        id="testimonials"
+        ref={testimonialsSectionRef}
+        className="relative overflow-hidden py-20 md:py-24 lg:py-[120px] bg-gradient-to-b from-[#faf6f8] via-[#f8f2f5] to-[#f5eef2]"
+      >
+        <div className={`relative z-10 ${contentMax} transition-all duration-700 ease-out ${testimonialsInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {/* Header — label, large title, centered subtext */}
+          <div className="mb-14 text-center lg:mb-16">
+            <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.28em] text-[#b77f9f]">
+              {t('homepage.testimonials.eyebrow')}
+            </p>
+            <h2 className="text-[2rem] font-semibold leading-tight tracking-[-0.02em] text-[#2d232d] md:text-[2.5rem] lg:text-[3rem] xl:text-[48px]">
+              {t('homepage.testimonials.title')}
+            </h2>
+            <p className="mx-auto mt-4 max-w-[520px] text-base leading-relaxed text-[#6f5d6d] lg:text-[1.05rem]">
+              {t('homepage.testimonials.subtitle')}
+            </p>
+          </div>
+
+          {feedbackItems.length === 0 ? (
+            <div className="rounded-3xl border border-[#f0e2eb] bg-white/80 px-6 py-16 text-center shadow-[0_8px_32px_-16px_rgba(80,45,70,0.06)]">
+              <p className="text-[#7e6376]">{t('homepage.testimonials.subtitle')}</p>
+            </div>
+          ) : (
+            <>
+              {/* TOP — Featured testimonial hero card (first visible feedback) */}
+              {feedbackItems[0] && (() => {
+                const featured = feedbackItems[0];
+                const firstName = featured.clientName.trim().split(/\s+/)[0] || featured.clientName;
+                const quoteShort = featured.feedbackText.length > 160 ? `${featured.feedbackText.slice(0, 157)}…` : featured.feedbackText;
+                return (
+                  <article
+                    className="group mb-10 overflow-hidden rounded-3xl bg-white shadow-[0_16px_48px_-24px_rgba(70,40,60,0.12),0_8px_24px_-12px_rgba(70,40,60,0.08)] transition-all duration-500 hover:scale-[1.01] hover:shadow-[0_24px_56px_-24px_rgba(70,40,60,0.18),0_12px_32px_-12px_rgba(70,40,60,0.1)] lg:mb-14"
+                  >
+                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.42fr)_1fr] min-h-[280px] lg:min-h-[320px]">
+                      {/* Left — client image or soft blurred nail-style background */}
+                      <div className="relative h-48 overflow-hidden bg-[#f5e8ef] lg:h-auto">
+                        {featured.clientAvatarUrl ? (
+                          <Image
+                            src={featured.clientAvatarUrl}
+                            alt=""
+                            width={560}
+                            height={560}
+                            unoptimized
+                            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_50%,#f0dce6_0%,#ead4e0_50%,#e5ccda_100%)]" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/95 lg:to-white/98" />
+                      </div>
+                      {/* Right — quote, name, stars, platform */}
+                      <div className="relative flex flex-col justify-center px-6 py-8 lg:px-14 lg:py-14">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#b47f9e]">
+                          {t('homepage.testimonials.heroMomentLabel')}
+                        </p>
+                        <blockquote className="mt-3 text-[22px] font-medium leading-relaxed tracking-[-0.01em] text-[#3a2c37] sm:text-[24px] lg:text-[28px] xl:text-[32px]">
+                          &ldquo;{quoteShort}&rdquo;
+                        </blockquote>
+                        <p className="mt-4 font-semibold text-[#2d232d]">{firstName}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex items-center gap-0.5 text-[#c24d86]" role="img" aria-label={`${featured.rating} out of 5 stars`}>
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span key={i} className="text-base transition-transform duration-200 hover:scale-110 lg:text-lg" aria-hidden>
+                                {i < featured.rating ? '★' : '☆'}
+                              </span>
+                            ))}
+                          </div>
+                          {featured.sourceLabel && (
+                            <span className="rounded-full border border-[#ebd3e0] bg-[#fdf8fb] px-3 py-1 text-xs font-medium text-[#7e6376]">
+                              {featured.sourceLabel}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })()}
+
+              {/* BOTTOM — Smaller testimonial cards grid (remaining feedback after featured) */}
+              <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-2 md:overflow-visible md:gap-6 lg:grid-cols-3">
+                {feedbackItems.slice(1).map((item, index) => {
+                  const oneLineQuote = item.feedbackText.length > 100 ? `${item.feedbackText.slice(0, 97)}…` : item.feedbackText;
+                  return (
+                    <article
+                      key={item.id}
+                      className="flex min-w-[300px] flex-col overflow-hidden rounded-2xl bg-white/95 shadow-[0_8px_24px_-12px_rgba(70,40,60,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_-16px_rgba(70,40,60,0.14)] md:min-w-0"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className="flex flex-1 flex-col p-5 lg:p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-[#f0dae6] bg-[#f8edf4]">
+                            {item.clientAvatarUrl ? (
+                              <Image
+                                src={item.clientAvatarUrl}
+                                alt=""
+                                width={48}
+                                height={48}
+                                className="h-full w-full object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#9b7590]">
+                                {item.clientName.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-[#2f2530]">{item.clientName}</h3>
+                            <div className="mt-1 flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-0.5 text-[#c24d86]" role="img" aria-label={`${item.rating} out of 5`}>
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <span key={i} className="text-xs transition-transform duration-200 hover:scale-110" aria-hidden>
+                                    {i < item.rating ? '★' : '☆'}
+                                  </span>
+                                ))}
+                              </div>
+                              {item.sourceLabel && (
+                                <span className="rounded-full border border-[#ead4e0] bg-[#fdf8fb] px-2 py-0.5 text-[10px] font-medium text-[#7e6376]">
+                                  {item.sourceLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-sm leading-relaxed text-[#5f4c59] line-clamp-2">&ldquo;{oneLineQuote}&rdquo;</p>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => router.push('/book')}
-                  className="btn-primary btn-primary-md"
-                >
-                  {t('nav.bookNow')}
-                </button>
-                <button className="btn-secondary btn-secondary-md">{t('location.getDirections')}</button>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ===================== */}
+      {/* 9. LOCAL TRUST / VISIT US — Editorial 2-column */}
+      {/* ===================== */}
+      <section id="location" ref={locationSectionRef} className={`bg-slate-50/60 ${sectionClass}`}>
+        <div className={contentMax}>
+          <div
+            className={`grid gap-12 lg:grid-cols-2 lg:gap-16 lg:items-center transition-all duration-700 ease-out ${
+              locationInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+            }`}
+          >
+            {/* LEFT COLUMN: visual anchor — large image with overlay and optional label */}
+            <div className="relative order-2 lg:order-1 overflow-hidden rounded-2xl bg-slate-200 shadow-xl">
+              <div className="aspect-[4/3] lg:aspect-[5/4] relative group">
+                {(media('location_studio') || media('team_portrait') || media('hero_main')) ? (
+                  <Image
+                    src={media('location_studio') || media('team_portrait') || media('hero_main')}
+                    alt={t('homepage.location.mapTitle')}
+                    width={1200}
+                    height={900}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-slate-200 text-slate-500">
+                    <span className="text-sm font-medium">{t('homepage.location.previewEyebrow')}</span>
+                  </div>
+                )}
+                <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/55 to-transparent pointer-events-none" />
+                <span className="absolute bottom-4 left-4 text-sm font-medium text-white drop-shadow-md">
+                  {t('location.mustamae')}
+                </span>
               </div>
             </div>
 
-            <div className="grid gap-4">
-              <article className={`overflow-hidden card-premium`}>
-                <Image
-                src={media('location_studio') || media('team_portrait') || media('hero_main')}
-                  alt="Nailify studio interior"
-                  width={1200}
-                  height={760}
-                  className="h-52 w-full object-cover"
-                />
-                <div className="p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-[#b07a99]">{t('homepage.location.previewEyebrow')}</p>
-                  <p className="mt-1 text-sm text-[#5d4b58]">{t('homepage.location.previewText')}</p>
-                </div>
-              </article>
-              <article className={`overflow-hidden card-premium`}>
-                <iframe
-                  title={t('homepage.location.mapTitle')}
-                  src="https://www.google.com/maps?q=Mustam%C3%A4e+tee+55+Tallinn&output=embed"
-                  className="h-56 w-full border-0"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </article>
+            {/* RIGHT COLUMN: content block — eyebrow, heading, paragraph, chips, CTAs */}
+            <div className="order-1 lg:order-2 flex flex-col">
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">
+                {t('homepage.localAuthority.eyebrow')}
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
+                {t('homepage.location.title')}
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-slate-600">
+                {t('homepage.location.subtitle')}
+              </p>
+              <p className="mt-2 text-base text-slate-500">
+                {t('homepage.location.previewText')}
+              </p>
+
+              {/* Feature chips — soft rectangular, icon + text, 2 per row on mobile */}
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4">
+                {[
+                  { icon: MapPin, key: 'badge1' as const },
+                  { icon: Clock, key: 'badge2' as const },
+                  { icon: Car, key: 'badge3' as const },
+                  { icon: Building2, key: 'badge4' as const },
+                ].map(({ icon: Icon, key }) => (
+                  <div
+                    key={key}
+                    className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/90 px-4 py-3.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <Icon className="h-5 w-5 shrink-0 text-slate-500" aria-hidden />
+                    <span className="text-sm font-medium text-slate-700">{t(`homepage.location.${key}`)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTAs — primary Get directions, secondary Book visit */}
+              <div className="mt-10 flex flex-wrap gap-4">
+                <a
+                  href="https://www.google.com/maps?q=Mustam%C3%A4e+tee+55+Tallinn"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-7 py-3.5 text-base font-medium text-white shadow-sm transition-all duration-200 hover:bg-slate-800 hover:opacity-95 hover:-translate-y-0.5"
+                >
+                  {t('location.getDirections')}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => router.push(localizePath('/book'))}
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-base font-medium text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:opacity-90 hover:-translate-y-0.5"
+                >
+                  {t('nav.bookNow')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2057,8 +2477,8 @@ export default function Home() {
       {/* ===================== */}
       {/* 10. AFTERCARE + GIFT CARDS */}
       {/* ===================== */}
-      <section className="border-t border-[#f2e6ed] bg-[#fff7fb] py-16 lg:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className={`bg-white ${sectionClass}`}>
+        <div className={contentMax}>
           <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-[#8a657c]">
             <span className="rounded-full border border-[#e6cddd] bg-white/80 px-3 py-1">{t('homepage.revenue.offerA')}</span>
             <span className="rounded-full border border-[#e6cddd] bg-white/80 px-3 py-1">{t('homepage.revenue.offerB')}</span>
@@ -2084,7 +2504,7 @@ export default function Home() {
                 </ul>
                 <div className="mt-5 flex gap-3">
                   <button
-                    onClick={() => router.push('/shop')}
+                    onClick={() => router.push(localizePath('/shop'))}
                     className="btn-primary btn-primary-sm"
                   >
                     {t('homepage.aftercare.cta')}
@@ -2128,8 +2548,8 @@ export default function Home() {
       {/* ===================== */}
       {/* 11. HOW BOOKING WORKS - SUPPORT */}
       {/* ===================== */}
-      <section className="border-t border-[#f2e6ed] bg-[#fffbfd] py-14 lg:py-18">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className={`bg-slate-50/50 ${sectionClass}`}>
+        <div className={contentMax}>
           <div className="text-center mb-8 lg:mb-10">
             <p className="mb-2 text-[11px] uppercase tracking-[0.24em] text-[#b67f9f]">{t('homepage.flow.eyebrow')}</p>
             <h2 className="mb-3 text-[2rem] font-medium tracking-[-0.02em] text-[#2A211D] lg:text-[2.35rem]">{t('howItWorks.title')}</h2>
@@ -2192,51 +2612,73 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===================== */}
-      {/* 12. FINAL CTA - CLOSING ENERGY */}
-      {/* ===================== */}
-      <section className="border-t border-[#f2e6ed] bg-[#fff8fc] py-20 lg:py-24">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div data-motion="major-cta" className="relative overflow-hidden rounded-[34px] border border-[#ebd2e1] bg-[linear-gradient(145deg,#fff2f9_0%,#ffdff0_55%,#ffd3ea_100%)] p-12 shadow-[0_40px_62px_-34px_rgba(130,53,96,0.58)] lg:p-16">
-            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.7),transparent_68%)]" />
-            <h2 className="mb-4 text-[2.85rem] font-medium tracking-[-0.03em] text-[#2A211D] lg:text-[3.35rem]">{t('finalCta.title')}</h2>
-            <p className="mx-auto mb-7 max-w-[44ch] text-[1.06rem] leading-7 text-[#6f5d53]">
-              {t('finalCta.subtitle')}
-            </p>
-            <p className="mb-6 text-sm font-medium text-[#8d5d79]">{t('homepage.final.limited')}</p>
-            
-            {/* REASSURANCE + RISK REMOVAL MICROCOPY */}
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center mb-8 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{t('finalCta.mostClients')}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>{t('finalCta.freeReschedule')}</span>
+      {/* Final CTA — split luxury layout: emotional left + conversion card right */}
+      <section
+        id="final-cta"
+        className={`relative overflow-hidden bg-gradient-to-b from-[#faf8f6] to-[#f5f2ef] py-20 md:py-24 lg:py-28`}
+        aria-labelledby="final-cta-heading"
+      >
+        {/* Subtle background glow — decorative only */}
+        <div className="pointer-events-none absolute right-0 top-1/2 h-[480px] w-[480px] -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_80%_80%_at_50%_50%,rgba(194,77,134,0.06),transparent_70%)]" aria-hidden />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-[320px] w-[320px] rounded-full bg-[radial-gradient(ellipse_80%_80%_at_50%_50%,rgba(194,77,134,0.04),transparent_70%)]" aria-hidden />
+
+        <div className={`relative ${contentMax}`}>
+          <div
+            data-motion="major-cta"
+            className="grid gap-12 lg:grid-cols-[1fr,auto] lg:gap-16 lg:items-center"
+          >
+            {/* LEFT: emotional content — eyebrow, headline, paragraph, trust rows */}
+            <div className="max-w-[36rem]">
+              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500">
+                {t('homepage.final.limited')}
+              </p>
+              <h2 id="final-cta-heading" className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl lg:text-[2.75rem] lg:leading-tight">
+                {t('finalCta.title')}
+              </h2>
+              <p className="mt-5 text-lg leading-relaxed text-slate-600">
+                {t('finalCta.subtitle')}
+              </p>
+
+              {/* Trust indicators — stacked mini rows, icon + benefit */}
+              <ul className="mt-8 space-y-4" role="list">
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" aria-hidden />
+                  <span className="text-sm font-medium text-slate-700">{t('finalCta.mostClients')}</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <RefreshCw className="h-5 w-5 shrink-0 text-emerald-500" aria-hidden />
+                  <span className="text-sm font-medium text-slate-700">{t('finalCta.freeReschedule')}</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* RIGHT: floating conversion card */}
+            <div
+              className="relative rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/90 p-8 shadow-[0_24px_48px_-16px_rgba(0,0,0,0.12)] transition-all duration-300 hover:shadow-[0_28px_56px_-14px_rgba(0,0,0,0.14)] hover:-translate-y-1 lg:min-w-[320px]"
+              style={{ boxShadow: '0 24px 48px -16px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)' }}
+            >
+              <p className="text-sm text-slate-600">{t('homepage.final.reassureLine')}</p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row lg:flex-col">
+                <button
+                  type="button"
+                  onClick={() => router.push(localizePath('/book'))}
+                  className="final-cta-primary inline-flex min-h-[52px] w-full items-center justify-center rounded-xl px-8 text-base font-semibold text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 sm:w-auto"
+                  style={{
+                    backgroundColor: colors.primary,
+                    boxShadow: `0 4px 20px -4px ${colors.primary}66`,
+                  }}
+                >
+                  {t('finalCta.secureSlot')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('services')}
+                  className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-8 text-base font-medium text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-300 sm:w-auto"
+                >
+                  {t('finalCta.browseServices')}
+                </button>
               </div>
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
-                onClick={() => router.push('/book')}
-                className="btn-primary btn-primary-xl"
-                style={{ backgroundColor: colors.primary }}
-              >
-                {t('finalCta.secureSlot')}
-              </button>
-              <button 
-                onClick={() => scrollToSection('services')}
-                className="btn-secondary btn-secondary-md px-8"
-              >
-                {t('finalCta.browseServices')}
-              </button>
-            </div>
-            <p className="mt-6 text-sm text-[#8c5f79]">{t('homepage.final.reassureLine')}</p>
           </div>
         </div>
       </section>
@@ -2244,8 +2686,8 @@ export default function Home() {
       {/* ===================== */}
       {/* 12. FOOTER - Light Premium */}
       {/* ===================== */}
-      <footer className="border-t border-[#ecddea] bg-[#fff9fd] py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <footer className="border-t border-slate-200 bg-white py-14">
+        <div className={contentMax}>
           <div className="grid gap-10 border-b border-[#efe0e9] pb-10 text-center md:grid-cols-3 md:text-left">
             <div>
               <span className="font-brand type-navbar-logo leading-none" style={{ color: colors.primary }}>Nailify</span>
@@ -2254,7 +2696,7 @@ export default function Home() {
             <div>
               <h4 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-[#7c6977]">{t('footer.quickLinks')}</h4>
               <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                <button onClick={() => router.push('/book')} className="rounded-full border border-[#ead7e3] px-3 py-1.5 text-sm text-[#6f5f6f] transition hover:bg-white">{t('nav.bookNow')}</button>
+                <button onClick={() => router.push(localizePath('/book'))} className="rounded-full border border-[#ead7e3] px-3 py-1.5 text-sm text-[#6f5f6f] transition hover:bg-white">{t('nav.bookNow')}</button>
                 <button onClick={() => scrollToSection('services')} className="rounded-full border border-[#ead7e3] px-3 py-1.5 text-sm text-[#6f5f6f] transition hover:bg-white">{t('nav.services')}</button>
                 <button onClick={() => scrollToSection('location')} className="rounded-full border border-[#ead7e3] px-3 py-1.5 text-sm text-[#6f5f6f] transition hover:bg-white">{t('nav.contact')}</button>
               </div>
@@ -2272,7 +2714,7 @@ export default function Home() {
           <div className="flex flex-col items-center justify-between gap-3 pt-6 sm:flex-row">
             <p className="text-gray-400 text-sm">{t('footer.copyright')}</p>
             <button 
-              onClick={() => router.push('/book')}
+              onClick={() => router.push(localizePath('/book'))}
               className="rounded-full px-6 py-2 text-white font-medium transition-all duration-200 hover:opacity-90"
               style={{ backgroundColor: colors.primary }}
             >
@@ -2291,7 +2733,7 @@ export default function Home() {
       {showDiscountPill && !discountPillDismissed && (
         <div className="fixed bottom-24 left-4 right-4 z-40 md:hidden">
           <div 
-            onClick={() => router.push('/book')}
+            onClick={() => router.push(localizePath('/book'))}
             className="bg-gray-900 text-white px-5 py-3 rounded-full shadow-xl flex items-center justify-between cursor-pointer animate-in slide-in-from-bottom-4"
           >
             <div className="flex items-center gap-3">
