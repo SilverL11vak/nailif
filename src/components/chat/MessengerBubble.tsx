@@ -14,13 +14,45 @@ export function MessengerBubble() {
   const pageId = sanitizePageId(process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID ?? '');
 
   const isHome = pathname === '/' || pathname === '/en' || pathname === '/et';
+  const isBookingFlow = pathname.includes('/book');
   const canRender = !isAdmin && Boolean(pageId);
-  const [isAllowedToRender, setIsAllowedToRender] = useState(() => (!isHome ? canRender : false));
+  const [isAllowedToRender, setIsAllowedToRender] = useState(() => {
+    if (!canRender) return false;
+    // On booking pages we delay the bubble until CTA area is reached.
+    if (isBookingFlow) return false;
+    // On home we delay bubble until user scrolls deeper.
+    if (isHome) return false;
+    return true;
+  });
 
   useEffect(() => {
     if (!canRender) {
       setIsAllowedToRender(false);
       return;
+    }
+
+    // Booking flow: delay until the CTA anchor is reached to avoid overlap.
+    if (isBookingFlow) {
+      setIsAllowedToRender(false);
+      const anchor = document.getElementById('confirm-step-cta-anchor');
+      if (!anchor) {
+        const timeout = window.setTimeout(() => setIsAllowedToRender(window.scrollY > 420), 250);
+        return () => window.clearTimeout(timeout);
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const hit = entries.some((e) => e.isIntersecting);
+          if (hit) {
+            setIsAllowedToRender(true);
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.01 }
+      );
+
+      observer.observe(anchor);
+      return () => observer.disconnect();
     }
 
     if (!isHome) {
@@ -60,14 +92,18 @@ export function MessengerBubble() {
     if (testimonialsEl) observer.observe(testimonialsEl);
 
     return () => observer.disconnect();
-  }, [canRender, isHome]);
+  }, [canRender, isHome, isBookingFlow]);
 
   if (!canRender || !isAllowedToRender) return null;
 
   const messengerUrl = `https://m.me/${pageId}`;
 
+  const containerClasses = isBookingFlow
+    ? 'fixed bottom-[calc(4.6rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
+    : 'fixed bottom-[calc(5.85rem+env(safe-area-inset-bottom))] right-3 z-[45] md:bottom-6 md:right-6';
+
   return (
-    <div className="fixed bottom-[calc(5.85rem+env(safe-area-inset-bottom))] right-3 z-[45] md:bottom-6 md:right-6">
+    <div className={containerClasses}>
       <div className="flex max-w-[calc(100vw-2rem)] items-center justify-end gap-2">
         <div className="hidden rounded-full border border-[#e8d3df] bg-white px-3 py-1.5 text-xs font-medium text-[#7a4563] shadow-[0_16px_28px_-20px_rgba(122,69,99,0.45)] md:block">
           Soovid abi? Kirjuta mulle

@@ -70,7 +70,7 @@ export function ConfirmStep() {
       firstName: en ? 'First name' : 'Eesnimi',
       phone: en ? 'Phone' : 'Telefon',
       email: en ? 'Email (optional)' : 'E-post (valikuline)',
-      notes: en ? 'Notes (optional)' : 'Märkused (valikuline)',
+      notes: en ? 'Quick note (optional)' : 'Kiire info sinu küünte kohta (valikuline)',
       inspiration: en ? 'Inspiration photo (optional)' : 'Inspiratsioonipilt (valikuline)',
       trustChip1: en ? 'Free rescheduling' : 'Tasuta ümberbroneerimine',
       trustChip2: en ? 'Certified hygiene' : 'Sertifitseeritud hügieen',
@@ -267,11 +267,13 @@ export function ConfirmStep() {
   const emailInput = form.email.trim();
   const emailValid = !emailInput || emailRegex.test(emailInput);
 
+  const phonePrefix = '+372';
+  const phoneRest = form.phone.trim().startsWith(phonePrefix) ? form.phone.trim().slice(phonePrefix.length).trim() : form.phone.trim();
+
   const canPay = firstNameValid && phoneValid && emailValid && remainingSec > 0 && lockReady && !isLoading;
 
   const [ctaPressed, setCtaPressed] = useState(false);
   const [ctaGlowOnce, setCtaGlowOnce] = useState(false);
-  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(true);
   const [inspirationUploading, setInspirationUploading] = useState(false);
 
   const ctaAnchorRef = useRef<HTMLDivElement>(null);
@@ -474,24 +476,24 @@ export function ConfirmStep() {
 
       <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_390px] xl:gap-10">
         {/* LEFT: emotional confirmation + form */}
-        <div>
-          <header className="mb-5 text-center">
+        <div className="flex flex-col">
+          <header className="order-2 mb-5 text-center">
             <h1 className="font-brand text-[28px] font-medium leading-[1.25] tracking-tight text-[#1f171d]">
               {copy.title}
             </h1>
             <p className="mt-2 text-[15px] leading-[1.65] font-medium text-[#5d4a56]">{copy.subtitle}</p>
 
-            {/* Loss framing bar */}
-            <div className="mx-auto mt-4 flex max-w-[560px] items-start gap-3 rounded-[22px] border-l-4 border-l-[#c24d86]/30 border border-[#f0d6e3] bg-[#fff4fb]/90 px-4 py-3 shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)]">
+            {/* Loss framing bar (desktop only) */}
+            <div className="hidden xl:flex mx-auto mt-4 flex max-w-[560px] items-start gap-3 rounded-[22px] border-l-4 border-l-[#c24d86]/30 border border-[#f0d6e3] bg-[#fff4fb]/90 px-4 py-3 shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)]">
               <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#f0e6ec] text-[#c24d86]">
                 <Lock className="h-5 w-5" strokeWidth={2} aria-hidden />
               </div>
               <p className="pt-0.5 text-left text-sm font-medium text-[#6a3b57]">{copy.timerHint}</p>
             </div>
 
-            {/* Animated countdown badge */}
+            {/* Animated countdown badge (desktop only) */}
             <div
-              className={`mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-[#efe0e8] bg-white/80 px-4 py-2 text-sm font-semibold text-[#6a3b57] shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)] backdrop-blur-sm ${
+              className={`hidden xl:mx-auto xl:mt-3 xl:inline-flex items-center gap-2 rounded-full border border-[#efe0e8] bg-white/80 px-4 py-2 text-sm font-semibold text-[#6a3b57] shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)] backdrop-blur-sm ${
                 lockPulse ? 'booking-countdown-badge-pulse' : ''
               }`}
             >
@@ -502,48 +504,40 @@ export function ConfirmStep() {
             </div>
           </header>
 
-          {/* Mobile: collapsible booking summary */}
-          <div className="xl:hidden mb-5">
-            <button
-              type="button"
-              onClick={() => setMobileSummaryOpen((s) => !s)}
-              className="w-full rounded-[22px] border border-[#efe0e8] bg-white/80 px-4 py-3 text-left shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)]"
-              aria-expanded={mobileSummaryOpen}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#a898a8]">
+          {/* Mobile: booking summary strip */}
+          <div className="xl:hidden order-1 mb-4">
+            <div className="rounded-[22px] border border-[#f0e8ed] bg-white/75 px-4 py-3 shadow-[0_12px_26px_-20px_rgba(57,33,52,0.16)]">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">
                     {en ? 'Booking summary' : 'Broneeringu kokkuvõte'}
                   </p>
-                  <p className="mt-1 truncate text-sm font-semibold text-[#2f2530]">{selectedService.name}</p>
-                  <p className="mt-0.5 text-xs font-medium text-[#8a7a88]">
+                  <p className="mt-1 line-clamp-2 text-[14px] leading-[1.25] font-semibold text-[#2f2530]">
+                    {selectedService.name}
+                  </p>
+                  <p className="mt-0.5 text-[12px] font-medium text-[#8a7a88]">
                     {dateShort} · {selectedSlot.time}
+                    <span className="ml-2 text-[#a89a9f]">{durationMin ? `· ${durationMin} min` : ''}</span>
                   </p>
                 </div>
-                <span className="shrink-0 text-[#c24d86] text-[22px] leading-none font-semibold" aria-hidden>
-                  {mobileSummaryOpen ? '−' : '+'}
-                </span>
-              </div>
-            </button>
-            {mobileSummaryOpen && (
-              <div className="mt-3">
-                <BookingSummaryPremiumCard />
-                <div className="mt-3 flex items-center gap-2 text-xs font-medium text-[#8a7a88]">
-                  <Eye className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                  {en ? `${viewedToday} people viewed this slot today` : '3 inimest vaatas seda aega täna'}
+                <div className="shrink-0 text-right">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">
+                    {en ? 'Total' : 'Kokku'}
+                  </p>
+                  <p className="mt-1 text-[22px] font-semibold tabular-nums text-[#c24d86]">€{totalPriceDisplay}</p>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Hero -> next section transition (subtle blur line) */}
           <div
-            className="xl:hidden mb-5 h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(194,77,134,0.28)_50%,transparent_100%)] blur-[0.2px]"
+            className="hidden xl:block mb-5 h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(194,77,134,0.28)_50%,transparent_100%)] blur-[0.2px]"
             aria-hidden
           />
 
           {/* Deposit framing */}
-          <section className="mb-5 rounded-[22px] border border-[#ead6e2] bg-[linear-gradient(180deg,#fff7fb_0%,#fffafd_60%,#ffffff_100%)] p-5 shadow-[0_18px_44px_-36px_rgba(194,77,134,0.35)]">
+          <section className="mb-5 hidden xl:block rounded-[22px] border border-[#ead6e2] bg-[linear-gradient(180deg,#fff7fb_0%,#fffafd_60%,#ffffff_100%)] p-5 shadow-[0_18px_44px_-36px_rgba(194,77,134,0.35)]">
             <div className="min-w-0">
               <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">{en ? 'Deposit' : 'Ettemaks'}</p>
               <p className="mt-2 font-brand text-[20px] font-semibold text-[#2f2530]">{copy.depositTitle}</p>
@@ -606,6 +600,26 @@ export function ConfirmStep() {
               )}
             </div>
 
+            {/* Compact trust chips for mobile */}
+            <div className="mb-4 grid grid-cols-2 gap-x-2 gap-y-2 xl:hidden">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
+                <Lock className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
+                {copy.depositChipStripe}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
+                <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2} aria-hidden />
+                {copy.depositChipEncrypted}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
+                <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={2} aria-hidden />
+                {copy.depositChipCancel}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white px-2 py-1 text-[11px] font-semibold text-[#5d4a56]">
+                <CheckCircle2 className="h-4 w-4 text-[#2d8a5e]" strokeWidth={2} aria-hidden />
+                {copy.depositChipEmail}
+              </span>
+            </div>
+
             <div className="space-y-8">
               <div className="space-y-4">
               {/* First name */}
@@ -651,24 +665,33 @@ export function ConfirmStep() {
                     <CheckCircle2 className="h-5 w-5 text-[#2d8a5e]" aria-hidden />
                   ) : null}
                 </div>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={form.phone}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setForm((prev) => ({ ...prev, phone: v }));
-                    setFormErrors((prev) => ({ ...prev, phone: '' }));
-                  }}
-                  onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
-                  className={`mt-2 h-[56px] w-full rounded-[14px] border bg-white px-4 text-[16px] outline-none transition sm:text-sm ${
+
+                <div
+                  className={`mt-2 flex h-[56px] items-center gap-2 rounded-[14px] border bg-white px-3 transition sm:text-sm ${
                     touched.phone && !phoneValid
-                      ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-300/20'
-                      : 'border-[#e3dbd4] focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20'
+                      ? 'border-red-300 focus-within:border-red-400 focus-within:ring-2 focus-within:ring-red-300/20'
+                      : 'border-[#e3dbd4] focus-within:border-[#c24d86]/60 focus-within:ring-2 focus-within:ring-[#c24d86]/20'
                   }`}
-                  placeholder={en ? '+372 5xx xxx' : '+372 5xx xxx'}
-                  aria-invalid={Boolean(formErrors.phone)}
-                />
+                >
+                  <span className="text-[16px] font-semibold text-[#443630]">{phonePrefix}</span>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={phoneRest}
+                    onChange={(e) => {
+                      const rest = e.target.value;
+                      const trimmed = rest.trim();
+                      const full = trimmed ? `${phonePrefix} ${trimmed}` : '';
+                      setForm((prev) => ({ ...prev, phone: full }));
+                      setFormErrors((prev) => ({ ...prev, phone: '' }));
+                    }}
+                    onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
+                    className="flex-1 bg-transparent px-0 py-0 text-[16px] outline-none placeholder:text-[#a89a9f]"
+                    placeholder={en ? '5xx xxx' : '5xx xxx'}
+                    aria-invalid={Boolean(formErrors.phone)}
+                    inputMode="tel"
+                  />
+                </div>
                 {touched.phone && formErrors.phone ? <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p> : null}
               </label>
 
@@ -707,7 +730,7 @@ export function ConfirmStep() {
               {/* Notes */}
               <label className="block">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-[14px] font-medium text-[#443630]">{copy.notes}</span>
+                  <span className="text-[13px] font-medium text-[#7d6275]">{copy.notes}</span>
                 </div>
                 <textarea
                   name="notes"
@@ -718,7 +741,7 @@ export function ConfirmStep() {
                   }}
                   onBlur={() => setTouched((prev) => ({ ...prev, notes: true }))}
                   className="mt-2 min-h-[88px] w-full resize-none rounded-[14px] border border-[#e3dbd4] bg-white px-4 py-4 text-[16px] outline-none transition focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20 sm:text-sm"
-                  placeholder={en ? 'Anything you want us to know…' : 'Kõik, mida peaks teadma…'}
+                  placeholder={en ? 'Add a quick note…' : 'Lisa märkus…'}
                 />
               </label>
 
@@ -728,8 +751,8 @@ export function ConfirmStep() {
               <div>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[14px] font-medium text-[#443630]">{en ? 'Inspiration photos' : 'Inspiratsioon'}</p>
-                    <p className="mt-1 text-[13px] font-medium text-[#7d6275]">
+                    <p className="text-[13px] font-medium text-[#443630]">{en ? 'Inspiration photos' : 'Inspiratsioon'}</p>
+                    <p className="mt-1 text-[12px] font-medium text-[#7d6275]">
                       {en ? 'Optional — helps us prepare.' : 'Valikuline — aitab meil ette valmistada.'}
                     </p>
                   </div>
@@ -746,12 +769,12 @@ export function ConfirmStep() {
                   onChange={(e) => void handleInspirationUpload(e.target.files)}
                 />
 
-                <div className="mt-3 grid grid-cols-2 gap-3">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => inspirationInputRef.current?.click()}
                     disabled={inspirationUploading}
-                    className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#e1d6cd] bg-white/60 px-4 py-4 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
+                    className="group flex flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/60 px-3 py-3 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
                     aria-busy={inspirationUploading}
                   >
                     <UploadCloud className="h-5 w-5 text-[#c24d86]" strokeWidth={2} aria-hidden />
@@ -762,7 +785,7 @@ export function ConfirmStep() {
                     type="button"
                     onClick={() => inspirationInputRef.current?.click()}
                     disabled={inspirationUploading}
-                    className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#e1d6cd] bg-white/60 px-4 py-4 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
+                    className="group flex flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/60 px-3 py-3 text-left transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
                     aria-busy={inspirationUploading}
                   >
                     <UploadCloud className="h-5 w-5 text-[#c24d86]" strokeWidth={2} aria-hidden />
@@ -772,7 +795,7 @@ export function ConfirmStep() {
 
                 {form.inspirationImage ? (
                   <div className="mt-3">
-                    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#eadce5] bg-white">
+                    <div className="relative aspect-[16/10] overflow-hidden rounded-[14px] border border-[#eadce5] bg-white">
                       <Image
                         src={form.inspirationImage}
                         alt={en ? 'Inspiration preview' : 'Inspiratsiooni eelvaade'}
@@ -785,14 +808,14 @@ export function ConfirmStep() {
                       <button
                         type="button"
                         onClick={() => inspirationInputRef.current?.click()}
-                        className="text-[14px] font-semibold text-[#c24d86] underline decoration-[#c24d86]/30 underline-offset-4 transition hover:decoration-[#c24d86]"
+                        className="text-[13px] font-semibold text-[#c24d86] underline decoration-[#c24d86]/30 underline-offset-4 transition hover:decoration-[#c24d86]"
                       >
                         {en ? 'Replace' : 'Asenda'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setForm((prev) => ({ ...prev, inspirationImage: '' }))}
-                        className="text-[14px] font-semibold text-[#d24f61] underline decoration-[#d24f61]/30 underline-offset-4 transition hover:decoration-[#d24f61]"
+                        className="text-[13px] font-semibold text-[#d24f61] underline decoration-[#d24f61]/30 underline-offset-4 transition hover:decoration-[#d24f61]"
                       >
                         {en ? 'Remove' : 'Eemalda'}
                       </button>
@@ -886,7 +909,7 @@ export function ConfirmStep() {
       </div>
 
       {/* Mobile sticky CTA */}
-      <div ref={ctaAnchorRef} className="h-px lg:hidden" aria-hidden />
+      <div ref={ctaAnchorRef} id="confirm-step-cta-anchor" className="h-px lg:hidden" aria-hidden />
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[50] h-32 bg-[linear-gradient(180deg,transparent_0%,#fff9fb_55%,#fff5f9_100%)] lg:hidden" />
 
       <div className="fixed inset-x-0 bottom-0 z-[55] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
@@ -921,21 +944,21 @@ export function ConfirmStep() {
             {isLoading ? copy.ctaLoading : copy.cta}
           </button>
           {/* Trust micro block under CTA */}
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
               <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
               {en ? '⭐ 4.9 rating' : '⭐ 4.9 hinnang'}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
               <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
               {en ? '🧼 Medical level hygiene' : '🧼 Meditsiiniline hügieen'}
             </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-3 py-2 text-[12px] font-semibold text-[#5d4a56]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/80 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
               <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
               {en ? '🔁 Free rescheduling' : '🔁 Tasuta ümberbroneerimine'}
             </span>
           </div>
-          <p className="mt-2 text-center text-[11px] text-[#a89a9f]">{copy.ctaSub}</p>
+          <p className="mt-2 text-center text-[12px] font-medium text-[#9a8a94]">{copy.ctaSub}</p>
         </div>
       </div>
       <style jsx global>{`
