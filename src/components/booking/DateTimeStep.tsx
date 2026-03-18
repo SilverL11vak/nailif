@@ -433,32 +433,9 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
     const totalSec = Math.floor(lockRemainingMs / 1000);
     const mm = Math.floor(totalSec / 60);
     const ss = totalSec % 60;
-    const av = sortedAvailable ?? [];
-    const count = av.length;
-    const morningCount = av.filter((s) => {
-      const h = Number(s.time.split(':')[0] ?? 0);
-      return Number.isFinite(h) && h >= 9 && h < 12;
-    }).length;
-    const eveningCount = av.filter((s) => {
-      const h = Number(s.time.split(':')[0] ?? 0);
-      return Number.isFinite(h) && h >= 17;
-    }).length;
-
-    let micro: string;
-    if (count <= 3) {
-      micro = en ? '3 people are viewing this time' : '3 inimest vaatab seda aega täna';
-    } else if (morningCount > 0 && count <= 6) {
-      micro = en ? 'Last morning slots available' : 'Viimased hommikused ajad täna';
-    } else if (eveningCount > 0 && eveningCount <= 2) {
-      micro = en ? 'Evening nearly full' : 'Õhtused ajad on peaaegu täis';
-    } else if (count <= 6) {
-      micro = en ? 'Times filling fast today' : 'Ajad täituvad kiiresti täna';
-    } else {
-      micro = en ? 'Time locked for you' : 'Aeg lukus sinu jaoks';
-    }
-
-    return `${micro} — ${String(mm).padStart(1, '0')}:${String(ss).padStart(2, '0')}`;
-  }, [selectedSlot, lockRemainingMs, en, sortedAvailable]);
+    const prefix = en ? 'Time locked for you' : 'Aeg lukus sinu jaoks';
+    return `${prefix} — ${String(mm).padStart(1, '0')}:${String(ss).padStart(2, '0')}`;
+  }, [selectedSlot, lockRemainingMs, en]);
 
   const lockUrgencyLine = useMemo(() => {
     if (!selectedSlot || !lockRemainingMs || lockRemainingMs <= 0) return null;
