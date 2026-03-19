@@ -130,6 +130,7 @@ export default function AdminSlotsPage() {
     return window.localStorage.getItem(WORK_HOURS_STORAGE_KEY_END) || '18:00';
   });
   const [blockAllConfirm, setBlockAllConfirm] = useState(false);
+  const [unblockAllConfirm, setUnblockAllConfirm] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkStart, setBulkStart] = useState('09:00');
   const [bulkEnd, setBulkEnd] = useState('18:00');
@@ -421,6 +422,26 @@ export default function AdminSlotsPage() {
     } catch (err) {
       console.error(err);
       setError('Kõigi aegade blokeerimine ebaonnestus.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const unblockAllDay = async () => {
+    setIsSaving(true);
+    setError(null);
+    setUnblockAllConfirm(false);
+    try {
+      await Promise.all(
+        timeGrid.map(async (time) => {
+          if (slotState(time) === 'booked') return;
+          await upsertSlot(selectedDate, time, true);
+        })
+      );
+      await loadSlots();
+    } catch (err) {
+      console.error(err);
+      setError('Kõigi aegade vabastamine ebaõnnestus.');
     } finally {
       setIsSaving(false);
     }
@@ -1013,6 +1034,39 @@ export default function AdminSlotsPage() {
                 </div>
 
                 <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                  {!unblockAllConfirm ? (
+                    <button
+                      type="button"
+                      onClick={() => setUnblockAllConfirm(true)}
+                      disabled={isSaving}
+                      className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/70 py-2 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Vabasta kõik ajad
+                    </button>
+                  ) : (
+                    <div className="mb-3 space-y-2 rounded-lg border border-emerald-100 bg-emerald-50/60 p-2.5">
+                      <p className="text-xs text-emerald-800">Vabastan kõik blokeeritud ja SOS ajad. Broneeritud jäävad.</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void unblockAllDay()}
+                          disabled={isSaving}
+                          className="flex-1 rounded-lg bg-emerald-700 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 disabled:opacity-50"
+                        >
+                          {isSaving ? '...' : 'Jah'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUnblockAllConfirm(false)}
+                          className="rounded-lg border border-[#e5e7eb] py-2 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          Tühista
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {!blockAllConfirm ? (
                     <button
                       type="button"

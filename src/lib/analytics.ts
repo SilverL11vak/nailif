@@ -115,6 +115,13 @@ export async function insertAnalyticsEvent(input: {
   metadata?: unknown | null;
 }) {
   await ensureAnalyticsTables();
+  // Defensive: client might emit an event before a session-start call lands.
+  // Ensure the referenced session row exists so foreign-key constraints can't produce noisy 500s.
+  await sql`
+    INSERT INTO booking_analytics_sessions (id)
+    VALUES (${input.sessionId}::uuid)
+    ON CONFLICT (id) DO NOTHING
+  `;
   const metadataJson = input.metadata == null ? null : JSON.stringify(input.metadata);
   await sql`
     INSERT INTO booking_analytics_events (session_id, event_type, step, service_id, slot_id, metadata)
@@ -126,6 +133,12 @@ export async function insertAnalyticsEvent(input: {
 
 export async function insertSlotClick(input: { sessionId: string; slotId: string }) {
   await ensureAnalyticsTables();
+  // Defensive: ensure referenced session exists to prevent FK violations.
+  await sql`
+    INSERT INTO booking_analytics_sessions (id)
+    VALUES (${input.sessionId}::uuid)
+    ON CONFLICT (id) DO NOTHING
+  `;
   await sql`
     INSERT INTO booking_analytics_slot_clicks (session_id, slot_id)
     VALUES (${input.sessionId}::uuid, ${input.slotId})

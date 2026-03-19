@@ -8,9 +8,11 @@ import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
 import { useBookingStore } from '@/store/booking-store';
+import { clearBookingProductIntent, setBookingProductIntent } from '@/lib/booking-product-intent';
 import { useTranslation, type Language } from '@/lib/i18n';
 import type { NailStyle } from '@/store/booking-types';
 import type { Product } from '@/lib/catalog';
+import { getNextAvailableSlotClient } from '@/lib/next-available-slot-client';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 import { getTodayInTallinn, getTomorrowInTallinn } from '@/lib/timezone';
@@ -80,6 +82,9 @@ export default function Home() {
   const router = useRouter();
   const { t, language, setLanguage, localizePath } = useTranslation();
   const setSelectedStyle = useBookingStore((state) => state.setSelectedStyle);
+  const addProductToBooking = useBookingStore((state) => state.addProductToBooking);
+  const selectedProducts = useBookingStore((state) => state.selectedProducts);
+  const removeProductFromBooking = useBookingStore((state) => state.removeProductFromBooking);
   const { favoritesCount, isFavorite, toggleFavorite } = useFavorites();
   const { cartCount } = useCart();
   const pathname = usePathname();
@@ -105,7 +110,13 @@ export default function Home() {
   const [localTrustInView, setLocalTrustInView] = useState(false);
   const [servicesInView, setServicesInView] = useState(false);
   const [galleryInView, setGalleryInView] = useState(false);
+  const [quickBookInView, setQuickBookInView] = useState(false);
+  const [productsInView, setProductsInView] = useState(false);
+  const [finalCtaInView, setFinalCtaInView] = useState(false);
   const gallerySectionRef = useRef<HTMLElement | null>(null);
+  const quickBookSectionRef = useRef<HTMLElement | null>(null);
+  const productsSectionRef = useRef<HTMLElement | null>(null);
+  const finalCtaSectionRef = useRef<HTMLElement | null>(null);
   const scrollTickingRef = useRef(false);
   const showDiscountPillRef = useRef(showDiscountPill);
   const discountDismissedRef = useRef(discountPillDismissed);
@@ -150,12 +161,9 @@ export default function Home() {
     let mounted = true;
     const loadNextAvailable = async () => {
       try {
-        const response = await fetch('/api/slots?upcoming=1&limit=1');
-        if (!response.ok) throw new Error('Failed to load next slot');
-        const data = (await response.json()) as { slots?: Array<{ date: string; time: string; available?: boolean }> };
-        const slot = data.slots?.[0];
+        const slot = await getNextAvailableSlotClient();
         if (!mounted) return;
-        if (!slot || slot.available === false) {
+        if (!slot) {
           setNextAvailable('');
           return;
         }
@@ -514,6 +522,41 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      setQuickBookInView(true);
+      setProductsInView(true);
+      setFinalCtaInView(true);
+      return;
+    }
+    const attach = (ref: { current: HTMLElement | null }, setter: (value: boolean) => void) => {
+      const el = ref.current;
+      if (!el) return () => {};
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setter(true);
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.16, rootMargin: '0px 0px -8% 0px' }
+      );
+      observer.observe(el);
+      return () => observer.disconnect();
+    };
+    const cleanups = [
+      attach(quickBookSectionRef, setQuickBookInView),
+      attach(productsSectionRef, setProductsInView),
+      attach(finalCtaSectionRef, setFinalCtaInView),
+    ];
+    return () => {
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, []);
+
+  useEffect(() => {
     const sectionEl = localTrustSectionRef.current;
     if (!sectionEl) return;
     const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -640,6 +683,22 @@ export default function Home() {
   };
   const goToBooking = () => {
     router.push(localizePath('/book'));
+  };
+  const openQuickBook = (mode: 'today' | 'tomorrow' | 'week' | 'quick' | 'design') => {
+    const params = new URLSearchParams();
+    if (mode === 'today') params.set('date', getTodayInTallinn());
+    if (mode === 'tomorrow') params.set('date', getTomorrowInTallinn());
+    if (mode === 'week') params.set('date', getTodayInTallinn());
+    if (mode === 'quick') {
+      const quickService = [...servicesSource].sort((a, b) => a.duration - b.duration)[0];
+      if (quickService?.id) params.set('service', quickService.id);
+    }
+    if (mode === 'design') {
+      const designService = servicesSource.find((service) => service.category === 'nail-art');
+      if (designService?.id) params.set('service', designService.id);
+    }
+    trackBehaviorEvent('homepage_quickbook_click', { mode });
+    router.push(localizePath(`/book${params.toString() ? `?${params.toString()}` : ''}`));
   };
 
   const handleLanguageChange = (newLang: Language) => {
@@ -804,7 +863,8 @@ export default function Home() {
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setHeroBookingFocused(true);
-      window.setTimeout(() => setHeroBookingFocused(false), 1300);
+      target.classList.add('hero-booking-highlight');
+      window.setTimeout(() => { setHeroBookingFocused(false); target.classList.remove('hero-booking-highlight'); }, 1600);
       return;
     }
     router.push(localizePath('/book'));
@@ -826,34 +886,33 @@ export default function Home() {
   const navLinkClass =
     'type-navbar-link group relative py-1 text-[#584a58] transition-colors duration-200 hover:text-[#2f2530]';
   const utilityIconClass =
-    'type-navbar-icon-btn relative inline-flex min-h-[48px] min-w-[48px] items-center justify-center';
+    'type-navbar-icon-btn relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center opacity-65 transition-all duration-180 hover:-translate-y-[1px] hover:opacity-100';
 
   /* Premium layout: max 1280px, normalized section spacing */
   const sectionClass = 'py-16 md:py-20 lg:py-24';
-  const contentMax = 'mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8';
+  const contentMax = 'mx-auto max-w-[1320px] px-4 sm:px-6 lg:px-8';
   const headerTitleGap = 'mt-3';
   const headerSubtitleGap = 'mt-3';
   const headerToContent = 'mb-8 md:mb-10';
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen bg-[#fafafa] pb-[84px] lg:pb-0">
       {/* ===================== */}
       {/* 1. STICKY HEADER */}
       {/* ===================== */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled 
-            ? 'bg-white/92 backdrop-blur-xl shadow-[0_18px_38px_-30px_rgba(97,48,85,0.35)]' 
-            : 'bg-white/75 backdrop-blur-lg'
-        } border-b border-[#f1e1ea]`}
+            ? 'bg-white/95 backdrop-blur-xl shadow-[0_8px_32px_-12px_rgba(0,0,0,0.10)] border-b border-black/[0.04]' 
+            : 'bg-white/80 backdrop-blur-lg border-b border-[#f0e8ec]/60'
+        }`}
       >
         <div className={contentMax}>
           <div className={`flex items-center justify-between transition-all duration-300 ${
-            // Mobile always 64px; desktop can breathe when not scrolled
-            isScrolled ? 'h-16' : 'h-16 lg:h-20'
+            isScrolled ? 'h-14' : 'h-14 lg:h-[4.5rem]'
           }`}>
             {/* Logo — breathing room on mobile */}
-            <div className="flex min-w-0 flex-shrink items-center gap-2 pr-2 sm:pr-0">
+            <div className="flex min-w-0 flex-shrink items-end gap-2 pr-2 sm:pr-0">
               <span
                 className={`font-brand type-navbar-logo leading-none transition-all duration-300 ${isScrolled ? 'lg:text-[34px]' : 'lg:text-[38px]'}`}
                 style={{ color: colors.primary, letterSpacing: '-0.015em' }}
@@ -878,7 +937,7 @@ export default function Home() {
                   className="type-navbar-icon-btn"
                   aria-label="Open language menu"
                 >
-                  <Globe size={18} strokeWidth={1.8} />
+                  <Globe size={17} strokeWidth={1.6} />
                 </button>
                 {isLangMenuOpen && (
                   <div className="absolute right-0 top-12 w-36 overflow-hidden rounded-2xl border border-[#ecdce6] bg-white p-1.5 shadow-[0_22px_34px_-24px_rgba(57,33,52,0.5)]">
@@ -899,16 +958,16 @@ export default function Home() {
               </div>
 
               {/* Icon cluster — spacing from logo; badges inset so they don’t crowd the edge */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={goToFavorites}
                   className={utilityIconClass}
                   aria-label={language === 'en' ? 'Open favourites' : 'Ava lemmikud'}
                   title={language === 'en' ? 'Favourites' : 'Lemmikud'}
                 >
-                  <FavoriteHeartIcon active={favoritesCount > 0} size={20} />
+                  <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
                   {favoritesCount > 0 && (
-                    <span className="absolute right-0 top-0 inline-flex min-h-[18px] min-w-[18px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold leading-none text-white shadow-[0_10px_18px_-12px_rgba(194,77,134,0.85)]">
+                    <span className="absolute right-0 top-0.5 inline-flex min-h-[16px] min-w-[16px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[8px] font-semibold leading-none text-white">
                       {favoritesCount > 9 ? '9+' : favoritesCount}
                     </span>
                   )}
@@ -919,9 +978,9 @@ export default function Home() {
                   aria-label={language === 'en' ? 'Open shop' : 'Ava pood'}
                   title={language === 'en' ? 'Shop' : 'Pood'}
                 >
-                  <ShoppingBag size={20} strokeWidth={1.8} />
+                  <ShoppingBag size={17} strokeWidth={1.6} />
                   {cartCount > 0 && (
-                    <span className="absolute right-0 top-0 inline-flex min-h-[18px] min-w-[18px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[9px] font-semibold leading-none text-white shadow-[0_10px_18px_-12px_rgba(194,77,134,0.85)]">
+                    <span className="absolute right-0 top-0.5 inline-flex min-h-[16px] min-w-[16px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[8px] font-semibold leading-none text-white">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
                   )}
@@ -932,7 +991,11 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => router.push(localizePath('/book'))}
-                className="btn-primary type-navbar-cta !hidden min-h-[44px] items-center justify-center rounded-full px-6 text-base font-semibold text-white transition-all duration-180 lg:!inline-flex"
+                className={`!hidden min-h-[42px] items-center justify-center rounded-full px-6 text-[14px] font-semibold transition-all duration-200 active:scale-[0.97] lg:!inline-flex ${
+                  isScrolled
+                    ? 'bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-10px_rgba(159,69,111,0.45)] scale-[1.03]'
+                    : 'border border-[#dec8d5] bg-white text-[#7a5f72] hover:bg-[#fff6fa]'
+                }`}
               >
                 {t('nav.bookNow')}
               </button>
@@ -942,7 +1005,7 @@ export default function Home() {
                 className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-[#d4b4c7] bg-transparent text-[#7a6174] transition-all duration-180 hover:border-[#b8659a] hover:bg-[#fff1f8] lg:hidden"
                 aria-label="Open menu"
               >
-                <Menu size={20} strokeWidth={1.8} />
+                <Menu size={20} strokeWidth={1.7} />
               </button>
             </div>
           </div>
@@ -1008,11 +1071,11 @@ export default function Home() {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a8899c]">
                   {language === 'en' ? 'Account & language' : 'Konto ja keel'}
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="mx-auto grid max-w-[300px] grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => goToPage(localizePath('/favorites'))}
-                    className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
+                    className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
                   >
                     <FavoriteHeartIcon active={favoritesCount > 0} size={20} />
                     <span>{language === 'en' ? 'Favourites' : 'Lemmikud'}</span>
@@ -1023,7 +1086,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => goToPage(localizePath('/shop'))}
-                    className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
+                    className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
                   >
                     <ShoppingBag className="h-5 w-5 text-[#7a6174]" strokeWidth={1.8} />
                     <span>{language === 'en' ? 'Shop' : 'Pood'}</span>
@@ -1107,13 +1170,30 @@ export default function Home() {
           0% { transform: translate(0, 0); }
           100% { transform: translate(-5%, -5%); }
         }
+        @keyframes heroBookingGlow {
+          0% { box-shadow: 0 32px 64px -20px rgba(70,45,60,0.28), 0 0 0 0 rgba(159,69,111,0); }
+          30% { box-shadow: 0 32px 64px -20px rgba(70,45,60,0.28), 0 0 0 6px rgba(159,69,111,0.12); }
+          60% { box-shadow: 0 32px 64px -20px rgba(70,45,60,0.28), 0 0 0 3px rgba(159,69,111,0.06); }
+          100% { box-shadow: 0 32px 64px -20px rgba(70,45,60,0.28), 0 0 0 0 rgba(159,69,111,0); }
+        }
+        .hero-booking-highlight { animation: heroBookingGlow 1.2s ease-out both; }
+        @keyframes heroTrustFade {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes homepageStickyBookEnter {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .hero-trust-fade { animation: heroTrustFade 600ms ease-out 500ms both; }
+        .homepage-sticky-book-enter { animation: homepageStickyBookEnter 260ms cubic-bezier(0.22,0.68,0,1) both; }
         @media (prefers-reduced-motion: reduce) {
-          .hero-drift, .hero-grain, .hero-bg-shift { animation: none !important; }
+          .hero-drift, .hero-grain, .hero-bg-shift, .hero-booking-highlight, .hero-trust-fade, .homepage-sticky-book-enter { animation: none !important; }
         }
       `}</style>
 
       {/* 2. HERO — Premium luxury nail studio conversion: editorial left + floating glass booking card right */}
-      <section className={`relative min-h-[76vh] overflow-hidden pb-10 pt-20 md:pt-28 lg:min-h-[90vh] lg:pb-14 lg:pt-32 ${isScrolled ? 'pt-20' : ''}`}>
+      <section className={`relative min-h-[68vh] overflow-hidden pb-10 pt-14 md:pt-16 lg:min-h-[82vh] lg:pb-12 lg:pt-20 ${isScrolled ? 'pt-14' : ''}`}>
         {/* Background: subtle radial from top-left, light pink/cream, soft vignette */}
         <div className="hero-bg-shift pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_120%_80%_at_0%_0%,#fdf6f9_0%,#faf5f8_35%,#f6f0f4_70%,#f2ecf0_100%)]" style={{ animation: 'heroBgShift 28s ease-in-out infinite' }} aria-hidden />
         <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_100%_100%_at_50%_50%,transparent_50%,rgba(240,230,235,0.4)_100%)]" aria-hidden />
@@ -1123,20 +1203,20 @@ export default function Home() {
         <div className="hero-grain pointer-events-none absolute inset-0 z-[1] opacity-[0.035] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', animation: 'heroGrain 20s linear infinite' }} aria-hidden />
 
         <div className={`relative z-10 ${contentMax}`}>
-          <div className="grid grid-cols-1 grid-rows-[auto_auto_auto] items-center gap-8 lg:min-h-[88vh] lg:grid-cols-[1fr_minmax(400px,0.5fr)] lg:grid-rows-1 lg:gap-16">
+          <div className="grid grid-cols-1 grid-rows-[auto_auto_auto] items-center gap-6 lg:min-h-[78vh] lg:grid-cols-[1fr_minmax(390px,0.5fr)] lg:grid-rows-1 lg:gap-6 xl:gap-8">
             {/* LEFT — Luxury editorial (mobile: row 1; desktop: col 1) */}
             <div className="order-1 flex flex-col justify-center lg:row-span-1">
               <div
-                className={`transition-all duration-700 ease-out ${
+                className={`transition-all duration-[350ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
                   heroContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                 }`}
               >
                 <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[#8a6b7e]">
                   {getI18nTextOrFallback('homepage.hero.luxuryOverline', language === 'en' ? 'PRIVATE NAIL STUDIO MUSTAMÄE' : 'PRIVATE KÜÜNESTUUDIO MUSTAMÄEL')}
                 </p>
-                <h1 className="mt-6 font-brand max-w-[520px] text-[clamp(2.5rem,5vw,4.25rem)] font-semibold leading-[1.12] tracking-[-0.02em] text-[#1f171d] lg:text-[56px] xl:text-[64px] xl:leading-[1.08]">
+                <h1 className="mt-5 font-brand max-w-[560px] text-[clamp(2.4rem,5vw,4.1rem)] font-semibold leading-[1.12] tracking-[-0.02em] text-[#1f171d] lg:text-[54px] xl:text-[62px] xl:leading-[1.08]">
                   {(() => {
-                    const headline = getI18nTextOrFallback('homepage.hero.luxuryHeadline', language === 'en' ? 'Beautiful nails.\nEffortlessly.' : 'Ilusad küüned.\nPingutuseta.');
+                    const headline = getI18nTextOrFallback('homepage.hero.luxuryHeadline', language === 'en' ? 'Perfect nails.\nTotal calm.' : 'Täiuslikud küüned.\nTäielik rahu.');
                     const lines = headline.split('\n').filter(Boolean);
                     return lines.length >= 2 ? (
                       <>
@@ -1152,7 +1232,7 @@ export default function Home() {
               </div>
 
               <p
-                className={`mt-8 max-w-[480px] text-[1.05rem] leading-[1.65] text-[#6b5a62] transition-all duration-700 ease-out ${
+                className={`mt-5 max-w-[540px] text-[1rem] leading-[1.58] text-[#6b5a62] transition-all duration-[420ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
                   heroContentVisible ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{ transitionDelay: '120ms' }}
@@ -1166,62 +1246,72 @@ export default function Home() {
               </p>
 
               <div
-                className={`mt-10 flex flex-wrap gap-3 transition-all duration-700 ease-out lg:mt-12 ${
+                className={`mt-7 flex flex-wrap gap-3 transition-all duration-[380ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] lg:mt-9 ${
                   heroContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
                 }`}
                 style={{ transitionDelay: '220ms' }}
               >
                 <button
                   onClick={focusHeroBooking}
-                  className="hidden group inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_100%)] px-10 py-4 text-base font-semibold text-white shadow-[0_20px_40px_-12px_rgba(194,77,134,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-12px_rgba(194,77,134,0.6)] active:scale-[0.98] md:inline-flex"
+                  className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-7 py-[14px] text-[14px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(139,51,100,0.48)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  {getI18nTextOrFallback('homepage.hero.luxuryCta', language === 'en' ? 'Choose your time' : 'Vali oma aeg')}
-                  <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2.2} />
+                  {language === 'en' ? 'Book now' : 'Broneeri kohe'}
                 </button>
                 <button
-                  onClick={() => scrollToSection('services')}
-                  className="hidden items-center rounded-full border-2 border-[#c8b3bf] bg-transparent px-8 py-4 text-base font-medium text-[#5c4a54] transition-all duration-300 hover:bg-[#faf5f8] hover:border-[#bfa6b3] hover:-translate-y-0.5 active:scale-[0.98] md:inline-flex"
+                  onClick={() => scrollToSection('gallery')}
+                  className="inline-flex min-h-[48px] items-center rounded-full border border-[#d8c8d2] bg-transparent px-7 py-[14px] text-[14px] font-medium text-[#6b5a62] transition-all duration-300 hover:bg-[#fdf9fb] hover:border-[#c8b3bf] active:scale-[0.98]"
                 >
-                  {getI18nTextOrFallback('homepage.hero.viewServices', language === 'en' ? 'View services' : 'Vaata teenuseid')}
+                  {language === 'en' ? 'Browse styles' : 'Vaata stiile'}
                 </button>
               </div>
 
               {/* Trust row — visible on desktop only (mobile has its own below card) */}
-              <p
-                className={`mt-10 hidden flex-wrap items-center gap-x-4 gap-y-2 text-[14px] text-[#6f5e66] transition-all duration-700 ease-out lg:mt-12 lg:flex ${
-                  heroContentVisible ? 'opacity-100' : 'opacity-0'
-                }`}
-                style={{ transitionDelay: '340ms' }}
-              >
-                <span className="flex items-center gap-2">
-                  <Star className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {t('trust.rating')}{' '}
-                  {language === 'en' ? 'rated' : 'hinnang'}
-                </span>
-                <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-                <span className="flex items-center gap-2">
-                  <Users className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? '1200+ clients' : '1200+ klienti'}
-                </span>
-                <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-                <span className="flex items-center gap-2">
-                  <Droplet className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}
-                </span>
-                <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-                <span className="flex items-center gap-2">
-                  <HomeIcon className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Private studio' : 'Privaatne stuudio'}
-                </span>
-              </p>
+              <div className="mt-10 hidden flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-medium text-[#5d4e56] lg:mt-12 lg:flex">
+                {[
+                  {
+                    icon: <Star className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
+                    label: `${t('trust.rating')} ${language === 'en' ? 'rated' : 'hinnang'}`,
+                  },
+                  {
+                    icon: <Users className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
+                    label: language === 'en' ? '1200+ clients' : '1200+ klienti',
+                  },
+                  {
+                    icon: <Droplet className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
+                    label: language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid',
+                  },
+                  {
+                    icon: <HomeIcon className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
+                    label: language === 'en' ? 'Private studio' : 'Privaatne stuudio',
+                  },
+                ].map((item, index) => (
+                  <div key={item.label} className="group flex items-center gap-3">
+                    {index > 0 ? <span className="text-[10px] text-[#c9b5c1]" aria-hidden>&bull;</span> : null}
+                    <span
+                      className={`flex items-center gap-2 transition-all duration-[420ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
+                        heroContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'
+                      }`}
+                      style={{ transitionDelay: `${380 + index * 50}ms` }}
+                    >
+                      {item.icon}
+                      <span className="transition-colors duration-180 group-hover:text-[#4f4048]">{item.label}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* RIGHT — Floating booking glass card (mobile: row 2) */}
-            <div className="order-2 w-full lg:sticky lg:top-24 lg:self-center">
+            <div className="order-2 w-full lg:sticky lg:top-20 lg:self-center">
               {/* Faint floating shape behind card — ambient drift */}
               <div className="hero-drift pointer-events-none absolute -right-4 -top-4 z-0 h-[120%] w-[90%] rounded-[48px] bg-[#f0e4eb]/30 blur-[40px]" style={{ animation: 'heroDrift 8s ease-in-out infinite' }} aria-hidden />
+              <div className="pointer-events-none absolute right-[-8%] top-[15%] z-0 h-[240px] w-[240px] rounded-full bg-[radial-gradient(circle,rgba(194,77,134,0.16)_0%,transparent_72%)] blur-2xl" aria-hidden />
               <div
                 ref={heroBookingCardRef}
-                className={`relative z-10 transition-all duration-[800ms] ease-out ${
-                  heroContentVisible ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'
-                } ${heroContentVisible ? 'lg:scale-105' : ''}`}
-                style={{ transitionDelay: '380ms' }}
+                className={`relative z-10 transition-all duration-[500ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
+                  heroContentVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-[0.985]'
+                }`}
+                style={{ transitionDelay: '300ms' }}
               >
                 <div
                   id="hero-booking"
@@ -1240,24 +1330,71 @@ export default function Home() {
             </div>
 
             {/* Trust row — mobile only (order 3: after headline, CTA, card) */}
-            <p className="order-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[14px] text-[#6f5e66] lg:hidden">
-              <span className="flex items-center gap-2">
-                <Star className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {t('trust.rating')}{' '}
-                {language === 'en' ? 'rated' : 'hinnang'}
-              </span>
-              <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-              <span className="flex items-center gap-2">
-                <Users className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? '1200+ clients' : '1200+ klienti'}
-              </span>
-              <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-              <span className="flex items-center gap-2">
-                <Droplet className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid'}
-              </span>
-              <span className="h-1 w-1 rounded-full bg-[#c9b5c1]" aria-hidden />
-              <span className="flex items-center gap-2">
-                <HomeIcon className="h-4 w-4 opacity-55" strokeWidth={1.8} /> {language === 'en' ? 'Private studio' : 'Privaatne stuudio'}
-              </span>
+            <div className="order-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] font-medium text-[#5d4e56] lg:hidden">
+              {[
+                {
+                  icon: <Star className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
+                  label: `${t('trust.rating')} ${language === 'en' ? 'rated' : 'hinnang'}`,
+                },
+                {
+                  icon: <Users className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
+                  label: language === 'en' ? '1200+ clients' : '1200+ klienti',
+                },
+                {
+                  icon: <Droplet className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
+                  label: language === 'en' ? 'Sterile tools' : 'Steriilsed töövahendid',
+                },
+                {
+                  icon: <HomeIcon className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
+                  label: language === 'en' ? 'Private studio' : 'Privaatne stuudio',
+                },
+              ].map((item, index) => (
+                <div key={item.label} className="flex items-center gap-3">
+                  {index > 0 ? <span className="text-[10px] text-[#c9b5c1]" aria-hidden>&bull;</span> : null}
+                  <span
+                    className={`flex items-center gap-2 transition-all duration-[360ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
+                      heroContentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'
+                    }`}
+                    style={{ transitionDelay: `${420 + index * 45}ms` }}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. QUICK BOOK STRIP — impulse routing into prefilled booking */}
+      <section
+        ref={quickBookSectionRef}
+        className={`border-y border-[#efe2e9] bg-white/85 py-5 backdrop-blur-sm transition-all duration-[460ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
+          quickBookInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[18px]'
+        }`}
+      >
+        <div className={contentMax}>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <p className="mr-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9d7a90]">
+              {language === 'en' ? 'Quick book' : 'Kiirbroneerimine'}
             </p>
+            {[
+              { id: 'today' as const, label: language === 'en' ? 'Today' : 'Täna' },
+              { id: 'tomorrow' as const, label: language === 'en' ? 'Tomorrow' : 'Homme' },
+              { id: 'week' as const, label: language === 'en' ? 'This week' : 'Sel nädalal' },
+              { id: 'quick' as const, label: language === 'en' ? 'Quick service' : 'Kiire hooldus' },
+              { id: 'design' as const, label: language === 'en' ? 'Design' : 'Disain' },
+            ].map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => openQuickBook(chip.id)}
+                className="rounded-full border border-[#ead9e3] bg-[#fff8fb] px-4 py-2 text-[12px] font-semibold text-[#6f4b62] transition hover:border-[#d9c1cf] hover:bg-white"
+              >
+                {chip.label}
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -1421,7 +1558,7 @@ export default function Home() {
                         <img
                           src={featuredService.imageUrl || ''}
                           alt={featuredService.name}
-                          className="absolute inset-0 box-border h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                          className="absolute inset-0 box-border h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                           style={{ maxWidth: '100%', maxHeight: '100%' }}
                           decoding="async"
                         />
@@ -1431,7 +1568,7 @@ export default function Home() {
                           alt={featuredService.name}
                           fill
                           sizes="(max-width: 1024px) 100vw, 42vw"
-                          className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                          className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                         />
                       )
                     ) : (
@@ -1531,7 +1668,7 @@ export default function Home() {
                           <img
                             src={service.imageUrl || ''}
                             alt={service.name}
-                            className="absolute inset-0 box-border h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                            className="absolute inset-0 box-border h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                             style={{ maxWidth: '100%', maxHeight: '100%' }}
                             decoding="async"
                           />
@@ -1541,7 +1678,7 @@ export default function Home() {
                             alt={service.name}
                             fill
                             sizes="(max-width: 1024px) min(300px,90vw), 33vw"
-                            className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                            className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                           />
                         )
                       ) : (
@@ -1625,7 +1762,7 @@ export default function Home() {
                   alt={getStyleLabel(nailStyles[0])}
                   width={1200}
                   height={900}
-                  className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                  className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 z-20 p-8 text-white">
@@ -1652,7 +1789,7 @@ export default function Home() {
                 style={{ transitionDelay: '80ms' }}
               >
                 <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(1)} aria-label={getStyleLabel(nailStyles[1])} />
-                <Image src={galleryCards[1]?.imageUrl || galleryUrls[1] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[1])} width={700} height={500} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <Image src={galleryCards[1]?.imageUrl || galleryUrls[1] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[1])} width={700} height={500} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.02]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                   <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[1])}</p>
@@ -1668,7 +1805,7 @@ export default function Home() {
                 style={{ transitionDelay: '160ms' }}
               >
                 <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(2)} aria-label={getStyleLabel(nailStyles[2])} />
-                <Image src={galleryCards[2]?.imageUrl || galleryUrls[2] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[2])} width={700} height={500} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <Image src={galleryCards[2]?.imageUrl || galleryUrls[2] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[2])} width={700} height={500} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.02]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                   <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[2])}</p>
@@ -1684,7 +1821,7 @@ export default function Home() {
                 style={{ transitionDelay: '240ms' }}
               >
                 <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(3)} aria-label={getStyleLabel(nailStyles[3])} />
-                <Image src={galleryCards[3]?.imageUrl || galleryUrls[3] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[3])} width={900} height={400} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <Image src={galleryCards[3]?.imageUrl || galleryUrls[3] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[3])} width={900} height={400} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.02]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                   <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[3])}</p>
@@ -1700,7 +1837,7 @@ export default function Home() {
                 style={{ transitionDelay: '320ms' }}
               >
                 <button type="button" className="absolute inset-0 z-10" onClick={() => openGallery(4)} aria-label={getStyleLabel(nailStyles[4])} />
-                <Image src={galleryCards[4]?.imageUrl || galleryUrls[4] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[4])} width={900} height={400} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.03]" />
+                <Image src={galleryCards[4]?.imageUrl || galleryUrls[4] || galleryUrls[0] || ''} alt={getStyleLabel(nailStyles[4])} width={900} height={400} className="h-full w-full object-cover transition-transform duration-600 group-hover:scale-[1.02]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 <div className="absolute inset-x-0 bottom-0 z-20 translate-y-2 p-5 text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                   <p className="font-brand text-lg font-semibold">{getStyleLabel(nailStyles[4])}</p>
@@ -1710,12 +1847,12 @@ export default function Home() {
             )}
           </div>
 
-          {/* Mobile: 2-column grid (no horizontal scroll) */}
-          <div className="grid grid-cols-2 gap-2 lg:hidden">
+          {/* Mobile: swipeable proof rail */}
+          <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 lg:hidden">
             {galleryCards.map((card, index) => (
               <article
                 key={card.style.id}
-                className={`group relative overflow-hidden rounded-2xl bg-[#f0e2eb] shadow-[0_8px_22px_-14px_rgba(60,40,55,0.14)] transition ${
+                className={`group relative min-w-[76vw] snap-start overflow-hidden rounded-2xl bg-[#f0e2eb] shadow-[0_8px_22px_-14px_rgba(60,40,55,0.14)] transition ${
                   galleryInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
                 }`}
                 style={{ transitionDelay: `${Math.min(index * 40, 240)}ms` }}
@@ -1723,7 +1860,7 @@ export default function Home() {
                 <button
                   type="button"
                   className="absolute inset-0 z-10"
-                  onClick={() => openGallery(index)}
+                  onClick={() => handleBookStyle(card.style)}
                   aria-label={getStyleLabel(card.style)}
                 />
                 <div className="relative aspect-[4/5] w-full">
@@ -1740,10 +1877,17 @@ export default function Home() {
                       src={card.imageUrl}
                       alt={getStyleLabel(card.style)}
                       fill
-                      sizes="(max-width: 640px) 50vw, 320px"
+                      sizes="(max-width: 640px) 76vw, 320px"
                       className="object-cover"
                     />
                   )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 z-20 p-4 text-white">
+                    <p className="font-brand text-[20px] font-semibold leading-tight">{getStyleLabel(card.style)}</p>
+                    <p className="mt-1 text-[12px] text-white/90">
+                      {language === 'en' ? 'Book this result' : 'Broneeri see tulemus'}
+                    </p>
+                  </div>
                 </div>
               </article>
             ))}
@@ -1758,6 +1902,9 @@ export default function Home() {
               {language === 'en' 
                 ? 'Ready for your transformation?' 
                 : 'Valmis oma transformatsiooniks?'}
+            </p>
+            <p className="mt-1 text-[0.9rem] font-medium text-[#6f4b62]">
+              {language === 'en' ? 'Want the same result?' : 'Soovid sama tulemust?'}
             </p>
             <button
               type="button"
@@ -2097,7 +2244,10 @@ export default function Home() {
       {/* ===================== */}
       <section
         id="products"
-        className={`relative overflow-hidden ${sectionClass} bg-[#f7f0f3]`}
+        ref={productsSectionRef}
+        className={`relative overflow-hidden ${sectionClass} bg-[#f7f0f3] transition-all duration-[460ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
+          productsInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[18px]'
+        }`}
       >
         {/* Layered depth: radial behind hero, pink-beige container, blurred glows, darker than page */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_20%,#fdf6f9_0%,transparent_55%)]" aria-hidden />
@@ -2129,6 +2279,39 @@ export default function Home() {
               {t('homepage.products.explore')}
             </button>
           </div>
+
+          {!productsLoading && retailProducts.length > 0 && (
+            <div className="mb-6 grid gap-3 rounded-[22px] border border-[#eedfe7] bg-white/75 p-4 backdrop-blur-sm lg:grid-cols-[1.1fr_1fr_0.9fr]">
+              <div className="rounded-[14px] border border-[#f0e4ea] bg-[#fffafd] p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
+                  {language === 'en' ? 'Bestseller trio' : 'Populaarseim kolmik'}
+                </p>
+                <p className="mt-1 text-[13px] text-[#5e4c58]">
+                  {retailProducts.slice(0, 3).map((product) => product.name).join(' · ')}
+                </p>
+              </div>
+              <div className="rounded-[14px] border border-[#efdce6] bg-[#fff7fb] p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
+                  {language === 'en' ? 'Care bundle' : 'Hoolduskomplekt'}
+                </p>
+                <p className="mt-1 text-[13px] text-[#5e4c58]">
+                  {language === 'en' ? 'Book + add 2 products and save up to €6.' : 'Broneering + 2 toodet koos ja säästad kuni €6.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push(localizePath('/shop'))}
+                className="rounded-[14px] border border-[#e8d6e1] bg-white px-4 py-3 text-left transition hover:bg-[#fff8fb]"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
+                  {language === 'en' ? 'Reorder in one tap' : 'Korda ostu ühe puudutusega'}
+                </p>
+                <p className="mt-1 text-[13px] font-semibold text-[#6f4b62]">
+                  {language === 'en' ? 'Continue care journey' : 'Jätka hooldusteekonda'}
+                </p>
+              </button>
+            </div>
+          )}
 
           {productsLoading ? (
             <div className="grid items-start gap-6 lg:grid-cols-12">
@@ -2229,10 +2412,32 @@ export default function Home() {
                             </div>
                             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                               <button
-                                onClick={() => router.push(localizePath('/book'))}
+                                onClick={() => {
+                                  const isSelected = selectedProducts.some((p) => p.productId === featuredProduct.id);
+                                  if (isSelected) {
+                                    clearBookingProductIntent();
+                                    removeProductFromBooking(featuredProduct.id);
+                                    return;
+                                  }
+
+                                  const bookingProduct = {
+                                    productId: featuredProduct.id,
+                                    name: featuredProduct.name,
+                                    unitPrice: featuredProduct.price,
+                                    quantity: 1,
+                                    imageUrl: featuredProduct.imageUrl ?? null,
+                                  };
+                                  setBookingProductIntent(bookingProduct);
+                                  addProductToBooking(bookingProduct);
+                                  router.push(localizePath('/book'));
+                                }}
                                 className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_45%,#8f3362_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_-8px_rgba(139,51,100,0.55)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
                               >
-                                {getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
+                                {selectedProducts.some((p) => p.productId === featuredProduct.id)
+                                  ? language === 'en'
+                                    ? 'Remove'
+                                    : 'Eemalda'
+                                  : getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
                               </button>
                               <button
                                 onClick={() => {
@@ -2845,7 +3050,10 @@ export default function Home() {
       {/* Final CTA — split luxury layout: emotional left + conversion card right */}
       <section
         id="final-cta"
-        className={`relative overflow-hidden bg-gradient-to-b from-[#faf8f6] to-[#f5f2ef] ${sectionClass}`}
+        ref={finalCtaSectionRef}
+        className={`relative overflow-hidden bg-gradient-to-b from-[#faf8f6] to-[#f5f2ef] ${sectionClass} transition-all duration-[480ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] ${
+          finalCtaInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[18px]'
+        }`}
         aria-labelledby="final-cta-heading"
       >
         {/* Subtle background glow — decorative only */}
@@ -2911,6 +3119,17 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Mobile sticky booking conversion rail */}
+      <div className="homepage-sticky-book-enter fixed inset-x-0 bottom-0 z-40 border-t border-[#eadde5] bg-white/90 p-3 shadow-[0_-16px_34px_-24px_rgba(60,40,55,0.4)] backdrop-blur-xl lg:hidden">
+        <button
+          type="button"
+          onClick={focusHeroBooking}
+          className="flex min-h-[50px] w-full items-center justify-center rounded-[14px] bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_52%,#8f3362_100%)] px-5 text-[15px] font-semibold text-white shadow-[0_14px_30px_-16px_rgba(194,77,134,0.55)]"
+        >
+          {language === 'en' ? 'Book appointment' : 'Broneeri aeg'}
+        </button>
+      </div>
 
       {/* ===================== */}
       {/* 12. FOOTER — Premium authority, final conversion safety zone */}
@@ -2991,5 +3210,3 @@ export default function Home() {
     </div>
   );
 }
-
-

@@ -125,18 +125,6 @@ const loaderKeys = [
   'loader_theme',
 ] as const;
 
-const emptyAddOn: AddOnEntry = {
-  id: '',
-  nameEt: '',
-  nameEn: '',
-  descriptionEt: '',
-  descriptionEn: '',
-  duration: 10,
-  price: 10,
-  sortOrder: 10,
-  active: true,
-};
-
 function safe(value: string | undefined) {
   return (value ?? '').trim();
 }
@@ -148,14 +136,12 @@ function prettyKey(key: string) {
 export default function AdminBookingContentPage() {
   const [content, setContent] = useState<ContentEntry[]>([]);
   const [addOns, setAddOns] = useState<AddOnEntry[]>([]);
-  const [addOnDraft, setAddOnDraft] = useState<AddOnEntry>(emptyAddOn);
   const [previewLocale, setPreviewLocale] = useState<'et' | 'en'>('et');
   const [activeSector, setActiveSector] = useState<TopSector>('texts');
   const [activeTextSectionId, setActiveTextSectionId] = useState<(typeof textSections)[number]['id']>(
     textSections[0].id
   );
   const [isSavingContent, setIsSavingContent] = useState(false);
-  const [isSavingAddOn, setIsSavingAddOn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -241,40 +227,6 @@ export default function AdminBookingContentPage() {
       setError('Bookingu tekstide salvestamine ebaonnestus.');
     } finally {
       setIsSavingContent(false);
-    }
-  };
-
-  const saveAddOn = async () => {
-    setIsSavingAddOn(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/booking-addons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(addOnDraft),
-      });
-      if (!response.ok) throw new Error('save failed');
-      await load();
-      setAddOnDraft(emptyAddOn);
-      setToast('Lisateenus salvestatud');
-    } catch {
-      setError('Lisateenuse salvestamine ebaonnestus.');
-    } finally {
-      setIsSavingAddOn(false);
-    }
-  };
-
-  const deleteAddOn = async (id: string, name: string) => {
-    const isConfirmed = window.confirm(`Kas kustutada lisateenus "${name}"?`);
-    if (!isConfirmed) return;
-    setError(null);
-    try {
-      const response = await fetch(`/api/booking-addons?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('delete failed');
-      await load();
-      setToast('Lisateenus kustutatud');
-    } catch {
-      setError('Lisateenuse kustutamine ebaonnestus.');
     }
   };
 
@@ -417,69 +369,20 @@ export default function AdminBookingContentPage() {
 
         {activeSector === 'addons' && (
           <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold text-[#111827]">Lisateenused</h2>
-            <div className="mb-4 overflow-x-auto rounded-2xl border border-[#efe3dc] bg-white">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-[#f9fafb] text-[#5a4652]">
-                  <tr>
-                    <th className="px-3 py-2">Nimi</th>
-                    <th className="px-3 py-2">Hind</th>
-                    <th className="px-3 py-2">Kestus</th>
-                    <th className="px-3 py-2">Tegevused</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {addOns.map((item) => (
-                    <tr key={item.id} className="border-t border-[#f1e7e1] text-[#3b2f28]">
-                      <td className="px-3 py-2">
-                        <div className="font-medium">{item.nameEt}</div>
-                        <div className="text-xs text-[#6b7280]">{item.nameEn || item.id}</div>
-                      </td>
-                      <td className="px-3 py-2">EUR {item.price}</td>
-                      <td className="px-3 py-2">{item.duration} min</td>
-                      <td className="px-3 py-2">
-                        <div className="flex gap-2">
-                          <button onClick={() => setAddOnDraft(item)} className="rounded-full border border-[#d1d5db] px-3 py-1 text-xs text-[#4b5563] hover:bg-[#f9fafb]">Muuda</button>
-                          <button onClick={() => void deleteAddOn(item.id, item.nameEt)} className="rounded-full border border-red-200 px-3 py-1 text-xs text-red-600 hover:bg-red-50">Kustuta</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="rounded-2xl border border-[#ebdfd7] bg-white p-4">
-              <h3 className="mb-3 text-lg font-semibold text-[#111827]">{addOnDraft.id ? 'Muuda lisateenust' : 'Lisa uus lisateenus'}</h3>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="text-sm font-medium text-[#4f3f46]">Nimi (ET)
-                  <input value={addOnDraft.nameEt} onChange={(event) => setAddOnDraft((prev) => ({ ...prev, nameEt: event.target.value }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                </label>
-                <label className="text-sm font-medium text-[#4f3f46]">Name (EN)
-                  <input value={addOnDraft.nameEn} onChange={(event) => setAddOnDraft((prev) => ({ ...prev, nameEn: event.target.value }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                </label>
-              </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-4">
-                <label className="text-sm font-medium text-[#4f3f46]">Hind (EUR)
-                  <input type="number" value={addOnDraft.price} onChange={(event) => setAddOnDraft((prev) => ({ ...prev, price: Number(event.target.value) }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                </label>
-                <label className="text-sm font-medium text-[#4f3f46]">Kestus (min)
-                  <input type="number" value={addOnDraft.duration} onChange={(event) => setAddOnDraft((prev) => ({ ...prev, duration: Number(event.target.value) }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                </label>
-                <label className="text-sm font-medium text-[#4f3f46]">Jarjestus
-                  <input type="number" value={addOnDraft.sortOrder} onChange={(event) => setAddOnDraft((prev) => ({ ...prev, sortOrder: Number(event.target.value) }))} className="mt-1 w-full rounded-xl border border-[#e5ddd3] bg-white px-3 py-2 outline-none focus:border-[#9ca3af]" />
-                </label>
-                <label className="flex items-end gap-2 text-sm font-medium text-[#4f3f46]">
-                  <input type="checkbox" checked={addOnDraft.active} onChange={(event) => setAddOnDraft((prev) => ({ ...prev, active: event.target.checked }))} />
-                  Aktiivne
-                </label>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button onClick={() => void saveAddOn()} disabled={!addOnDraft.nameEt || isSavingAddOn} className="rounded-full bg-[#111827] px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                  {isSavingAddOn ? 'Salvestan...' : 'Salvesta lisateenus'}
-                </button>
-                <button type="button" onClick={() => setAddOnDraft(emptyAddOn)} className="rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563]">Tuhjenda vorm</button>
-              </div>
+            <h2 className="mb-2 text-xl font-semibold text-[#111827]">Lisateenused</h2>
+            <p className="text-sm text-[#4b5563]">
+              Lisateenused on nuud seotud konkreetse pohiteenusega.
+            </p>
+            <p className="mt-2 text-sm text-[#4b5563]">
+              Lisa, muuda ja kustuta lisateenuseid lehel <code>/admin/services</code>, iga teenuse sees eraldi.
+            </p>
+            <div className="mt-4">
+              <Link
+                href="/admin/services"
+                className="inline-flex rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-sm font-medium text-[#4b5563] hover:bg-[#f9fafb]"
+              >
+                Ava teenuste haldus
+              </Link>
             </div>
           </section>
         )}

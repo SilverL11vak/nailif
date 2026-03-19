@@ -1,5 +1,10 @@
 import type { FunnelEventName } from '@/lib/funnel-analytics';
 
+function isAnalyticsEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (window as unknown as { __ANALYTICS_ENABLED__?: boolean }).__ANALYTICS_ENABLED__ === true;
+}
+
 function deviceType() {
   try {
     const ua = navigator.userAgent.toLowerCase();
@@ -38,6 +43,7 @@ export function trackEvent(input: {
   metadata?: Record<string, unknown>;
   language?: string;
 }) {
+  if (!isAnalyticsEnabled()) return;
   sendNonBlocking({
     event: input.event,
     bookingId: input.bookingId,

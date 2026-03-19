@@ -56,6 +56,9 @@ export function getRequiredTables(): Record<string, string> {
     // Webhooks
     webhookEvents: 'stripe_webhook_events',
     
+    // App settings (feature flags, etc.)
+    appSettings: 'app_settings',
+
     // Internal
     migrations: '__migrations',
   };
@@ -131,6 +134,7 @@ export async function validateDomainTables(domain: keyof ReturnType<typeof getRe
     funnelEvents: ['booking_funnel_events'],
     adminUsers: ['admin_users', 'admin_sessions'],
     webhookEvents: ['stripe_webhook_events'],
+    appSettings: ['app_settings'],
     migrations: ['__migrations'],
   };
   
@@ -182,6 +186,7 @@ export async function warnOnMissingTables(): Promise<void> {
     funnelEvents: ['booking_funnel_events'],
     adminUsers: ['admin_users'],
     webhookEvents: ['stripe_webhook_events'],
+    appSettings: ['app_settings'],
     migrations: ['__migrations'],
   };
   

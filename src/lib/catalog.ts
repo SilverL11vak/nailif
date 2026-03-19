@@ -1,6 +1,6 @@
 import { sql } from './db';
 import { isDatabaseMigrated } from './schema-validator';
-import type { Service } from '@/store/booking-types';
+import type { Service, ServiceVariant } from '@/store/booking-types';
 import type { LocaleCode } from './i18n/locale-path';
 import { mockServices } from '@/store/mock-data';
 
@@ -44,6 +44,7 @@ export interface ServiceRecord extends Service {
   isPopular: boolean;
   sortOrder?: number;
   active: boolean;
+  variants?: ServiceVariant[];
 }
 
 const defaultProducts: Omit<Product, 'createdAt'>[] = [
@@ -250,6 +251,24 @@ async function ensureCatalogTablesInternal() {
     )
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS service_variants (
+      id TEXT PRIMARY KEY,
+      service_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      name_et TEXT,
+      name_en TEXT,
+      price INTEGER NOT NULL DEFAULT 0,
+      duration INTEGER NOT NULL DEFAULT 45,
+      deposit_amount INTEGER,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_service_variants_svc ON service_variants(service_id)`;
+
   await sql`ALTER TABLE services ADD COLUMN IF NOT EXISTS name_et TEXT`;
   await sql`ALTER TABLE services ADD COLUMN IF NOT EXISTS name_en TEXT`;
   await sql`ALTER TABLE services ADD COLUMN IF NOT EXISTS description_et TEXT`;
@@ -396,6 +415,54 @@ export async function ensureCatalogTables() {
   await catalogEnsurePromise;
 }
 
+/** Fetch variants for given service IDs; activeOnly for booking list, false for admin. */
+export async function listVariantsForServiceIds(
+  serviceIds: string[],
+  activeOnly: boolean,
+  locale?: string
+): Promise<Map<string, ServiceVariant[]>> {
+  if (serviceIds.length === 0) return new Map();
+  const lang = normalizeLocale(locale);
+  const rows = await sql<{
+    id: string;
+    service_id: string;
+    name: string;
+    name_et: string | null;
+    name_en: string | null;
+    price: number;
+    duration: number;
+    deposit_amount: number | null;
+    is_active: boolean;
+    order_index: number;
+  }[]>`
+    SELECT id, service_id, name, name_et, name_en, price, duration, deposit_amount, is_active, order_index
+    FROM service_variants
+    WHERE service_id IN ${sql(serviceIds)}
+      ${activeOnly ? sql`AND is_active = TRUE` : sql``}
+    ORDER BY service_id, order_index ASC, name ASC
+  `;
+  const map = new Map<string, ServiceVariant[]>();
+  for (const row of rows) {
+    const list = map.get(row.service_id) ?? [];
+    const displayName =
+      localizedValue(lang, row.name_et, row.name_en, row.name) || row.name || '';
+    list.push({
+      id: row.id,
+      serviceId: row.service_id,
+      name: displayName.trim() || row.name || '',
+      nameEt: row.name_et ?? row.name ?? '',
+      nameEn: row.name_en ?? '',
+      price: row.price,
+      duration: row.duration,
+      depositAmount: row.deposit_amount,
+      isActive: row.is_active,
+      orderIndex: row.order_index,
+    });
+    map.set(row.service_id, list);
+  }
+  return map;
+}
+
 export async function listServices(locale?: string): Promise<ServiceRecord[]> {
   const lang = normalizeLocale(locale);
   const rows = await sql<{
@@ -426,6 +493,9 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     ORDER BY sort_order ASC, price ASC, name ASC
   `;
 
+  const serviceIds = rows.map((r) => r.id);
+  const variantMap = await listVariantsForServiceIds(serviceIds, true, locale);
+
   return rows.map((row) => ({
     id: row.id,
     name: localizedValue(lang, row.name_et, row.name_en, row.name),
@@ -450,6 +520,7 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     isPopular: row.is_popular,
     sortOrder: row.sort_order,
     active: row.active,
+    variants: variantMap.get(row.id) ?? [],
   }));
 }
 
@@ -482,6 +553,9 @@ export async function listAdminServices(locale?: string): Promise<ServiceRecord[
     ORDER BY sort_order ASC, created_at DESC
   `;
 
+  const serviceIds = rows.map((r) => r.id);
+  const variantMap = await listVariantsForServiceIds(serviceIds, false, locale);
+
   return rows.map((row) => ({
     id: row.id,
     name: localizedValue(lang, row.name_et, row.name_en, row.name),
@@ -506,6 +580,7 @@ export async function listAdminServices(locale?: string): Promise<ServiceRecord[
     isPopular: row.is_popular,
     sortOrder: row.sort_order,
     active: row.active,
+    variants: variantMap.get(row.id) ?? [],
   }));
 }
 
@@ -598,6 +673,71 @@ export async function upsertService(input: UpsertServiceInput) {
 
 export async function deleteService(id: string) {
   await sql`DELETE FROM services WHERE id = ${id}`;
+}
+
+export interface UpsertVariantInput {
+  id: string;
+  serviceId: string;
+  name: string;
+  nameEt?: string;
+  nameEn?: string;
+  price: number;
+  duration: number;
+  depositAmount?: number | null;
+  isActive?: boolean;
+  orderIndex?: number;
+}
+
+export async function upsertVariant(input: UpsertVariantInput) {
+  const canonicalName = (input.name ?? input.nameEt ?? '').trim();
+  const nameEt = (input.nameEt ?? input.name ?? '').trim() || canonicalName;
+  const nameEn = (input.nameEn ?? '').trim();
+  await sql`
+    INSERT INTO service_variants (id, service_id, name, name_et, name_en, price, duration, deposit_amount, is_active, order_index, updated_at)
+    VALUES (
+      ${input.id},
+      ${input.serviceId},
+      ${canonicalName},
+      ${nameEt},
+      ${nameEn},
+      ${input.price},
+      ${input.duration},
+      ${input.depositAmount ?? null},
+      ${input.isActive ?? true},
+      ${input.orderIndex ?? 0},
+      NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      service_id = EXCLUDED.service_id,
+      name = EXCLUDED.name,
+      name_et = EXCLUDED.name_et,
+      name_en = EXCLUDED.name_en,
+      price = EXCLUDED.price,
+      duration = EXCLUDED.duration,
+      deposit_amount = EXCLUDED.deposit_amount,
+      is_active = EXCLUDED.is_active,
+      order_index = EXCLUDED.order_index,
+      updated_at = NOW()
+  `;
+}
+
+export async function deleteVariant(id: string) {
+  await sql`DELETE FROM service_variants WHERE id = ${id}`;
+}
+
+/** Resolve price and duration for booking: from variant if variantId provided, else from service. */
+export async function getServiceOrVariantPricing(serviceId: string, variantId?: string | null): Promise<{ id: string; price: number; duration: number } | null> {
+  if (variantId) {
+    const [row] = await sql<Array<{ id: string; price: number; duration: number; service_id: string }>>`
+      SELECT id, price, duration, service_id FROM service_variants WHERE id = ${variantId} AND is_active = TRUE LIMIT 1
+    `;
+    if (row && row.service_id === serviceId) return { id: row.id, price: row.price, duration: row.duration };
+    return null;
+  }
+  const [row] = await sql<Array<{ id: string; price: number; duration: number }>>`
+    SELECT id, price, duration FROM services WHERE id = ${serviceId} AND active = TRUE LIMIT 1
+  `;
+  return row ? { id: row.id, price: row.price, duration: row.duration } : null;
 }
 
 export async function listProducts(activeOnly = true, locale?: string): Promise<Product[]> {

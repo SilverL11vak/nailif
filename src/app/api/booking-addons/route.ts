@@ -23,19 +23,21 @@ export async function GET(request: Request) {
     await ensureBookingContentTables();
     const { searchParams, pathname } = new URL(request.url);
     const isAdmin = searchParams.get('admin') === '1';
+    const serviceIdParam = searchParams.get('serviceId');
+    const serviceId = serviceIdParam?.trim() || null;
 
     if (isAdmin) {
       const admin = await getAdminFromCookies();
       if (!admin) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      const addOns = await listAdminBookingAddOns();
+      const addOns = await listAdminBookingAddOns(serviceId);
       return NextResponse.json({ ok: true, addOns });
     }
 
     const lang = searchParams.get('lang');
     const locale = lang === 'en' ? 'en' : (getLocaleFromPathname(pathname) ?? 'et');
-    const addOns = await listBookingAddOns(locale);
+    const addOns = await listBookingAddOns(locale, serviceId);
     return NextResponse.json(
       { ok: true, addOns },
       {
@@ -60,6 +62,7 @@ export async function POST(request: Request) {
     await ensureBookingContentTables();
     const payload = (await request.json()) as Partial<{
       id: string;
+      serviceId: string;
       nameEt: string;
       nameEn: string;
       descriptionEt: string;
@@ -71,12 +74,17 @@ export async function POST(request: Request) {
     }>;
 
     const nameEt = payload.nameEt?.trim();
+    const serviceId = payload.serviceId?.trim();
     if (!nameEt) {
       return NextResponse.json({ error: 'Add-on name is required' }, { status: 400 });
     }
+    if (!serviceId) {
+      return NextResponse.json({ error: 'Service id is required' }, { status: 400 });
+    }
 
     await upsertBookingAddOn({
-      id: payload.id?.trim() || slugify(nameEt),
+      id: payload.id?.trim() || `${serviceId}-${slugify(nameEt)}`,
+      serviceId,
       nameEt,
       nameEn: (payload.nameEn ?? '').trim(),
       descriptionEt: (payload.descriptionEt ?? '').trim(),

@@ -10,6 +10,8 @@ import { useCart } from '@/hooks/use-cart';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { ShopNavBar } from '@/components/shop/ShopNavBar';
 import { ArrowLeft } from 'lucide-react';
+import { useBookingStore } from '@/store/booking-store';
+import { clearBookingProductIntent, setBookingProductIntent } from '@/lib/booking-product-intent';
 
 interface ProductItem {
   id: string;
@@ -19,6 +21,8 @@ interface ProductItem {
   imageUrl: string | null;
   images?: string[];
   category?: string;
+  stock?: number;
+  active?: boolean;
 }
 
 export default function ProductDetailPage() {
@@ -27,9 +31,13 @@ export default function ProductDetailPage() {
   const { language, setLanguage, localizePath } = useTranslation();
   const { favoritesCount, isFavorite, toggleFavorite } = useFavorites();
   const { addToCart } = useCart();
+  const selectedBookingProducts = useBookingStore((state) => state.selectedProducts);
+  const addProductToBooking = useBookingStore((state) => state.addProductToBooking);
+  const removeProductFromBooking = useBookingStore((state) => state.removeProductFromBooking);
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
   const productId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const copy =
@@ -97,6 +105,10 @@ export default function ProductDetailPage() {
   }, [language]);
 
   const product = useMemo(() => products.find((item) => item.id === productId), [products, productId]);
+  const isInBooking = useMemo(() => {
+    if (!product) return false;
+    return selectedBookingProducts.some((p) => p.productId === product.id);
+  }, [selectedBookingProducts, product]);
   const productImages = useMemo(() => {
     if (!product) return [];
     if (Array.isArray(product.images) && product.images.length > 0) return product.images;
@@ -196,33 +208,110 @@ export default function ProductDetailPage() {
           <div className="space-y-4 lg:col-span-5">
             <p className="text-xs uppercase tracking-[0.2em] text-[#a06f8d]">{product.category ?? 'Aftercare'}</p>
             <h1 className="text-[2rem] font-semibold leading-[1.05] tracking-[-0.02em] text-[#2f2530]">{product.name}</h1>
-            <p className="text-sm leading-6 text-[#726272]">{product.description}</p>
-            <p className="text-3xl font-semibold tracking-[-0.02em] text-[#b04b80]">EUR {product.price}</p>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => addToCart(product.id, 1, product.price)}
-                className="rounded-full bg-[linear-gradient(120deg,#d4669e_0%,#c24d86_52%,#a93d71_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_22px_34px_-26px_rgba(139,51,100,0.75)]"
-              >
-                {copy.addToBag}
-              </button>
-              <button
-                onClick={() => router.push(localizePath('/book'))}
-                className="rounded-full border border-[#e5c8d8] bg-white px-5 py-2.5 text-sm font-semibold text-[#6a4c64] transition hover:bg-[#fff2fa]"
-              >
-                {copy.addToBooking}
-              </button>
-              <button
-                onClick={() => toggleFavorite(product.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold ${
-                  isFavorite(product.id)
-                    ? 'border-[#c24d86] bg-[#fff1f8] text-[#b03f75]'
-                    : 'border-[#e5c8d8] bg-white text-[#6a4c64]'
-                }`}
-              >
-                <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
-                {language === 'en' ? 'Favourite' : 'Lemmik'}
-              </button>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <p className="text-3xl font-semibold tracking-[-0.02em] text-[#b04b80]">EUR {product.price}</p>
+              <span className="rounded-full border border-[#e8d5e1] bg-white px-3 py-1 text-xs font-semibold text-[#6a4c64]">
+                SKU: {product.id}
+              </span>
+              {product.active && (product.stock ?? 0) > 0 ? (
+                <span className="rounded-full bg-[#f1fbf5] px-3 py-1 text-xs font-semibold text-[#2d8a5e]">In stock</span>
+              ) : (
+                <span className="rounded-full bg-[#fff1f4] px-3 py-1 text-xs font-semibold text-[#c94a64]">
+                  {language === 'en' ? 'Unavailable' : 'Ajutiselt saadaval puudub'}
+                </span>
+              )}
+            </div>
+
+            <p className="text-sm leading-6 text-[#726272]">{product.description}</p>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3 rounded-[18px] border border-[#ecdce7] bg-white/75 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#a06f8d]">
+                  {language === 'en' ? 'Quantity' : 'Kogus'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e8d5e1] bg-white hover:bg-[#fff2fa]"
+                    aria-label={language === 'en' ? 'Decrease quantity' : 'Vähenda kogust'}
+                    disabled={quantity <= 1}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={99}
+                    value={quantity}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      if (!Number.isFinite(next)) return;
+                      setQuantity(Math.max(1, Math.min(99, Math.floor(next))));
+                    }}
+                    className="w-16 rounded-xl border border-[#e8d5e1] bg-white px-3 py-2 text-center text-sm font-semibold text-[#2f2530] outline-none focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20"
+                    aria-label={language === 'en' ? 'Quantity' : 'Kogus'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e8d5e1] bg-white hover:bg-[#fff2fa]"
+                    aria-label={language === 'en' ? 'Increase quantity' : 'Suurenda kogust'}
+                    disabled={!product.active || (product.stock ?? 0) <= 0}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => addToCart(product.id, quantity, product.price)}
+                  disabled={!product.active || (product.stock ?? 0) <= 0}
+                  className="rounded-full bg-[linear-gradient(120deg,#d4669e_0%,#c24d86_52%,#a93d71_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_22px_34px_-26px_rgba(139,51,100,0.75)] transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                >
+                  {copy.addToBag}
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (isInBooking) {
+                      clearBookingProductIntent();
+                      removeProductFromBooking(product.id);
+                      return;
+                    }
+
+                    const bookingProduct = {
+                      productId: product.id,
+                      name: product.name,
+                      unitPrice: product.price,
+                      quantity,
+                      imageUrl: product.imageUrl ?? null,
+                    };
+                    setBookingProductIntent(bookingProduct);
+                    addProductToBooking(bookingProduct);
+                    router.push(localizePath('/book'));
+                  }}
+                  disabled={!product.active || (product.stock ?? 0) <= 0}
+                  className="rounded-full border border-[#e5c8d8] bg-white px-5 py-2.5 text-sm font-semibold text-[#6a4c64] transition hover:bg-[#fff2fa] disabled:opacity-50"
+                >
+                  {isInBooking ? (language === 'en' ? 'Remove' : 'Eemalda') : copy.addToBooking}
+                </button>
+
+                <button
+                  onClick={() => toggleFavorite(product.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-semibold ${
+                    isFavorite(product.id)
+                      ? 'border-[#c24d86] bg-[#fff1f8] text-[#b03f75]'
+                      : 'border-[#e5c8d8] bg-white text-[#6a4c64]'
+                  }`}
+                >
+                  <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
+                  {language === 'en' ? 'Favourite' : 'Lemmik'}
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -232,9 +321,9 @@ export default function ProductDetailPage() {
             <h2 className="text-lg font-semibold text-[#302532]">{copy.detailsTitle}</h2>
             <dl className="mt-3 space-y-3 text-sm leading-6 text-[#6f5f70]">
               <div><dt className="font-semibold text-[#3a2f3a]">{copy.whatItDoes}</dt><dd>{product.description}</dd></div>
-              <div><dt className="font-semibold text-[#3a2f3a]">{copy.whyItMatters}</dt><dd>{language === 'en' ? 'Helps maintain salon-level finish for longer between appointments.' : 'Aitab hoida salongitulemust kauem kaunina järgmise hoolduseni.'}</dd></div>
-              <div><dt className="font-semibold text-[#3a2f3a]">{copy.howToUse}</dt><dd>{language === 'en' ? 'Use daily on clean nails and cuticles for best result.' : 'Kasuta igapäevaselt puhastele küüntele ja küünenahkadele parima tulemuse jaoks.'}</dd></div>
-              <div><dt className="font-semibold text-[#3a2f3a]">{copy.whoFor}</dt><dd>{language === 'en' ? 'For clients who want healthier nails and longer-lasting polish look.' : 'Sobib kliendile, kes soovib tervemaid küüsi ja kauem püsivat viimistlust.'}</dd></div>
+              <div><dt className="font-semibold text-[#3a2f3a]">{copy.whyItMatters}</dt><dd>{product.description}</dd></div>
+              <div><dt className="font-semibold text-[#3a2f3a]">{copy.howToUse}</dt><dd>{product.description}</dd></div>
+              <div><dt className="font-semibold text-[#3a2f3a]">{copy.whoFor}</dt><dd>{product.category ?? (language === 'en' ? 'Aftercare' : 'Järelhooldus')}</dd></div>
             </dl>
           </article>
 
@@ -242,20 +331,14 @@ export default function ProductDetailPage() {
             <h2 className="text-lg font-semibold text-[#302532]">{copy.specs}</h2>
             <ul className="mt-3 space-y-2 text-sm text-[#6f5f70]">
               <li>{language === 'en' ? 'Category:' : 'Kategooria:'} {product.category ?? (language === 'en' ? 'Aftercare' : 'Järelhooldus')}</li>
-              <li>{language === 'en' ? 'Finish support:' : 'Viimistluse tugi:'} {language === 'en' ? 'Gloss and hydration' : 'Läige ja niisutus'}</li>
-              <li>{language === 'en' ? 'Usage frequency:' : 'Kasutussagedus:'} {language === 'en' ? 'Daily or as needed' : 'Igapäevaselt või vastavalt vajadusele'}</li>
+              <li>{language === 'en' ? 'Availability:' : 'Saadavus:'} {product.active && (product.stock ?? 0) > 0 ? (language === 'en' ? `${product.stock ?? 0} in stock` : `${product.stock ?? 0} laos`) : (language === 'en' ? 'Out of stock' : 'Laost otsas')}</li>
+              <li>{language === 'en' ? 'Product code:' : 'Tootekood:'} {product.id}</li>
             </ul>
             <h3 className="mt-5 text-base font-semibold text-[#302532]">{copy.benefits}</h3>
-            <ul className="mt-2 space-y-2 text-sm text-[#6f5f70]">
-              <li>{language === 'en' ? 'Supports longer-lasting manicure look' : 'Toetab kauem püsivat maniküüri tulemust'}</li>
-              <li>{language === 'en' ? 'Helps keep cuticles balanced' : 'Aitab hoida küünenahad tasakaalus'}</li>
-              <li>{language === 'en' ? 'Beauty-routine friendly application' : 'Lihtne lisada igapäevasesse ilurutiini'}</li>
-            </ul>
+            <p className="mt-2 text-sm text-[#6f5f70] leading-6">{product.description}</p>
             <h3 className="mt-5 text-base font-semibold text-[#302532]">{copy.pairing}</h3>
             <p className="mt-2 text-sm text-[#6f5f70]">
-              {language === 'en'
-                ? 'Recommended after gel manicure and maintenance appointments.'
-                : 'Soovitatud pärast geelmaniküüri ja hooldusvisiite.'}
+              {language === 'en' ? 'Best pairing is described in the product details.' : 'Parim sobivus on kirjelduses välja toodud.'}
             </p>
           </article>
         </section>
@@ -303,4 +386,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAnalyticsEnabled } from '@/lib/app-settings';
 import {
   endAnalyticsSession,
   insertAnalyticsEvent,
@@ -10,6 +11,7 @@ const ENDING_EVENTS = new Set<AnalyticsEventType>(['booking_success', 'booking_a
 
 export async function POST(request: Request) {
   try {
+    if (!(await getAnalyticsEnabled())) return NextResponse.json({ ok: true });
     const payload = (await request.json()) as {
       sessionId?: string;
       eventType?: AnalyticsEventType | string;

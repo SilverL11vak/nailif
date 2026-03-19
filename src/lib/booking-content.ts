@@ -241,6 +241,35 @@ declare global {
 let bookingContentEnsurePromise: Promise<void> | null =
   global.__nailify_booking_content_ensure__ ?? null;
 
+async function ensureBookingAddOnsServiceLink() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS booking_addons (
+      id TEXT PRIMARY KEY,
+      service_id TEXT,
+      name_et TEXT NOT NULL DEFAULT '',
+      name_en TEXT NOT NULL DEFAULT '',
+      description_et TEXT NOT NULL DEFAULT '',
+      description_en TEXT NOT NULL DEFAULT '',
+      duration INTEGER NOT NULL DEFAULT 0,
+      price INTEGER NOT NULL DEFAULT 0,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    ALTER TABLE booking_addons
+    ADD COLUMN IF NOT EXISTS service_id TEXT
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_booking_addons_service_active_sort
+      ON booking_addons(service_id, active, sort_order)
+  `;
+}
+
 async function ensureBookingContentTablesInternal() {
   await sql`
     CREATE TABLE IF NOT EXISTS booking_content (
@@ -254,6 +283,7 @@ async function ensureBookingContentTablesInternal() {
   await sql`
     CREATE TABLE IF NOT EXISTS booking_addons (
       id TEXT PRIMARY KEY,
+      service_id TEXT,
       name_et TEXT NOT NULL,
       name_en TEXT NOT NULL DEFAULT '',
       description_et TEXT NOT NULL DEFAULT '',
@@ -266,6 +296,8 @@ async function ensureBookingContentTablesInternal() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+  await ensureBookingAddOnsServiceLink();
 
   const [{ count: bookingContentCount }] = await sql<[{ count: string }]>`
     SELECT COUNT(*)::text AS count FROM booking_content
@@ -340,6 +372,10 @@ async function ensureBookingContentTablesInternal() {
 }
 
 export async function ensureBookingContentTables() {
+  // Always ensure add-on schema link so environments that have completed older
+  // migrations still get the new service-scoped add-on column/index.
+  await ensureBookingAddOnsServiceLink();
+
   // TRANSITIONAL: Skip ensure in production if migrations have been run
   // TODO: After migrations are fully deployed and verified, remove this function
   // and rely entirely on migrations in migrations/005_booking.sql
@@ -408,6 +444,7 @@ export async function upsertBookingContent(entries: Array<{ key: BookingContentK
 
 export interface BookingAddOnRecord {
   id: string;
+  serviceId?: string | null;
   nameEt: string;
   nameEn: string;
   descriptionEt: string;
@@ -418,9 +455,12 @@ export interface BookingAddOnRecord {
   active: boolean;
 }
 
-export async function listBookingAddOns(locale: LocaleCode): Promise<AddOn[]> {
+export async function listBookingAddOns(locale: LocaleCode, serviceId?: string | null): Promise<AddOn[]> {
+  if (!serviceId) return [];
+
   const rows = await sql<{
     id: string;
+    service_id: string | null;
     name_et: string;
     name_en: string;
     description_et: string;
@@ -429,14 +469,16 @@ export async function listBookingAddOns(locale: LocaleCode): Promise<AddOn[]> {
     price: number;
     active: boolean;
   }[]>`
-    SELECT id, name_et, name_en, description_et, description_en, duration, price, active
+    SELECT id, service_id, name_et, name_en, description_et, description_en, duration, price, active
     FROM booking_addons
     WHERE active = TRUE
+      AND service_id = ${serviceId}
     ORDER BY sort_order ASC, created_at ASC
   `;
 
   return rows.map((row) => ({
     id: row.id,
+    serviceId: row.service_id,
     name: localize(locale, row.name_et, row.name_en),
     duration: row.duration,
     price: row.price,
@@ -445,9 +487,28 @@ export async function listBookingAddOns(locale: LocaleCode): Promise<AddOn[]> {
   }));
 }
 
-export async function listAdminBookingAddOns(): Promise<BookingAddOnRecord[]> {
-  const rows = await sql<{
+export async function listAdminBookingAddOns(serviceId?: string | null): Promise<BookingAddOnRecord[]> {
+  const rows = serviceId
+    ? await sql<{
+        id: string;
+        service_id: string | null;
+        name_et: string;
+        name_en: string;
+        description_et: string;
+        description_en: string;
+        duration: number;
+        price: number;
+        sort_order: number;
+        active: boolean;
+      }[]>`
+        SELECT id, service_id, name_et, name_en, description_et, description_en, duration, price, sort_order, active
+        FROM booking_addons
+        WHERE service_id = ${serviceId}
+        ORDER BY sort_order ASC, created_at ASC
+      `
+    : await sql<{
     id: string;
+    service_id: string | null;
     name_et: string;
     name_en: string;
     description_et: string;
@@ -457,13 +518,14 @@ export async function listAdminBookingAddOns(): Promise<BookingAddOnRecord[]> {
     sort_order: number;
     active: boolean;
   }[]>`
-    SELECT id, name_et, name_en, description_et, description_en, duration, price, sort_order, active
+    SELECT id, service_id, name_et, name_en, description_et, description_en, duration, price, sort_order, active
     FROM booking_addons
     ORDER BY sort_order ASC, created_at ASC
   `;
 
   return rows.map((row) => ({
     id: row.id,
+    serviceId: row.service_id,
     nameEt: row.name_et,
     nameEn: row.name_en,
     descriptionEt: row.description_et,
@@ -478,9 +540,10 @@ export async function listAdminBookingAddOns(): Promise<BookingAddOnRecord[]> {
 export async function upsertBookingAddOn(input: BookingAddOnRecord) {
   await sql`
     INSERT INTO booking_addons (
-      id, name_et, name_en, description_et, description_en, duration, price, sort_order, active
+      id, service_id, name_et, name_en, description_et, description_en, duration, price, sort_order, active
     ) VALUES (
       ${input.id},
+      ${input.serviceId ?? null},
       ${input.nameEt},
       ${input.nameEn},
       ${input.descriptionEt},
@@ -491,6 +554,7 @@ export async function upsertBookingAddOn(input: BookingAddOnRecord) {
       ${input.active}
     )
     ON CONFLICT (id) DO UPDATE SET
+      service_id = EXCLUDED.service_id,
       name_et = EXCLUDED.name_et,
       name_en = EXCLUDED.name_en,
       description_et = EXCLUDED.description_et,

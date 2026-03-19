@@ -1,5 +1,7 @@
 'use client';
 
+import { isAnalyticsEnabled } from '@/lib/analytics-enabled';
+
 export type BehavioralAnalyticsDevice = 'mobile' | 'desktop';
 
 export type BehavioralAnalyticsEvent = {
@@ -56,6 +58,7 @@ function getOrCreateBehaviorSessionId(): string {
  */
 export function trackEvent(eventName: string, payload?: Record<string, unknown>) {
   if (typeof window === 'undefined') return;
+  if (!isAnalyticsEnabled()) return;
 
   const base: BehavioralAnalyticsEvent = {
     event: eventName,

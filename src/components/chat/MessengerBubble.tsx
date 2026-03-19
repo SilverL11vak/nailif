@@ -108,9 +108,9 @@ export function MessengerBubble() {
 
   const containerClasses = isBookingFlow
     ? isConfirmStep
-      ? 'fixed bottom-[calc(10rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
-      : 'fixed bottom-[calc(4.6rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
-    : 'fixed bottom-[calc(5.85rem+env(safe-area-inset-bottom))] right-3 z-[45] md:bottom-6 md:right-6';
+      ? 'fixed bottom-[calc(11.5rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
+      : 'fixed bottom-[calc(8rem+env(safe-area-inset-bottom))] right-3 z-[40] md:bottom-6 md:right-6'
+    : 'fixed bottom-[calc(6.8rem+env(safe-area-inset-bottom))] right-3 z-[45] md:bottom-6 md:right-6';
 
   return (
     <div className={containerClasses}>

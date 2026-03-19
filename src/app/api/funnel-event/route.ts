@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAnalyticsEnabled } from '@/lib/app-settings';
 import { insertFunnelEvent, type FunnelEventName } from '@/lib/funnel-analytics';
 
 function toText(v: unknown, max = 120) {
@@ -22,6 +23,7 @@ function isValidEventName(v: unknown): v is FunnelEventName {
 
 export async function POST(request: Request) {
   try {
+    if (!(await getAnalyticsEnabled())) return NextResponse.json({ ok: true });
     const payload = (await request.json()) as {
       event?: unknown;
       bookingId?: unknown;

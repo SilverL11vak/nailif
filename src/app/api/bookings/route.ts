@@ -15,7 +15,9 @@ function isValidPayload(payload: unknown): payload is BookingInsert {
   const data = payload as Partial<BookingInsert>;
   if (!data.service || !data.slot || !data.contact) return false;
   if (!Array.isArray(data.addOns)) return false;
+  if (!Array.isArray(data.products)) return false;
   if (typeof data.totalPrice !== 'number' || typeof data.totalDuration !== 'number') return false;
+  if (typeof data.productsTotalPrice !== 'number') return false;
   if (data.source !== 'guided' && data.source !== 'fast') return false;
   return true;
 }

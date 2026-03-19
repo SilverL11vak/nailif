@@ -8,6 +8,8 @@ export type BookingAnalyticsEventType =
   | 'booking_payment_fail'
   | 'booking_abandon';
 
+import { isAnalyticsEnabled } from '@/lib/analytics-enabled';
+
 const SESSION_KEY = 'booking_analytics_session_id';
 const SUCCESS_KEY = 'booking_analytics_success';
 const LAST_STEP_KEY = 'booking_analytics_last_step';
@@ -117,6 +119,7 @@ export function hasBookingSuccess(): boolean {
 }
 
 export function trackSessionStart(input: { locale?: string; path?: string; referrer?: string }) {
+  if (!isAnalyticsEnabled()) return;
   const sessionId = getOrCreateBookingSessionId();
   sendNonBlocking('/api/analytics/session-start', { sessionId, ...input });
 }
@@ -128,6 +131,7 @@ export function trackEvent(input: {
   slotId?: string;
   metadata?: Record<string, unknown>;
 }) {
+  if (!isAnalyticsEnabled()) return;
   const sessionId = getOrCreateBookingSessionId();
   const now = safeNow();
   const last = lastEventAt[input.eventType] ?? 0;
@@ -145,6 +149,7 @@ export function trackEvent(input: {
 }
 
 export function trackSlotClick(slotId: string) {
+  if (!isAnalyticsEnabled()) return;
   const sessionId = getOrCreateBookingSessionId();
   const now = safeNow();
   const last = lastSlotClickAt[slotId] ?? 0;

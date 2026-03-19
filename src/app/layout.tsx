@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
 import { ClientProviders } from '@/components/providers/ClientProviders';
 import { BehaviorTracking } from '@/components/analytics/BehaviorTracking';
+import { getAnalyticsEnabled } from '@/lib/app-settings';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -31,14 +32,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const analyticsEnabled = await getAnalyticsEnabled();
   return (
     <html lang="et">
       <body className={`${inter.variable} ${cormorant.variable} antialiased`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__ANALYTICS_ENABLED__=${JSON.stringify(analyticsEnabled)}`,
+          }}
+        />
         <ClientProviders>
           <BehaviorTracking />
           {children}

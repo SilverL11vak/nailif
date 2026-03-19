@@ -23,6 +23,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { TimeSlot } from '@/store/booking-types';
+import type { BookingPricingSnapshot } from '@/store/booking-types';
+import { calculateBookingCheckoutPricingFromBookingRecord } from '@/lib/booking-engine/pricing/calculate-booking-checkout-pricing';
 
 interface Booking {
   id: string;
@@ -45,6 +47,9 @@ interface Booking {
   addOns?: Array<{ id?: string; name: string; price: number; duration?: number }>;
   totalPrice: number;
   totalDuration?: number;
+  products?: Array<{ productId: string; name: string; unitPrice: number; quantity: number; imageUrl?: string | null }>;
+  productsTotalPrice?: number;
+  pricingSnapshot?: BookingPricingSnapshot | null;
   paymentStatus: 'unpaid' | 'pending' | 'paid' | 'failed' | string;
   depositAmount?: number;
   stripeSessionId?: string | null;
@@ -185,6 +190,16 @@ function depositLabel(b: Booking) {
   return { text: 'Unpaid', tone: 'text-[#8a7c82]' };
 }
 
+function getCheckoutTotals(booking: Booking) {
+  return calculateBookingCheckoutPricingFromBookingRecord({
+    servicePrice: booking.servicePrice ?? booking.totalPrice,
+    totalPrice: booking.totalPrice,
+    depositAmount: booking.depositAmount ?? 0,
+    productsTotalPrice: booking.productsTotalPrice ?? 0,
+    pricingSnapshot: booking.pricingSnapshot ?? null,
+  });
+}
+
 function FullscreenImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -234,6 +249,10 @@ export default function AdminBookingsPage() {
   const [fullscreenImage, setFullscreenImage] = useState<{ src: string; alt: string } | null>(null);
   const [panelSaved, setPanelSaved] = useState(false);
   const [quickMenuBookingId, setQuickMenuBookingId] = useState<string | null>(null);
+  const [bulkFrom, setBulkFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [bulkTo, setBulkTo] = useState(() => addDays(new Date().toISOString().slice(0, 10), 6));
+  const [bulkSpotsLoading, setBulkSpotsLoading] = useState(false);
+  const [bulkSpotsMessage, setBulkSpotsMessage] = useState<string | null>(null);
   const longPressRef = useRef<number | null>(null);
 
   const loadBookings = useCallback(async () => {
@@ -373,6 +392,38 @@ export default function AdminBookingsPage() {
       return false;
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const applyMultiDaySpots = async (mode: 'enable' | 'disable') => {
+    if (!bulkFrom || !bulkTo) return;
+    setError(null);
+    setBulkSpotsMessage(null);
+    setBulkSpotsLoading(true);
+    try {
+      const response = await fetch('/api/admin/tools', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: mode === 'enable' ? 'enable_spots_range' : 'disable_spots_range',
+          payload: { from: bulkFrom, to: bulkTo },
+        }),
+      });
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? 'Bulk update failed');
+      }
+      const data = (await response.json()) as { updated?: number };
+      setBulkSpotsMessage(
+        mode === 'enable'
+          ? `Vabastatud ${data.updated ?? 0} aega valitud perioodis.`
+          : `Blokeeritud ${data.updated ?? 0} aega valitud perioodis.`
+      );
+      await loadDaySlots(viewDate);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Mitme päeva muudatus ebaõnnestus.');
+    } finally {
+      setBulkSpotsLoading(false);
     }
   };
 
@@ -574,6 +625,54 @@ export default function AdminBookingsPage() {
               ))}
             </section>
 
+            <section className="mb-6 rounded-2xl border border-[#ebe6e3] bg-white p-4 shadow-[0_4px_20px_-8px_rgba(42,36,40,0.08)]">
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">Multi-day spots</p>
+                  <p className="mt-1 text-sm text-[#7a6e74]">Muuda mitme päeva vabu/blokeeritud aegu korraga. Broneeritud ajad jäävad alles.</p>
+                </div>
+                <div className="ml-auto flex flex-wrap items-end gap-2">
+                  <label className="flex flex-col gap-1 text-xs font-medium text-[#7a6e74]">
+                    From
+                    <input
+                      type="date"
+                      value={bulkFrom}
+                      onChange={(e) => setBulkFrom(e.target.value)}
+                      className="rounded-xl border border-[#e5ddd8] bg-[#faf8f6] px-3 py-2 text-sm text-[#2a2428]"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-medium text-[#7a6e74]">
+                    To
+                    <input
+                      type="date"
+                      value={bulkTo}
+                      onChange={(e) => setBulkTo(e.target.value)}
+                      className="rounded-xl border border-[#e5ddd8] bg-[#faf8f6] px-3 py-2 text-sm text-[#2a2428]"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void applyMultiDaySpots('enable')}
+                    disabled={bulkSpotsLoading}
+                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+                  >
+                    {bulkSpotsLoading ? '...' : 'Vabasta ajad'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void applyMultiDaySpots('disable')}
+                    disabled={bulkSpotsLoading}
+                    className="rounded-xl border border-[#e5ddd8] bg-white px-4 py-2 text-sm font-semibold text-[#5c4f55] hover:bg-[#faf8f6] disabled:opacity-50"
+                  >
+                    {bulkSpotsLoading ? '...' : 'Blokeeri ajad'}
+                  </button>
+                </div>
+              </div>
+              {bulkSpotsMessage ? (
+                <p className="mt-3 text-sm text-emerald-700">{bulkSpotsMessage}</p>
+              ) : null}
+            </section>
+
             {/* Day / week + date nav */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 rounded-full border border-[#e5ddd8] bg-white p-1 shadow-sm">
@@ -741,6 +840,7 @@ export default function AdminBookingsPage() {
                         const w = 100 / L.lanes;
                         const left = L.lane * w;
                         const dep = depositLabel(b);
+                        const checkout = getCheckoutTotals(b);
                         const repeat = (repeatByPhone.get((b.contactPhone ?? '').trim()) ?? 0) >= 2;
                         const prime = isPrimeTime(b.slotTime);
                         const showMenu = quickMenuBookingId === b.id;
@@ -783,7 +883,7 @@ export default function AdminBookingsPage() {
                                       {b.slotTime.slice(0, 5)}–{endTimeLabel(b)}
                                     </span>
                                     <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[#2a2228]">
-                                      €{Math.round(Number(b.totalPrice) || 0)}
+                                      €{Math.round(checkout.payNowTotal || 0)} now
                                     </span>
                                     <span className={`rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold ${dep.tone}`}>
                                       {b.paymentStatus === 'paid' ? 'Deposit paid' : 'Deposit due'}
@@ -884,6 +984,7 @@ export default function AdminBookingsPage() {
                 <div className="space-y-2">
                   {bookingsForViewDate.map((b) => {
                     const dep = depositLabel(b);
+                    const checkout = getCheckoutTotals(b);
                     const repeat = (repeatByPhone.get((b.contactPhone ?? '').trim()) ?? 0) >= 2;
                     return (
                       <div
@@ -897,7 +998,7 @@ export default function AdminBookingsPage() {
                           <p className="text-sm text-[#6d6268]">{b.serviceName}</p>
                           <p className="text-xs text-[#8a7c82]">
                             {b.slotTime.slice(0, 5)}–{endTimeLabel(b)} · {durMin(b)} min ·{' '}
-                            <span className="font-semibold tabular-nums text-[#2a2228]">€{Math.round(Number(b.totalPrice) || 0)}</span>{' '}
+                          <span className="font-semibold tabular-nums text-[#2a2228]">€{Math.round(checkout.payNowTotal || 0)}</span>{' '}
                             · <span className={dep.tone}>{dep.text}</span>
                             {repeat && <span className="ml-2 rounded-full bg-[#fce8f0] px-2 py-0.5 text-[10px] font-semibold text-[#9d4d6a]">Repeat</span>}
                           </p>
@@ -1005,6 +1106,39 @@ export default function AdminBookingsPage() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-[#a8989e]">Specialist</p>
                     <p className="mt-1.5 rounded-xl border border-[#f0ebe8] bg-[#faf8f6] px-3 py-2.5 text-sm text-[#5c4f55]">Sandra</p>
                     <p className="mt-1 text-[11px] text-[#a8989e]">Studio specialist (read-only)</p>
+                  </div>
+                  {panelBooking.products?.length ? (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#a8989e]">Retail products</p>
+                      <div className="mt-1.5 space-y-1 rounded-xl border border-[#f0ebe8] bg-[#faf8f6] px-3 py-3">
+                        {panelBooking.products.map((p) => (
+                          <p key={p.productId} className="text-sm text-[#2a2228]">
+                            {p.name}
+                            {p.quantity > 1 ? ` x ${p.quantity}` : null} · €{Math.round(Number(p.unitPrice) || 0) * p.quantity}
+                          </p>
+                        ))}
+                        <p className="pt-1 text-xs font-semibold text-[#b04b80]">
+                          Products total: €{Math.round(Number(panelBooking.productsTotalPrice) || 0)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#a8989e]">Checkout totals</p>
+                    <div className="mt-1.5 space-y-1 rounded-xl border border-[#f0ebe8] bg-[#faf8f6] px-3 py-3 text-sm text-[#2a2228]">
+                      {(() => {
+                        const checkout = getCheckoutTotals(panelBooking);
+                        return (
+                          <>
+                            <p>Service total: €{Math.round(checkout.serviceTotal || 0)}</p>
+                            <p>Products total: €{Math.round(checkout.productsTotal || 0)}</p>
+                            <p>Deposit applied: €{Math.round(checkout.depositAmount || 0)}</p>
+                            <p className="font-semibold text-[#b04b80]">Pay now: €{Math.round(checkout.payNowTotal || 0)}</p>
+                            <p>Pay later: €{Math.round(checkout.payLaterTotal || 0)}</p>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="text-xs font-semibold uppercase tracking-wider text-[#a8989e]">

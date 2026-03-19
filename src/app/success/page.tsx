@@ -7,14 +7,25 @@ import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingContent } from '@/hooks/use-booking-content';
 import type { TimeSlot } from '@/store/booking-types';
+import type { BookingRecord } from '@/lib/bookings';
+import { calculateBookingBreakdown } from '@/lib/booking-engine/pricing/calculate-booking-breakdown';
+import { calculateBookingCheckoutPricingFromBookingRecord } from '@/lib/booking-engine/pricing/calculate-booking-checkout-pricing';
+import { BOOKING_DEPOSIT_EUR } from '@/lib/booking-engine/pricing/calculate-booking-pricing';
 import { getLocaleFromPathname, withLocale, type LocaleCode } from '@/lib/i18n/locale-path';
 import { clearBookingSession, markBookingSuccessForSession, trackEvent, touchBookingActivity } from '@/lib/analytics-client';
 import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 
 type PaymentStatus = 'idle' | 'verifying' | 'confirmed' | 'error';
+type SuccessProduct = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string | null;
+  category?: string;
+};
 
-const DEPOSIT_EUROS = 10;
 const FALLBACK_GALLERY = [
   'https://images.unsplash.com/photo-1604902396830-aca29e19b067?w=400&q=80',
   'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=400&q=80',
@@ -29,171 +40,156 @@ function SuccessPageContent() {
   const { text } = useBookingContent();
   const [bookingRef, setBookingRef] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
-  const [paymentMessage, setPaymentMessage] = useState<string>('');
+  const [paymentMessage, setPaymentMessage] = useState('');
   const [flowType, setFlowType] = useState<'booking' | 'order' | null>(null);
   const [showRepeatOffer, setShowRepeatOffer] = useState(true);
   const [recommendedMaintenanceSlots, setRecommendedMaintenanceSlots] = useState<TimeSlot[]>([]);
   const [galleryUrls, setGalleryUrls] = useState<string[]>(FALLBACK_GALLERY);
+  const [confirmedBooking, setConfirmedBooking] = useState<BookingRecord | null>(null);
+  const [postBookingProducts, setPostBookingProducts] = useState<SuccessProduct[]>([]);
 
   const bookingStore = useBookingStore();
   const { selectedService, selectedSlot, totalPrice, totalDuration, reset } = bookingStore;
 
-  // Capture booking data IMMEDIATELY before any store reset can occur
-  // This prevents €0 display when navigating to success page after payment
-  const capturedPriceRef = useRef<number>(typeof totalPrice === 'number' ? totalPrice : 0);
-  const capturedDurationRef = useRef<number>(typeof totalDuration === 'number' ? totalDuration : 0);
-  const capturedServiceRef = useRef(selectedService);
-  const capturedSlotRef = useRef(selectedSlot);
+  const capturedPriceRef = useRef<number>(0);
+  const capturedDurationRef = useRef<number>(0);
+  const capturedServiceRef = useRef(selectedService ?? null);
+  const capturedSlotRef = useRef(selectedSlot ?? null);
 
-  // Use captured values as fallback when store values are reset
-  const effectivePrice = totalPrice || capturedPriceRef.current;
-  const effectiveDuration = totalDuration || capturedDurationRef.current;
-  const effectiveService = selectedService || capturedServiceRef.current;
-  const effectiveSlot = selectedSlot || capturedSlotRef.current;
+  useEffect(() => {
+    if (typeof totalPrice === 'number' && totalPrice > 0) capturedPriceRef.current = totalPrice;
+    if (typeof totalDuration === 'number' && totalDuration >= 0) capturedDurationRef.current = totalDuration;
+    if (selectedService) capturedServiceRef.current = selectedService;
+    if (selectedSlot) capturedSlotRef.current = selectedSlot;
+  }, [totalPrice, totalDuration, selectedService, selectedSlot]);
+
+  const effectivePrice = (typeof totalPrice === 'number' && totalPrice > 0 ? totalPrice : null) ?? capturedPriceRef.current;
+  const effectiveDuration = (typeof totalDuration === 'number' ? totalDuration : null) ?? capturedDurationRef.current;
+  const effectiveService = selectedService ?? capturedServiceRef.current;
+  const effectiveSlot = selectedSlot ?? capturedSlotRef.current;
+
+  const storeServiceCost =
+    typeof effectivePrice === 'number' && effectivePrice > 0 ? effectivePrice
+    : typeof effectiveService?.price === 'number' ? effectiveService.price : 0;
+
+  const bookingBreakdown = useMemo(() => confirmedBooking ? calculateBookingBreakdown(confirmedBooking) : null, [confirmedBooking]);
+  const checkoutPricing = useMemo(() => confirmedBooking ? calculateBookingCheckoutPricingFromBookingRecord(confirmedBooking) : null, [confirmedBooking]);
+
+  const serviceCost = checkoutPricing?.serviceTotal ?? bookingBreakdown?.finalTotal ?? storeServiceCost;
+  const depositPaidForCard = checkoutPricing?.depositAmount ?? bookingBreakdown?.depositAmount ?? BOOKING_DEPOSIT_EUR;
+  const productsTotal = checkoutPricing?.productsTotal ?? 0;
+  const payNowTotal = checkoutPricing?.payNowTotal ?? Math.max(0, depositPaidForCard + productsTotal);
 
   const locale: LocaleCode = getLocaleFromPathname(pathname ?? '') ?? 'et';
   const L = (path: string) => withLocale(path, locale);
-  // Localization rule: derive from current locale (/en vs /et).
   const en = locale === 'en';
 
   const copy = useMemo(
     () =>
       en
         ? {
-            paymentVerifying: 'Verifying your payment…',
-            paymentBookingOk: 'Deposit received. Your time is secured.',
-            paymentOrderOk: 'Thank you — your order is on its way.',
+            verifying: 'Verifying your payment…',
+            paymentOkBooking: 'Deposit received. Your time is secured.',
+            paymentOkOrder: 'Thank you — your order is on its way.',
             paymentFail: 'We could not verify this payment. Please contact us.',
-            bookingNameFallback: 'Your appointment',
-            depositPaid: 'Deposit paid',
-            remainingStudio: 'Remaining at studio',
-            studio: 'Mustamäe tee 55, Tallinn',
-            specialist: 'Sandra',
-            headline: 'Your appointment is confirmed',
-            subtext: "We've reserved your time with Sandra. We're excited to see you.",
-            heroHeadline: 'Your time is confirmed ✨',
-            heroSubtext: "We’re waiting for you with Sandra — your beauty moment is now certain.",
-            heroMicroLine: 'Most clients already feel the excitement of their new result right now.',
-            refLabel: 'Reference',
-            summaryDurationLabel: 'Duration',
-            summaryStudioLabel: 'Studio',
-            summaryTechnicianLabel: 'Technician',
-            breakdownServiceTotalLabel: 'Service total',
-            breakdownDepositPaidLabel: 'Deposit paid',
-            breakdownPayAtSalonLabel: 'Pay at salon',
-            depositTrustNote: 'Your deposit protects your time and prevents last-minute cancellations.',
-            calendarHelper: 'You’ll get an automatic reminder before your visit.',
-            secondaryProductsCta: 'View care products',
-            secondaryBookNewCta: 'Book a new time',
+            heroHeadline: 'Sinu aeg on kinnitatud ✨',
+            heroSub: "Booking with Sandra is confirmed.\nWe're looking forward to seeing you!",
+            heroHeadlineEn: 'Your appointment is confirmed ✨',
+            heroSubEn: "Your time with Sandra is secured.\nWe're looking forward to seeing you!",
+            ref: 'Reference',
+            durationLabel: 'Duration',
+            techLabel: 'Technician',
+            locationLabel: 'Location',
+            serviceTotalLabel: 'Service total',
+            depositLabel: 'Deposit paid',
+            remainLabel: 'Remaining at salon',
+            depositNote: 'Your deposit protects your time and prevents last-minute cancellations.',
+            nextTitle: 'What happens next',
+            next1: 'Confirmation sent to your email',
+            next2: 'You can reschedule if plans change',
+            next3: "Arrive 5 minutes early — we'll be ready",
+            calendarCta: 'Add to Calendar',
+            calendarHelper: "You'll get a reminder before your visit.",
+            productsCta: 'View care products',
+            bookNewCta: 'Book another time',
             inspirationTitle: 'Inspiration for your next visit',
             retentionTitle: 'Plan your next visit',
-            retentionBody:
-              'The best results last 3–4 weeks. Most clients book their next appointment today.',
-            retentionPrimary: 'Book your next appointment',
-            retentionSecondary: 'Not now',
-            footerQuestions: 'Questions? hello@nailify.com',
-            nextTitle: 'What happens next',
-            next1: 'Confirmation sent to you by email',
-            next2: 'Flexible reschedule if plans change',
-            next3: 'Arrive 5 minutes early — we’ll be ready',
-            tipLabel: 'Tip from Sandra',
-            tipBody:
-              'Come with clean nails and skip heavy hand cream that day — it helps your polish last beautifully.',
-            resultsCaption: 'Clients love their results.',
-            addCalendar: 'Add to Calendar',
-            exploreShop: 'Explore products',
-            bookAnother: 'Book another appointment',
-            helpFooter: 'Questions? We’re here — hello@nailify.com',
-            maintenanceTitle: 'Plan your next visit',
-            maintenanceHelper: 'Many clients rebook 3–4 weeks ahead.',
-            bookNext: 'Reserve next slot',
-            skip: 'Not now',
-            orderHeadline: 'Thank you for your order',
-            orderSub: 'We’re preparing everything with care.',
+            retentionBody: 'Best results last 3–4 weeks. Most clients book their next appointment today.',
+            retentionCta: 'Book your next appointment',
+            retentionDismiss: 'Not now',
+            footer: 'Questions? hello@nailify.com',
             backHome: 'Back to home',
+            orderHeadline: 'Thank you for your order',
+            orderSub: "We're preparing everything with care.",
+            exploreCta: 'Explore products',
+            maintenanceHint: 'Best results last 3–4 weeks.',
+            postCareTitle: 'Keep your result beautiful longer',
+            postCareBody: 'Based on your service, these are most recommended by our technicians.',
+            addWithVisit: 'Add to order',
+            shipWithVisit: 'Delivery with your visit prep',
+            pickup: 'Pick up during visit',
+            home: 'Home delivery',
           }
         : {
-            paymentVerifying: 'Kontrollime makset…',
-            paymentBookingOk: 'Ettemaks laekus. Sinu aeg on kindlustatud.',
-            paymentOrderOk: 'Aitäh — tellimus on teele pandud.',
+            verifying: 'Kontrollime makset…',
+            paymentOkBooking: 'Ettemaks laekus. Sinu aeg on kindlustatud.',
+            paymentOkOrder: 'Aitäh — tellimus on teele pandud.',
             paymentFail: 'Makset ei õnnestunud kinnitada. Palun võta ühendust.',
-            bookingNameFallback: 'Sinu aeg',
-            depositPaid: 'Ettemaks tasutud',
-            remainingStudio: 'Kohapeal tasuda',
-            studio: 'Mustamäe tee 55, Tallinn',
-            specialist: 'Sandra',
-            headline: 'Sinu aeg on kinnitatud',
-            subtext: 'Oleme sulle aja broneerinud Sandraga. Ootame sind!',
             heroHeadline: 'Sinu aeg on kinnitatud ✨',
-            heroSubtext: 'Ootame sind Sandraga — sinu iluhetk on nüüd kindel.',
-            heroMicroLine: 'Enamus kliente tunneb juba praegu elevust oma uue tulemuse üle.',
-            refLabel: 'Viide',
-            summaryDurationLabel: 'Kestus',
-            summaryStudioLabel: 'Stuudio',
-            summaryTechnicianLabel: 'Tehnik',
-            breakdownServiceTotalLabel: 'Teenuse koguhind',
-            breakdownDepositPaidLabel: 'Ettemaks tasutud',
-            breakdownPayAtSalonLabel: 'Maksta salongis',
-            depositTrustNote: 'Ettemaks kaitseb sinu aega ja väldib viimase hetke tühistamisi.',
-            calendarHelper: 'Saad automaatse meeldetuletuse enne visiiti.',
-            secondaryProductsCta: 'Vaata hooldustooteid',
-            secondaryBookNewCta: 'Broneeri uus aeg',
-            inspirationTitle: 'Inspiratsioon sinu järgmiseks külastuseks',
-            retentionTitle: 'Planeeri järgmine külastus',
-            retentionBody:
-              'Parim tulemus püsib 3–4 nädalat. Enamus kliente broneerib järgmise aja juba täna.',
-            retentionPrimary: 'Broneeri järgmine aeg',
-            retentionSecondary: 'Mitte praegu',
-            footerQuestions: 'Küsimused? hello@nailify.com',
+            heroSub: 'Broneering Sandraga on edukalt tehtud.\nOotame sind!',
+            heroHeadlineEn: 'Sinu aeg on kinnitatud ✨',
+            heroSubEn: 'Broneering Sandraga on edukalt tehtud.\nOotame sind!',
+            ref: 'Viide',
+            durationLabel: 'Kestus',
+            techLabel: 'Tehnik',
+            locationLabel: 'Asukoht',
+            serviceTotalLabel: 'Teenuse koguhind',
+            depositLabel: 'Ettemaks tasutud',
+            remainLabel: 'Ülejääk salongis',
+            depositNote: 'Ettemaks kaitseb sinu aega ja väldib viimase hetke tühistamisi.',
             nextTitle: 'Mis edasi saab',
             next1: 'Saadame kinnituse e-postile',
             next2: 'Vajadusel saad aega paindlikult muuta',
             next3: 'Tule 5 minutit varem — oleme valmis',
-            tipLabel: 'Nõuanne Sandralt',
-            tipBody:
-              'Tule puhaste küüntega ja väldi sel päeval raskeid kreeme — nii püsib viimistlus kauem kaunis.',
-            resultsCaption: 'Kliendid on tulemustega väga rahul.',
-            addCalendar: 'Lisa kalendrisse',
-            exploreShop: 'Avasta tooted',
-            bookAnother: 'Broneeri uus aeg',
-            helpFooter: 'Küsimused? hello@nailify.com',
-            maintenanceTitle: 'Planeeri järgmine külastus',
-            maintenanceHelper: 'Paljud kliendid broneerivad 3–4 nädala ette.',
-            bookNext: 'Broneeri järgmine aeg',
-            skip: 'Mitte praegu',
+            calendarCta: 'Lisa kalendrisse',
+            calendarHelper: 'Saad automaatse meeldetuletuse enne visiiti.',
+            productsCta: 'Vaata hooldustooteid',
+            bookNewCta: 'Broneeri uus aeg',
+            inspirationTitle: 'Inspiratsioon järgmiseks külastuseks',
+            retentionTitle: 'Planeeri järgmine külastus',
+            retentionBody: 'Parim tulemus püsib 3–4 nädalat. Enamus kliente broneerib järgmise aja juba täna.',
+            retentionCta: 'Broneeri järgmine aeg',
+            retentionDismiss: 'Mitte praegu',
+            footer: 'Küsimused? hello@nailify.com',
+            backHome: 'Tagasi avalehele',
             orderHeadline: 'Aitäh tellimuse eest',
             orderSub: 'Valmistame kõike hoolega ette.',
-            backHome: 'Tagasi avalehele',
+            exploreCta: 'Avasta tooted',
+            maintenanceHint: 'Parim tulemus püsib 3–4 nädalat.',
+            postCareTitle: 'Hoia tulemus kauem ilus',
+            postCareBody: 'Sinu teenuse põhjal soovitavad tehnikud just neid tooteid.',
+            addWithVisit: 'Lisa tellimusse',
+            shipWithVisit: 'Tarne koos visiidiga',
+            pickup: 'Võtan visiidil kaasa',
+            home: 'Saadan koju',
           },
     [en]
   );
 
   const nextBookingSuggestion = useMemo(() => {
-    const configuredWeeks = Number(text('repeat_booking_weeks', '4'));
-    const targetDays = Number.isFinite(configuredWeeks) && configuredWeeks > 0 ? configuredWeeks * 7 : 28;
+    const weeks = Number(text('repeat_booking_weeks', '4'));
+    const days = Number.isFinite(weeks) && weeks > 0 ? weeks * 7 : 28;
     const base = selectedSlot ? new Date(`${selectedSlot.date}T12:00:00`) : new Date();
-    const start = new Date(base);
-    start.setDate(base.getDate() + Math.max(targetDays - 7, 7));
-    const end = new Date(base);
-    end.setDate(base.getDate() + targetDays);
+    const start = new Date(base); start.setDate(base.getDate() + Math.max(days - 7, 7));
+    const end = new Date(base); end.setDate(base.getDate() + days);
     return {
       startDate: start.toISOString().slice(0, 10),
-      label: `${start.toLocaleDateString(en ? 'en-GB' : 'et-EE', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(
-        en ? 'en-GB' : 'et-EE',
-        { day: 'numeric', month: 'short' }
-      )}`,
+      label: `${start.toLocaleDateString(en ? 'en-GB' : 'et-EE', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(en ? 'en-GB' : 'et-EE', { day: 'numeric', month: 'short' })}`,
     };
   }, [selectedSlot, en, text]);
 
-  useEffect(() => {
-    setBookingRef(`NF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      reset();
-    };
-  }, [reset]);
+  useEffect(() => { setBookingRef(`NF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`); }, []);
+  useEffect(() => { return () => { reset(); }; }, [reset]);
 
   useEffect(() => {
     void (async () => {
@@ -201,15 +197,10 @@ function SuccessPageContent() {
         const res = await fetch('/api/gallery');
         if (!res.ok) return;
         const data = (await res.json()) as { images?: { imageUrl: string }[] };
-        const urls = (data.images ?? [])
-          .map((i) => i.imageUrl)
-          .filter(Boolean)
-          .slice(0, 3);
+        const urls = (data.images ?? []).map((i) => i.imageUrl).filter(Boolean).slice(0, 3);
         if (urls.length >= 3) setGalleryUrls(urls);
         else if (urls.length > 0) setGalleryUrls([...urls, ...FALLBACK_GALLERY].slice(0, 3));
-      } catch {
-        /* keep fallbacks */
-      }
+      } catch { /* keep fallbacks */ }
     })();
   }, []);
 
@@ -223,395 +214,369 @@ function SuccessPageContent() {
     const verify = async () => {
       setPaymentStatus('verifying');
       try {
-        const response = await fetch('/api/stripe/confirm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, type }),
-        });
+        const response = await fetch('/api/stripe/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, type }) });
         if (!response.ok) throw new Error('Payment verification failed');
+        let bookingFromDb: BookingRecord | null = null;
+        let breakdownForBooking: ReturnType<typeof calculateBookingBreakdown> | null = null;
+        if (type === 'booking') {
+          try {
+            const r = await fetch(`/api/bookings/summary?stripeSessionId=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
+            if (r.ok) { const j = (await r.json()) as { booking?: BookingRecord }; if (j.booking) { bookingFromDb = j.booking; breakdownForBooking = calculateBookingBreakdown(j.booking); } }
+          } catch { /* best-effort */ }
+        }
         if (!isMounted) return;
-        setPaymentStatus('confirmed');
-        setFlowType(type);
-        setPaymentMessage(type === 'booking' ? copy.paymentBookingOk : copy.paymentOrderOk);
+        if (type === 'booking') setConfirmedBooking(bookingFromDb);
+        setPaymentStatus('confirmed'); setFlowType(type);
+        setPaymentMessage(type === 'booking' ? copy.paymentOkBooking : copy.paymentOkOrder);
         touchBookingActivity();
         if (type === 'booking') {
+          const tTotal = breakdownForBooking?.finalTotal ?? serviceCost;
+          const tDep = breakdownForBooking?.depositAmount ?? BOOKING_DEPOSIT_EUR;
+          const tRem = breakdownForBooking?.remainingAmount ?? Math.max(0, tTotal - tDep);
           markBookingSuccessForSession();
-          trackBehaviorEvent('payment_success', {
-            serviceId: effectiveService?.id,
-            slotId: effectiveSlot?.id,
-            price: effectivePrice || undefined,
-          });
-          trackEvent({
-            eventType: 'booking_success',
-            step: 6,
-            serviceId: effectiveService?.id,
-            slotId: effectiveSlot?.id,
-            metadata: {
-              source: 'stripe_confirm',
-              totalPrice: effectivePrice || null,
-              totalDuration: effectiveDuration || null,
-              deposit: DEPOSIT_EUROS,
-              remaining: effectivePrice ? Math.max(0, Number((effectivePrice - DEPOSIT_EUROS).toFixed(2))) : null,
-              serviceName: effectiveService?.name ?? null,
-            },
-          });
-          trackFunnelEvent({
-            event: 'payment_success',
-            serviceId: effectiveService?.id,
-            slotId: effectiveSlot?.id,
-            metadata: { totalPrice: effectivePrice, totalDuration: effectiveDuration, deposit: DEPOSIT_EUROS },
-            language,
-          });
+          trackBehaviorEvent('payment_success', { serviceId: effectiveService?.id, slotId: effectiveSlot?.id, price: tTotal || undefined });
+          trackEvent({ eventType: 'booking_success', step: 6, serviceId: effectiveService?.id, slotId: effectiveSlot?.id, metadata: { source: 'stripe_confirm', totalPrice: tTotal || null, totalDuration: bookingFromDb?.totalDuration ?? (effectiveDuration || null), deposit: tDep, remaining: tTotal > 0 ? Math.max(0, Number(tRem.toFixed(2))) : null, serviceName: effectiveService?.name ?? null } });
+          trackFunnelEvent({ event: 'payment_success', serviceId: effectiveService?.id, slotId: effectiveSlot?.id, metadata: { totalPrice: tTotal, totalDuration: bookingFromDb?.totalDuration ?? effectiveDuration, deposit: tDep }, language });
           clearBookingSession();
-        } else {
-          trackBehaviorEvent('shop_payment_success');
-        }
+        } else { trackBehaviorEvent('shop_payment_success'); }
       } catch (error) {
         console.error('Stripe confirm error:', error);
         if (!isMounted) return;
-        setPaymentStatus('error');
-        setPaymentMessage(copy.paymentFail);
+        setPaymentStatus('error'); setPaymentMessage(copy.paymentFail);
         trackBehaviorEvent('payment_failed', { reason: error instanceof Error ? error.message : 'verification_failed' });
       }
     };
-
     void verify();
-    return () => {
-      isMounted = false;
-    };
-  }, [searchParams, copy.paymentBookingOk, copy.paymentOrderOk, copy.paymentFail]);
+    return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, copy.paymentOkBooking, copy.paymentOkOrder, copy.paymentFail]);
 
   useEffect(() => {
     let mounted = true;
-    const loadRecommendations = async () => {
-      const configuredWeeks = Number(text('smart_settings_maintenance_weeks', text('repeat_booking_weeks', '4')));
-      const weeks = Number.isFinite(configuredWeeks) && configuredWeeks > 0 ? configuredWeeks : 4;
+    const load = async () => {
+      const weeks = Number(text('smart_settings_maintenance_weeks', text('repeat_booking_weeks', '4')));
+      const w = Number.isFinite(weeks) && weeks > 0 ? weeks : 4;
       const fromBase = selectedSlot ? new Date(`${selectedSlot.date}T00:00:00`) : new Date();
-      const from = new Date(fromBase);
-      from.setDate(from.getDate() + Math.max(weeks * 7 - 7, 14));
-      const to = new Date(fromBase);
-      to.setDate(to.getDate() + weeks * 7 + 7);
+      const from = new Date(fromBase); from.setDate(from.getDate() + Math.max(w * 7 - 7, 14));
+      const to = new Date(fromBase); to.setDate(to.getDate() + w * 7 + 7);
       try {
-        const response = await fetch(
-          `/api/slots?from=${from.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}&smart=1&lang=${language}&serviceDuration=${selectedService?.duration ?? 0}`,
-          { cache: 'no-store' }
-        );
+        const r = await fetch(`/api/slots?from=${from.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}&smart=1&lang=${language}&serviceDuration=${selectedService?.duration ?? 0}`, { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = (await r.json()) as { recommendedTimes?: TimeSlot[] };
+        if (mounted) setRecommendedMaintenanceSlots((d.recommendedTimes ?? []).filter((s) => s.available).slice(0, 3));
+      } catch (e) { console.error('Recommendations failed:', e); }
+    };
+    void load();
+    return () => { mounted = false; };
+  }, [language, selectedService?.duration, selectedSlot, text]);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const response = await fetch(`/api/products?lang=${language}`, { cache: 'force-cache' });
         if (!response.ok) return;
-        const data = (await response.json()) as { recommendedTimes?: TimeSlot[] };
-        if (!mounted) return;
-        setRecommendedMaintenanceSlots((data.recommendedTimes ?? []).filter((slot) => slot.available).slice(0, 3));
-      } catch (error) {
-        console.error('Success recommendations load failed:', error);
+        const data = (await response.json()) as { products?: SuccessProduct[] };
+        const all = data.products ?? [];
+        if (!all.length) return;
+        const serviceText = `${confirmedBooking?.serviceName ?? effectiveService?.name ?? ''} ${effectiveService?.category ?? ''}`.toLowerCase();
+        const scored = all
+          .map((product) => {
+            const textValue = `${product.name} ${product.description} ${product.category ?? ''}`.toLowerCase();
+            let score = 0;
+            if (serviceText.includes('pikendus') || serviceText.includes('extension')) {
+              if (textValue.includes('repair') || textValue.includes('seerum') || textValue.includes('serum')) score += 3;
+            }
+            if (serviceText.includes('gel') || serviceText.includes('manik')) {
+              if (textValue.includes('oil') || textValue.includes('õli') || textValue.includes('topcoat')) score += 3;
+            }
+            if (textValue.includes('care') || textValue.includes('hooldus')) score += 1;
+            return { product, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2)
+          .map((entry) => entry.product);
+        if (mounted) setPostBookingProducts(scored);
+      } catch {
+        // best-effort upsell
       }
     };
-
-    void loadRecommendations();
+    void run();
     return () => {
       mounted = false;
     };
-  }, [language, selectedService?.duration, selectedSlot, text]);
+  }, [confirmedBooking?.serviceName, effectiveService?.category, effectiveService?.name, language]);
 
   const handleNextBooking = () => {
-    const params = new URLSearchParams();
-    if (selectedService?.id) params.set('service', selectedService.id);
-    if (nextBookingSuggestion.startDate) params.set('date', nextBookingSuggestion.startDate);
-    if (selectedSlot?.time) params.set('time', selectedSlot.time);
-    router.push(`${L('/book')}?${params.toString()}`);
+    const p = new URLSearchParams();
+    if (selectedService?.id) p.set('service', selectedService.id);
+    if (nextBookingSuggestion.startDate) p.set('date', nextBookingSuggestion.startDate);
+    if (selectedSlot?.time) p.set('time', selectedSlot.time);
+    router.push(`${L('/book')}?${p.toString()}`);
   };
 
   const handleRecommendedMaintenance = (slot: TimeSlot) => {
-    const params = new URLSearchParams();
-    if (selectedService?.id) params.set('service', selectedService.id);
-    params.set('date', slot.date);
-    params.set('time', slot.time);
-    router.push(`${L('/book')}?${params.toString()}`);
+    const p = new URLSearchParams();
+    if (selectedService?.id) p.set('service', selectedService.id);
+    p.set('date', slot.date); p.set('time', slot.time);
+    router.push(`${L('/book')}?${p.toString()}`);
   };
 
   const handleInspirationTap = () => {
-    if (recommendedMaintenanceSlots[0]) {
-      handleRecommendedMaintenance(recommendedMaintenanceSlots[0]);
-      return;
-    }
+    if (recommendedMaintenanceSlots[0]) { handleRecommendedMaintenance(recommendedMaintenanceSlots[0]); return; }
     handleNextBooking();
   };
 
   const calendarUrl = useMemo(() => {
     if (!effectiveSlot || !effectiveService) return '';
     const start = new Date(`${effectiveSlot.date}T${effectiveSlot.time}:00`);
-    const end = new Date(start);
-    end.setMinutes(end.getMinutes() + (effectiveDuration || effectiveService.duration || 60));
-    const toGCal = (value: Date) =>
-      value
-        .toISOString()
-        .replace(/[-:]/g, '')
-        .split('.')[0] + 'Z';
+    const end = new Date(start); end.setMinutes(end.getMinutes() + (effectiveDuration || effectiveService.duration || 60));
+    const g = (v: Date) => v.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const title = encodeURIComponent(`Nailify — ${effectiveService.name}`);
-    const details = encodeURIComponent(
-      en ? 'Appointment with Sandra at Nailify Mustamäe.' : 'Aeg Sandraga Nailify Mustamäe stuudios.'
-    );
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${toGCal(start)}/${toGCal(end)}&details=${details}&location=${encodeURIComponent(copy.studio)}`;
-  }, [effectiveService, effectiveSlot, effectiveDuration, en, copy.studio]);
+    const details = encodeURIComponent(en ? 'Appointment with Sandra at Nailify Mustamäe.' : 'Aeg Sandraga Nailify Mustamäe stuudios.');
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${g(start)}/${g(end)}&details=${details}&location=${encodeURIComponent('Mustamäe tee 55, Tallinn')}`;
+  }, [effectiveService, effectiveSlot, effectiveDuration, en]);
 
-  const remainingStudio = Math.max(0, Math.round((effectivePrice - DEPOSIT_EUROS) * 100) / 100);
+  const remainingStudio = checkoutPricing ? Math.round(checkoutPricing.payLaterTotal * 100) / 100 : 0;
   const checkoutType = searchParams.get('type');
-  const isOrderCheckoutFlow = checkoutType === 'order';
-  const isBookingView =
-    !isOrderCheckoutFlow &&
-    (flowType === 'booking' ||
-      (flowType === null && (checkoutType === 'booking' || (!checkoutType && Boolean(effectiveSlot)))));
+  const isOrderFlow = checkoutType === 'order';
+  const isBookingView = !isOrderFlow && (flowType === 'booking' || (flowType === null && (checkoutType === 'booking' || (!checkoutType && Boolean(effectiveSlot)))));
+  const serviceDisplayName = confirmedBooking?.serviceName ? confirmedBooking.serviceName : effectiveService ? (en ? effectiveService.nameEn ?? effectiveService.name : effectiveService.nameEt ?? effectiveService.name) : '';
+  const durationDisplayMin = confirmedBooking?.totalDuration ?? effectiveDuration ?? effectiveService?.duration ?? 0;
 
-  const serviceDisplayName = effectiveService
-    ? en
-      ? effectiveService.nameEn ?? effectiveService.name
-      : effectiveService.nameEt ?? effectiveService.name
-    : '';
-
-  const durationDisplayMin = effectiveDuration || effectiveService?.duration || 0;
-
+  /* ─── Error state ─── */
   if (paymentStatus === 'error') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#faf8f6] px-4 py-16">
         <div className="max-w-md rounded-2xl border border-[#e8ddd8] bg-white p-8 text-center shadow-sm">
           <p className="text-[#5c4a52]">{paymentMessage}</p>
-          <button
-            type="button"
-            onClick={() => router.push(L('/'))}
-            className="mt-6 rounded-full bg-[#c24d86] px-6 py-3 text-sm font-semibold text-white"
-          >
-            {copy.backHome}
-          </button>
+          <button type="button" onClick={() => router.push(L('/'))} className="mt-6 rounded-full bg-[#c24d86] px-6 py-3 text-sm font-semibold text-white">{copy.backHome}</button>
         </div>
       </div>
     );
   }
 
+  /* ─── Order success ─── */
   if (flowType === 'order' && paymentStatus === 'confirmed') {
     return (
-      <div className="min-h-screen bg-[#faf9f7] px-4 pb-36 pt-12 sm:px-6 sm:pb-12 sm:pt-16">
+      <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_#fffdfa_0%,_#fbf7fa_52%,_#f8f4f7_100%)] px-4 pb-24 pt-12 sm:px-6 sm:pt-16">
         <div className="mx-auto max-w-md text-center">
-          <div className="success-check-ring mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f5eeef]">
-            <svg className="success-check-icon h-10 w-10 text-[#b85c8a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+          <div className="success-check-ring mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#f4edf1] shadow-[0_8px_24px_-14px_rgba(159,69,111,0.15)]">
+            <svg className="success-check-icon h-8 w-8 text-[#b85c8a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
           </div>
           <h1 className="font-brand text-2xl font-semibold text-[#2a2228]">{copy.orderHeadline}</h1>
-          <p className="mt-3 text-[#7a6d74]">{copy.orderSub}</p>
-          <p className="mt-2 text-xs text-[#a8989e]">
-            {copy.refLabel}: {bookingRef}
-          </p>
-          <button
-            type="button"
-            onClick={() => router.push(L('/shop'))}
-            className="mt-10 w-full rounded-full bg-[linear-gradient(135deg,#9c4d72_0%,#c24d86_50%,#a93d71_100%)] py-4 text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.45)]"
-          >
-            {copy.exploreShop}
-          </button>
-          <button type="button" onClick={() => router.push(L('/'))} className="mt-4 text-sm font-medium text-[#9d7a8a] underline underline-offset-2">
-            {copy.backHome}
-          </button>
+          <p className="mt-2 text-[#7a6d74]">{copy.orderSub}</p>
+          <p className="mt-1.5 text-[10px] uppercase tracking-widest text-[#b8a8b0]">{copy.ref}: {bookingRef}</p>
+          <button type="button" onClick={() => router.push(L('/shop'))} className="mt-8 w-full rounded-xl bg-[linear-gradient(135deg,#9c4d72_0%,#c24d86_50%,#a93d71_100%)] py-3.5 text-[15px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(194,77,134,0.4)]">{copy.exploreCta}</button>
+          <button type="button" onClick={() => router.push(L('/'))} className="mt-3 text-sm font-medium text-[#9d7a8a] underline underline-offset-2">{copy.backHome}</button>
         </div>
         <style jsx>{successStyles}</style>
       </div>
     );
   }
 
+  /* ─── Booking success ─── */
   return (
-    <div className="min-h-screen bg-[#faf9f7] pb-40 pt-8 sm:px-4 sm:pb-12 sm:pt-12 lg:pt-16">
-      <div className="mx-auto flex max-w-lg flex-col items-center px-4 sm:max-w-xl">
+    <div className="min-h-screen bg-[#f8f7f6] px-4 pb-14 pt-8 sm:pt-12">
+      <div className="mx-auto flex max-w-lg flex-col items-center">
+
         {paymentStatus === 'verifying' && (
-          <p className="mb-6 text-center text-sm text-[#8a7c84]">{copy.paymentVerifying}</p>
+          <div className="mb-5 flex items-center gap-2 rounded-full border border-[#ede5ea] bg-white px-4 py-2 shadow-sm">
+            <div className="h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-[#ede5ea] border-t-[#9f456f]" />
+            <span className="text-[13px] text-[#7a6d74]">{copy.verifying}</span>
+          </div>
         )}
 
-        {paymentStatus === 'confirmed' && isBookingView && (
-          <p className="mb-4 text-center text-sm text-[#9d8a96]">{paymentMessage}</p>
-        )}
-
-        <div className="success-check-ring mb-8 flex h-[5.5rem] w-[5.5rem] items-center justify-center rounded-full bg-[#f3ecee] shadow-[0_12px_32px_-20px_rgba(194,77,134,0.2)]">
-          <svg
-            className="success-check-icon h-11 w-11 text-[#b85c8a]"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.65}
-          >
+        {/* ─── Hero ─── */}
+        <div className="success-check-ring mb-4 flex h-[5rem] w-[5rem] items-center justify-center rounded-full bg-[#FFF5F9] shadow-[0_8px_24px_-12px_rgba(159,69,111,0.15)]">
+          <svg className="success-check-icon h-10 w-10 text-[#9f456f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
-        <h1 className="success-stagger-1 text-center font-brand text-[1.75rem] font-semibold leading-tight tracking-tight text-[#2a2228] sm:text-[2rem] sm:text-[2.15rem]">
+        <h1 className="success-stagger-1 text-center font-brand text-[1.65rem] font-semibold leading-tight tracking-tight text-[#2a2228] sm:text-[1.9rem]">
           {isBookingView ? copy.heroHeadline : copy.orderHeadline}
         </h1>
-        <p className="success-stagger-2 mx-auto mt-3 max-w-[34ch] text-center text-[15px] leading-relaxed text-[#6d6268]">
-          {isBookingView ? copy.heroSubtext : copy.orderSub}
+        <p className="success-stagger-2 mx-auto mt-2.5 max-w-[34ch] whitespace-pre-line text-center text-[14px] leading-relaxed text-[#6d6268]">
+          {isBookingView ? copy.heroSub : copy.orderSub}
         </p>
-        {isBookingView ? (
-          <p className="success-stagger-3 mt-4 text-center text-[14px] font-medium text-[#7a6d74]">
-            {copy.heroMicroLine}
-          </p>
-        ) : (
-          <p className="mt-4 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-[#c9aeb8]">
-            {copy.refLabel} · {bookingRef}
+
+        {paymentStatus === 'confirmed' && isBookingView && (
+          <p className="success-stagger-3 mt-3 rounded-full border border-[#e8dce4] bg-white px-4 py-1.5 text-[11px] font-medium text-[#9f456f] shadow-sm">
+            {paymentMessage}
           </p>
         )}
 
-        {isBookingView && selectedService && (
+        {isBookingView && effectiveService && (
           <>
-            <section className="success-stagger-4 mt-10 w-full rounded-[22px] border border-[#ebe6e3] bg-white p-5 shadow-[0_20px_48px_-32px_rgba(45,35,40,0.12)] sm:p-6">
-              <div className="space-y-3 text-sm">
+            {/* ─── Booking Summary Card ─── */}
+            <section className="success-stagger-4 mt-7 w-full rounded-[24px] border border-[#efefef] bg-white shadow-[0_8px_40px_-16px_rgba(0,0,0,0.07)]">
+              <div className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">
-                      {en ? 'Booking summary' : 'Broneeringu kokkuvõte'}
-                    </p>
-                    <p className="mt-2 text-[16px] font-semibold text-[#2f282c]">{serviceDisplayName}</p>
-                    {selectedSlot && (
-                      <p className="mt-1 text-[14px] font-medium text-[#7a6d74]">
-                        {new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}{' '}
-                        · {selectedSlot.time}
+                    <p className="text-[17px] font-semibold text-[#2f282c]">{serviceDisplayName}</p>
+                    {effectiveSlot && (
+                      <p className="mt-1 text-[13px] text-[#6d6268]">
+                        {new Date(effectiveSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', { weekday: 'long', day: 'numeric', month: 'long' })}{' · '}{effectiveSlot.time}
                       </p>
                     )}
                   </div>
+                  <span className="shrink-0 rounded-lg bg-[#f8f4f6] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#a898a8]">{bookingRef}</span>
                 </div>
 
-                <div className="mt-1 grid grid-cols-2 gap-3">
+                <div className="mt-4 grid grid-cols-3 gap-3 border-t border-[#f2eaed] pt-3 text-[12px]">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#a8989e]">{copy.summaryDurationLabel}</p>
-                    <p className="mt-1 text-[14px] font-semibold text-[#2f282c]">{durationDisplayMin} min</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#b8a8b0]">{copy.durationLabel}</p>
+                    <p className="mt-0.5 font-semibold text-[#2f282c]">{durationDisplayMin} min</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#a8989e]">{copy.summaryStudioLabel}</p>
-                    <p className="mt-1 text-[13px] font-medium text-[#5d5258]">{copy.studio}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#b8a8b0]">{copy.techLabel}</p>
+                    <p className="mt-0.5 font-semibold text-[#2f282c]">Sandra</p>
                   </div>
-                </div>
-
-                <p className="mt-1 text-[13px] font-medium text-[#3d3539]">
-                  {copy.summaryTechnicianLabel}: {copy.specialist}
-                </p>
-              </div>
-
-              <div className="my-5 h-px bg-[#efeae7]" />
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#6d6268]">{copy.breakdownServiceTotalLabel}</span>
-                  <span className="font-semibold tabular-nums text-[#2f282c]">
-                    €{effectivePrice || effectiveService?.price}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#6d6268]">{copy.breakdownDepositPaidLabel}</span>
-                  <span className="font-semibold tabular-nums text-[#b04b80]">€{DEPOSIT_EUROS}</span>
-                </div>
-
-                <div className="rounded-xl border border-[#f0d6e3] bg-[#fff4fb] px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-semibold text-[#6a3b57]">{copy.breakdownPayAtSalonLabel}</span>
-                    <span className="text-[15px] font-bold tabular-nums text-[#b04b80]">€{remainingStudio}</span>
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#b8a8b0]">{copy.locationLabel}</p>
+                    <p className="mt-0.5 font-medium text-[#5d5258]">Mustamäe</p>
                   </div>
                 </div>
               </div>
 
-              <p className="mt-3 text-xs font-medium leading-relaxed text-[#7a6d74]">{copy.depositTrustNote}</p>
+              {/* Financial breakdown */}
+              <div className="border-t border-[#f2eaed] px-5 py-4 text-[13px]">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-[#6d6268]">{copy.serviceTotalLabel}</span>
+                    <span className="font-semibold tabular-nums text-[#2f282c]">{`€${serviceCost}`}</span>
+                  </div>
+                  {productsTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-[#6d6268]">{en ? 'Products' : 'Tooted'}</span>
+                      <span className="font-semibold tabular-nums text-[#2f282c]">{`€${productsTotal}`}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-[#6d6268]">{copy.depositLabel}</span>
+                    <span className="font-semibold tabular-nums text-[#9f456f]">{`€${checkoutPricing?.depositAmount ?? depositPaidForCard}`}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6d6268]">{en ? 'Paid at checkout' : 'Makstud'}</span>
+                    <span className="font-semibold tabular-nums text-[#2f282c]">{`€${payNowTotal}`}</span>
+                  </div>
+                </div>
+                {remainingStudio > 0 && (
+                  <div className="mt-2.5 flex items-center justify-between rounded-xl bg-[#fff9fc] px-3.5 py-2">
+                    <span className="text-[12px] font-semibold text-[#6a3b57]">{copy.remainLabel}</span>
+                    <span className="text-[16px] font-bold tabular-nums text-[#9f456f]">{`€${remainingStudio}`}</span>
+                  </div>
+                )}
+
+                {confirmedBooking?.products?.length ? (
+                  <div className="mt-3 border-t border-[#f2eaed] pt-2.5">
+                    <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#b8a8b0]">{en ? 'Products' : 'Tooted'}</p>
+                    {confirmedBooking.products.map((p) => (
+                      <div key={p.productId} className="py-0.5 text-[12px]">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate text-[#2f282c]">{p.name}{p.quantity > 1 ? ` ×${p.quantity}` : ''}</span>
+                          <span className="shrink-0 font-semibold tabular-nums text-[#9f456f]">{`€${p.unitPrice * p.quantity}`}</span>
+                        </div>
+                        <p className="text-[10px] text-[#9a8a94]">
+                          {p.deliveryMethod === 'home_delivery' ? copy.home : copy.pickup}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <p className="mt-3 text-[11px] leading-relaxed text-[#8a7a85]">{copy.depositNote}</p>
+              </div>
             </section>
 
-            <section className="success-stagger-5 mt-8 w-full">
+            {/* ─── Actions ─── */}
+            <section className="success-stagger-5 mt-4 w-full space-y-2.5">
               <a
                 href={calendarUrl || '#'}
                 target="_blank"
                 rel="noreferrer"
-                className={`block w-full rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] py-4 text-center text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.4)] ${
-                  !calendarUrl ? 'pointer-events-none opacity-40' : ''
-                }`}
+                className={`flex h-[52px] w-full items-center justify-center gap-2 rounded-[14px] bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-[15px] font-semibold text-white shadow-[0_10px_28px_-12px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.98] ${!calendarUrl ? 'pointer-events-none opacity-40' : ''}`}
               >
-                {copy.addCalendar}
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                {copy.calendarCta}
               </a>
-              <p className="mt-2 text-center text-xs font-medium text-[#a8989e]">{copy.calendarHelper}</p>
+              <p className="text-center text-[11px] text-[#a898a8]">{copy.calendarHelper}</p>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => router.push(L('/shop'))}
-                  className="rounded-full border-2 border-[#e0d5d9] bg-white py-3.5 text-[15px] font-semibold text-[#5d4a56] hover:bg-[#fff7fc] transition-colors duration-200"
-                >
-                  {copy.secondaryProductsCta}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNextBooking}
-                  className="rounded-full border border-[#eadce5] bg-[#fffcfb] py-3.5 text-[15px] font-semibold text-[#8b5c72] hover:bg-[#fff5f8] transition-colors duration-200"
-                >
-                  {copy.secondaryBookNewCta}
-                </button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <button type="button" onClick={() => router.push(L('/shop'))} className="flex h-[44px] items-center justify-center rounded-[12px] border border-[#e8e8e8] bg-white text-[13px] font-semibold text-[#555] transition hover:bg-[#fafafa]">{copy.productsCta}</button>
+                <button type="button" onClick={handleNextBooking} className="flex h-[44px] items-center justify-center rounded-[12px] border border-[#e8e8e8] bg-white text-[13px] font-semibold text-[#9f456f] transition hover:bg-[#fff5f9]">{copy.bookNewCta}</button>
               </div>
             </section>
 
-            <section className="success-stagger-6 mt-10 w-full">
-              <h2 className="text-left text-[13px] font-semibold tracking-tight text-[#2f282c]">
-                {copy.inspirationTitle}
-              </h2>
-              <div className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 success-inspiration-strip">
-                {galleryUrls.map((url, i) => (
-                  <button
-                    key={`${url}-${i}`}
-                    type="button"
-                    onClick={handleInspirationTap}
-                    className="success-inspiration-card group relative h-[128px] w-[168px] shrink-0 snap-start overflow-hidden rounded-2xl border border-[#ebe6e3] bg-[#f5f0ed] transition-shadow duration-200 hover:shadow-[0_18px_44px_-24px_rgba(194,77,134,0.35)]"
-                    aria-label={en ? 'Open related service' : 'Ava seotud teenus'}
-                  >
-                    <Image
-                      src={url}
-                      alt=""
-                      fill
-                      unoptimized
-                      className="object-cover transition-transform duration-300 group-hover:scale-[1.06]"
-                      sizes="168px"
-                    />
-                  </button>
+            {postBookingProducts.length > 0 && (
+              <section className="success-stagger-5 mt-4 w-full rounded-[18px] border border-[#efe3e9] bg-white p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">{copy.postCareTitle}</p>
+                <p className="mt-1 text-[12px] text-[#7a6a72]">{copy.postCareBody}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {postBookingProducts.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => router.push(L(`/shop/${product.id}`))}
+                      className="rounded-[12px] border border-[#f0e8ec] bg-[#fffafd] p-3 text-left"
+                    >
+                      <p className="line-clamp-2 text-[12px] font-semibold text-[#2f282c]">{product.name}</p>
+                      <p className="mt-1 text-[11px] text-[#7a6d74]">€{product.price}</p>
+                      <p className="mt-2 text-[10px] text-[#9f456f]">{copy.addWithVisit}</p>
+                      <p className="text-[10px] text-[#a898a8]">{copy.shipWithVisit}</p>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ─── What happens next ─── */}
+            <section className="success-stagger-5 mt-5 w-full rounded-[18px] border border-[#f0f0f0] bg-white p-4">
+              <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">{copy.nextTitle}</p>
+              <div className="space-y-2.5">
+                {[copy.next1, copy.next2, copy.next3].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#f4edf1] text-[10px] font-bold text-[#9f456f]">{i + 1}</span>
+                    <span className="text-[13px] text-[#5d5258]">{item}</span>
+                  </div>
                 ))}
               </div>
             </section>
 
-            {showRepeatOffer && (
-              <section className="success-stagger-7 mt-10 w-full rounded-2xl border border-[#ebe6e3] bg-[#fffcfb] px-5 py-5">
-                <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-[#b898a4]">{copy.retentionTitle}</h2>
-                <p className="mt-2 text-sm text-[#6d6268]">{copy.retentionBody}</p>
+            {/* ─── Inspiration ─── */}
+            <section className="success-stagger-6 mt-6 w-full">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">{copy.inspirationTitle}</p>
+              <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 success-inspiration-strip">
+                {galleryUrls.map((url, i) => (
+                  <button key={`${url}-${i}`} type="button" onClick={handleInspirationTap} className="group relative h-[102px] w-[150px] shrink-0 snap-start overflow-hidden rounded-xl border border-[#f0e8ec] bg-[#f5f0ed] shadow-[0_10px_24px_-18px_rgba(159,69,111,0.32)] transition-shadow hover:shadow-[0_14px_30px_-16px_rgba(159,69,111,0.30)]" aria-label={en ? 'Open related service' : 'Ava seotud teenus'}>
+                    <Image src={url} alt="" fill unoptimized className="object-cover transition-transform duration-300 group-hover:scale-[1.04]" sizes="130px" />
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-center text-[11px] text-[#a898a8]">{copy.maintenanceHint}</p>
+            </section>
 
-                <button
-                  type="button"
-                  onClick={handleNextBooking}
-                  className="mt-4 w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_36px_-16px_rgba(194,77,134,0.4)] hover:shadow-[0_20px_46px_-18px_rgba(194,77,134,0.35)] transition-shadow duration-200"
-                >
-                  {copy.retentionPrimary}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowRepeatOffer(false)}
-                  className="mt-2 w-full text-center text-xs font-semibold text-[#a8989e] hover:text-[#8a7a88] transition-colors duration-200"
-                >
-                  {copy.retentionSecondary}
-                </button>
+            {/* ─── Retention ─── */}
+            {showRepeatOffer && (
+              <section className="success-stagger-7 mt-6 w-full rounded-[18px] border border-[#efefef] bg-white p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#aaa]">{copy.retentionTitle}</p>
+                <p className="mt-2 text-[14px] leading-relaxed text-[#555]">{copy.retentionBody}</p>
+                <p className="mt-1 text-[12px] text-[#999]">{en ? 'Most clients book their next time today.' : 'Enamus kliente broneerib järgmise aja juba täna.'}</p>
+                <button type="button" onClick={handleNextBooking} className="mt-4 h-[48px] w-full rounded-[14px] bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-[14px] font-semibold text-white shadow-[0_10px_28px_-12px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.98]">{copy.retentionCta}</button>
+                <button type="button" onClick={() => setShowRepeatOffer(false)} className="mt-2 w-full text-center text-[11px] font-medium text-[#aaa] hover:text-[#888]">{copy.retentionDismiss}</button>
               </section>
             )}
           </>
         )}
 
         {!isBookingView && paymentStatus === 'confirmed' && (
-          <div className="mt-10 hidden w-full sm:block">
-            <button
-              type="button"
-              onClick={() => router.push(L('/shop'))}
-              className="w-full rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] py-4 text-[15px] font-semibold text-white"
-            >
-              {copy.exploreShop}
-            </button>
+          <div className="mt-8 hidden w-full sm:block">
+            <button type="button" onClick={() => router.push(L('/shop'))} className="h-[50px] w-full rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#c24d86_48%,#a93d71_100%)] text-[15px] font-semibold text-white">{copy.exploreCta}</button>
           </div>
         )}
 
-        <p className="mt-12 text-center text-xs text-[#b5a8ad]">{copy.footerQuestions}</p>
+        <p className="mt-8 text-center text-[11px] text-[#b5a8ad]">{copy.footer}</p>
       </div>
 
       <style jsx>{successStyles}</style>
@@ -620,96 +585,35 @@ function SuccessPageContent() {
 }
 
 const successStyles = `
-  @keyframes success-check-pulse {
-    0% {
-      transform: scale(0.8);
-      opacity: 0;
-      filter: saturate(0.9);
-    }
-    45% {
-      transform: scale(1.08);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-      filter: saturate(1);
-    }
+  @keyframes success-check-spring {
+    0% { transform: scale(0.5); opacity: 0; }
+    40% { transform: scale(1.15); opacity: 1; }
+    60% { transform: scale(0.92); }
+    75% { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 1; }
   }
-
-  .success-check-icon {
-    animation: success-check-pulse 0.85s cubic-bezier(0.22, 0.8, 0.22, 1) both;
-  }
-
+  .success-check-icon { animation: success-check-spring 0.85s cubic-bezier(0.22,0.68,0,1) both; }
   @keyframes success-fade-up {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-
-  .success-stagger-1 {
-    animation: success-fade-up 520ms ease-out both;
-  }
-  .success-stagger-2 {
-    animation: success-fade-up 520ms ease-out both;
-    animation-delay: 80ms;
-  }
-  .success-stagger-3 {
-    animation: success-fade-up 520ms ease-out both;
-    animation-delay: 140ms;
-  }
-  .success-stagger-4 {
-    animation: success-fade-up 520ms ease-out both;
-    animation-delay: 220ms;
-  }
-  .success-stagger-5 {
-    animation: success-fade-up 520ms ease-out both;
-    animation-delay: 280ms;
-  }
-  .success-stagger-6 {
-    animation: success-fade-up 520ms ease-out both;
-    animation-delay: 340ms;
-  }
-  .success-stagger-7 {
-    animation: success-fade-up 520ms ease-out both;
-    animation-delay: 410ms;
-  }
-
+  .success-stagger-1 { animation: success-fade-up 440ms ease-out both; }
+  .success-stagger-2 { animation: success-fade-up 440ms ease-out both; animation-delay: 60ms; }
+  .success-stagger-3 { animation: success-fade-up 440ms ease-out both; animation-delay: 110ms; }
+  .success-stagger-4 { animation: success-fade-up 440ms ease-out both; animation-delay: 180ms; }
+  .success-stagger-5 { animation: success-fade-up 440ms ease-out both; animation-delay: 240ms; }
+  .success-stagger-6 { animation: success-fade-up 440ms ease-out both; animation-delay: 300ms; }
+  .success-stagger-7 { animation: success-fade-up 440ms ease-out both; animation-delay: 360ms; }
   @media (prefers-reduced-motion: reduce) {
-    .success-check-icon {
-      animation: none;
-    }
-    .success-stagger-1,
-    .success-stagger-2,
-    .success-stagger-3,
-    .success-stagger-4,
-    .success-stagger-5,
-    .success-stagger-6,
-    .success-stagger-7 {
-      animation: none;
-    }
+    .success-check-icon, .success-stagger-1, .success-stagger-2, .success-stagger-3,
+    .success-stagger-4, .success-stagger-5, .success-stagger-6, .success-stagger-7 { animation: none; }
   }
-
-  .success-inspiration-strip {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
+  .success-inspiration-strip { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 `;
 
 export default function SuccessPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#faf9f7] p-4 text-[#8a7c84]">
-          Loading…
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#faf9f7] p-4 text-[#8a7c84]">Loading…</div>}>
       <SuccessPageContent />
     </Suspense>
   );

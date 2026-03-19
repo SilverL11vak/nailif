@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { getAnalyticsEnabled } from '@/lib/app-settings';
 import { insertSlotClick } from '@/lib/analytics';
 
 export async function POST(request: Request) {
   try {
+    if (!(await getAnalyticsEnabled())) return NextResponse.json({ ok: true });
     const payload = (await request.json()) as { sessionId?: string; slotId?: string };
     if (!payload?.sessionId || typeof payload.sessionId !== 'string') {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });

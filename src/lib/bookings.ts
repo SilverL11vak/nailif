@@ -1,20 +1,40 @@
 import { sql } from './db';
 import { isDatabaseMigrated } from './schema-validator';
-import type { AddOn, ContactInfo, Service, TimeSlot } from '@/store/booking-types';
+import type {
+  AddOn,
+  ContactInfo,
+  Service,
+  TimeSlot,
+  BookingProductSelection,
+  BookingPricingSnapshot,
+} from '@/store/booking-types';
 // Customer linking happens only after verified payment success.
 
+/** Service for booking: when variant is selected, id is parent service id and variantId is set. */
+export interface BookingServicePayload extends Service {
+  variantId?: string;
+}
+
 export interface BookingInsert {
-  service: Service;
+  service: BookingServicePayload;
   slot: TimeSlot;
   contact: ContactInfo;
   addOns: AddOn[];
   totalPrice: number;
   totalDuration: number;
+  products: BookingProductSelection[];
+  productsTotalPrice: number;
   source: 'guided' | 'fast';
+  /**
+   * Used to localize product display names/descriptions when storing the booking snapshot.
+   * Not persisted as a separate column.
+   */
+  locale?: 'en' | 'et';
   status?: string;
   paymentStatus?: 'unpaid' | 'pending' | 'paid' | 'failed';
   depositAmount?: number;
   stripeSessionId?: string | null;
+  pricingSnapshot?: BookingPricingSnapshot;
 }
 
 export interface BookingRecord {
@@ -38,9 +58,12 @@ export interface BookingRecord {
   addOns: AddOn[];
   totalPrice: number;
   totalDuration: number;
+  products: BookingProductSelection[];
+  productsTotalPrice: number;
   paymentStatus: string;
   depositAmount: number;
   stripeSessionId: string | null;
+  pricingSnapshot: BookingPricingSnapshot | null;
   paidAt: string | null;
   paymentMethod: string | null;
   stripePaymentIntentId: string | null;
@@ -91,9 +114,12 @@ async function ensureBookingsTableInternal() {
       add_ons_json JSONB NOT NULL DEFAULT '[]'::jsonb,
       total_price INTEGER NOT NULL,
       total_duration INTEGER NOT NULL,
+      products_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      products_total_price INTEGER NOT NULL DEFAULT 0,
       payment_status TEXT NOT NULL DEFAULT 'unpaid',
       deposit_amount INTEGER NOT NULL DEFAULT 0,
       stripe_session_id TEXT,
+      pricing_snapshot_json JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
@@ -101,10 +127,14 @@ async function ensureBookingsTableInternal() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_amount INTEGER NOT NULL DEFAULT 0`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stripe_session_id TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pricing_snapshot_json JSONB`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS contact_notes TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_image TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS current_nail_image TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS inspiration_note TEXT`;
+
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS products_json JSONB NOT NULL DEFAULT '[]'::jsonb`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS products_total_price INTEGER NOT NULL DEFAULT 0`;
   
   // Webhook-related columns
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ`;
@@ -122,6 +152,8 @@ async function ensureBookingsTableInternal() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_name_snapshot TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_email_snapshot TEXT`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_phone_snapshot TEXT`;
+
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_variant_id TEXT`;
 
   // Atomic conflict prevention: one non-cancelled booking per slot date+time.
   // Treats reserved/pending bookings as taken immediately.
@@ -166,12 +198,35 @@ export async function ensureBookingsTable() {
   await bookingsEnsurePromise;
 }
 
+/**
+ * Cancel abandoned pending_payment bookings for a specific slot.
+ * A booking is considered abandoned if it has been in pending_payment
+ * status for longer than the TTL (30 minutes).  This frees the slot
+ * for new bookings and removes the unique-index conflict.
+ */
+export async function cancelExpiredPendingBookingsForSlot(slotDate: string, slotTime: string) {
+  const result = await sql`
+    UPDATE bookings
+    SET status = 'cancelled',
+        payment_status = 'failed'
+    WHERE slot_date = ${slotDate}::date
+      AND slot_time = ${slotTime}
+      AND status = 'pending_payment'
+      AND created_at < NOW() - INTERVAL '30 minutes'
+  `;
+  if (result.count && result.count > 0) {
+    console.log(`[bookings] Cancelled ${result.count} expired pending_payment booking(s) for ${slotDate} ${slotTime}`);
+  }
+  return result.count ?? 0;
+}
+
 export async function insertBooking(data: BookingInsert) {
   const [row] = await sql<[{ id: number; created_at: string }]>`
     INSERT INTO bookings (
       source,
       status,
       service_id,
+      service_variant_id,
       service_name,
       service_duration,
       service_price,
@@ -189,9 +244,12 @@ export async function insertBooking(data: BookingInsert) {
       add_ons_json,
       total_price,
       total_duration,
+      products_json,
+      products_total_price,
       payment_status,
       deposit_amount,
       stripe_session_id,
+      pricing_snapshot_json,
       customer_id,
       customer_name_snapshot,
       customer_email_snapshot,
@@ -200,6 +258,7 @@ export async function insertBooking(data: BookingInsert) {
       ${data.source},
       ${data.status ?? 'confirmed'},
       ${data.service.id},
+      ${(data.service as BookingServicePayload).variantId ?? null},
       ${data.service.name},
       ${data.service.duration},
       ${data.service.price},
@@ -217,9 +276,12 @@ export async function insertBooking(data: BookingInsert) {
       ${JSON.stringify(data.addOns)},
       ${data.totalPrice},
       ${data.totalDuration},
+      ${JSON.stringify(data.products ?? [])},
+      ${data.productsTotalPrice ?? 0},
       ${data.paymentStatus ?? 'unpaid'},
       ${data.depositAmount ?? 0},
       ${data.stripeSessionId ?? null},
+      ${data.pricingSnapshot ? JSON.stringify(data.pricingSnapshot) : null},
       NULL,
       ${`${data.contact.firstName} ${data.contact.lastName ?? ''}`.trim()},
       ${data.contact.email ?? null},
@@ -258,9 +320,12 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
     add_ons_json: AddOn[] | string;
     total_price: number;
     total_duration: number;
+    products_json: BookingProductSelection[] | string;
+    products_total_price: number;
     payment_status: string;
     deposit_amount: number;
     stripe_session_id: string | null;
+    pricing_snapshot_json: BookingPricingSnapshot | string | null;
     paid_at: string | null;
     payment_method: string | null;
     stripe_payment_intent_id: string | null;
@@ -287,9 +352,12 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       add_ons_json,
       total_price,
       total_duration,
+      products_json,
+      products_total_price,
       payment_status,
       deposit_amount,
       stripe_session_id,
+      pricing_snapshot_json,
       paid_at::text,
       payment_method,
       stripe_payment_intent_id,
@@ -301,6 +369,8 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
 
   return rows.map((row) => {
     let addOns: AddOn[] = [];
+    let products: BookingProductSelection[] = [];
+    let pricingSnapshot: BookingPricingSnapshot | null = null;
     if (Array.isArray(row.add_ons_json)) {
       addOns = row.add_ons_json;
     } else if (typeof row.add_ons_json === 'string') {
@@ -308,6 +378,26 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
         addOns = JSON.parse(row.add_ons_json) as AddOn[];
       } catch {
         addOns = [];
+      }
+    }
+
+    if (Array.isArray(row.products_json)) {
+      products = row.products_json as BookingProductSelection[];
+    } else if (typeof row.products_json === 'string') {
+      try {
+        products = JSON.parse(row.products_json) as BookingProductSelection[];
+      } catch {
+        products = [];
+      }
+    }
+
+    if (row.pricing_snapshot_json && typeof row.pricing_snapshot_json === 'object') {
+      pricingSnapshot = row.pricing_snapshot_json as BookingPricingSnapshot;
+    } else if (typeof row.pricing_snapshot_json === 'string') {
+      try {
+        pricingSnapshot = JSON.parse(row.pricing_snapshot_json) as BookingPricingSnapshot;
+      } catch {
+        pricingSnapshot = null;
       }
     }
 
@@ -332,15 +422,159 @@ export async function listBookings(limit = 100): Promise<BookingRecord[]> {
       addOns,
       totalPrice: row.total_price,
       totalDuration: row.total_duration,
+      products,
+      productsTotalPrice: row.products_total_price,
       paymentStatus: row.payment_status,
       depositAmount: row.deposit_amount,
       stripeSessionId: row.stripe_session_id,
+      pricingSnapshot,
       paidAt: row.paid_at,
       paymentMethod: row.payment_method,
       stripePaymentIntentId: row.stripe_payment_intent_id,
       createdAt: row.created_at,
     };
   });
+}
+
+export async function getBookingByStripeSessionId(stripeSessionId: string): Promise<BookingRecord | null> {
+  await ensureBookingsTable();
+
+  const rows = await sql<{
+    id: number;
+    source: 'guided' | 'fast';
+    status: string;
+    service_name: string;
+    service_id: string;
+    service_duration: number;
+    service_price: number;
+    slot_date: string;
+    slot_time: string;
+    contact_first_name: string;
+    contact_last_name: string | null;
+    contact_phone: string;
+    contact_email: string | null;
+    contact_notes: string | null;
+    inspiration_image: string | null;
+    current_nail_image: string | null;
+    inspiration_note: string | null;
+    add_ons_json: AddOn[] | string;
+    total_price: number;
+    total_duration: number;
+    products_json: BookingProductSelection[] | string;
+    products_total_price: number;
+    payment_status: string;
+    deposit_amount: number;
+    stripe_session_id: string | null;
+    pricing_snapshot_json: BookingPricingSnapshot | string | null;
+    paid_at: string | null;
+    payment_method: string | null;
+    stripe_payment_intent_id: string | null;
+    created_at: string;
+  }[]>`
+    SELECT
+      id,
+      source,
+      status,
+      service_name,
+      service_id,
+      service_duration,
+      service_price,
+      slot_date::text,
+      slot_time,
+      contact_first_name,
+      contact_last_name,
+      contact_phone,
+      contact_email,
+      contact_notes,
+      inspiration_image,
+      current_nail_image,
+      inspiration_note,
+      add_ons_json,
+      total_price,
+      total_duration,
+      products_json,
+      products_total_price,
+      payment_status,
+      deposit_amount,
+      stripe_session_id,
+      pricing_snapshot_json,
+      paid_at::text,
+      payment_method,
+      stripe_payment_intent_id,
+      created_at::text
+    FROM bookings
+    WHERE stripe_session_id = ${stripeSessionId}
+    LIMIT 1
+  `;
+
+  const row = rows[0];
+  if (!row) return null;
+
+  let addOns: AddOn[] = [];
+  if (Array.isArray(row.add_ons_json)) {
+    addOns = row.add_ons_json;
+  } else if (typeof row.add_ons_json === 'string') {
+    try {
+      addOns = JSON.parse(row.add_ons_json) as AddOn[];
+    } catch {
+      addOns = [];
+    }
+  }
+
+  let products: BookingProductSelection[] = [];
+  let pricingSnapshot: BookingPricingSnapshot | null = null;
+  if (Array.isArray(row.products_json)) {
+    products = row.products_json as BookingProductSelection[];
+  } else if (typeof row.products_json === 'string') {
+    try {
+      products = JSON.parse(row.products_json) as BookingProductSelection[];
+    } catch {
+      products = [];
+    }
+  }
+
+  if (row.pricing_snapshot_json && typeof row.pricing_snapshot_json === 'object') {
+    pricingSnapshot = row.pricing_snapshot_json as BookingPricingSnapshot;
+  } else if (typeof row.pricing_snapshot_json === 'string') {
+    try {
+      pricingSnapshot = JSON.parse(row.pricing_snapshot_json) as BookingPricingSnapshot;
+    } catch {
+      pricingSnapshot = null;
+    }
+  }
+
+  return {
+    id: String(row.id),
+    source: row.source,
+    status: row.status,
+    serviceName: row.service_name,
+    serviceId: row.service_id,
+    serviceDuration: row.service_duration,
+    servicePrice: row.service_price,
+    slotDate: row.slot_date,
+    slotTime: row.slot_time,
+    contactFirstName: row.contact_first_name,
+    contactLastName: row.contact_last_name,
+    contactPhone: row.contact_phone,
+    contactEmail: row.contact_email,
+    contactNotes: row.contact_notes,
+    inspirationImage: row.inspiration_image,
+    currentNailImage: row.current_nail_image,
+    inspirationNote: row.inspiration_note,
+    addOns,
+    totalPrice: row.total_price,
+    totalDuration: row.total_duration,
+    products,
+    productsTotalPrice: row.products_total_price,
+    paymentStatus: row.payment_status,
+    depositAmount: row.deposit_amount,
+    stripeSessionId: row.stripe_session_id,
+    pricingSnapshot,
+    paidAt: row.paid_at,
+    paymentMethod: row.payment_method,
+    stripePaymentIntentId: row.stripe_payment_intent_id,
+    createdAt: row.created_at,
+  };
 }
 
 export async function listBookingsCompact(limit = 100): Promise<BookingRecordCompact[]> {

@@ -64,10 +64,15 @@ export async function listResolvedSlotsInRange(input: {
     WITH booked AS (
       -- Deduplicate bookings by slot date+time so one time_slots row
       -- maps to exactly one resolved slot status.
+      -- Expired pending_payment bookings (>30 min old) are treated as abandoned
+      -- and do NOT block slots.
       SELECT DISTINCT slot_date, slot_time
       FROM bookings
-      WHERE status <> 'cancelled'
-        AND slot_date BETWEEN ${input.from}::date AND ${input.to}::date
+      WHERE slot_date BETWEEN ${input.from}::date AND ${input.to}::date
+        AND (
+          status IN ('confirmed', 'completed')
+          OR (status = 'pending_payment' AND created_at > NOW() - INTERVAL '30 minutes')
+        )
     )
     SELECT
       ts.id,

@@ -3,7 +3,7 @@
  * All date/time handling uses Europe/Tallinn (EET/EEST) timezone
  */
 
-const TALLINN_TIMEZONE = 'Europe/Tallinn';
+export const TALLINN_TIMEZONE = 'Europe/Tallinn';
 
 /**
  * Get today's date in YYYY-MM-DD format in Europe/Tallinn timezone

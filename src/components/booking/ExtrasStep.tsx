@@ -6,15 +6,14 @@ import { useBookingAddOns } from '@/hooks/use-booking-addons';
 
 export function ExtrasStep() {
   const { t, language } = useTranslation();
-  useBookingAddOns();
+  const selectedService = useBookingStore((state) => state.selectedService);
+  useBookingAddOns(selectedService?.id ?? null);
 
   const selectedAddOns = useBookingStore((state) => state.selectedAddOns);
   const toggleAddOn = useBookingStore((state) => state.toggleAddOn);
   const nextStep = useBookingStore((state) => state.nextStep);
   const totalPrice = useBookingStore((state) => state.totalPrice);
   const totalDuration = useBookingStore((state) => state.totalDuration);
-  const selectedService = useBookingStore((state) => state.selectedService);
-
   const selectedCount = selectedAddOns.filter((a) => a.selected).length;
   const selectedExtrasTotal = selectedAddOns.filter((a) => a.selected).reduce((sum, a) => sum + a.price, 0);
   const mostPopularId =
@@ -23,7 +22,10 @@ export function ExtrasStep() {
   return (
     <div className="animate-fade-in">
       <div className="mb-8 text-center md:mb-10">
-        <h2 className="font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2622] md:text-[1.85rem]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9d8493]">
+          {language === 'en' ? 'Step 3 of 3' : 'Samm 3 / 3'}
+        </p>
+        <h2 className="mt-2 font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2622] md:text-[1.85rem]">
           {language === 'en' ? 'Make your visit special' : 'Muuda külastus eriliseks'}
         </h2>
         <p className="mt-2 text-[15px] text-[#6f655f]">
@@ -33,7 +35,7 @@ export function ExtrasStep() {
         </p>
       </div>
 
-      <div className="mb-5 rounded-2xl border border-[#eadce5] bg-[#fffafe] p-5">
+      <div className="mb-5 rounded-2xl border border-[#efe6ec] bg-white p-5">
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium text-[#4a3344]">{selectedService?.name}</span>
           <div className="text-right">
@@ -44,12 +46,7 @@ export function ExtrasStep() {
       </div>
 
       {/* Hero -> next section transition (subtle blur line) */}
-      <div
-        className="mb-6 h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(194,77,134,0.28)_50%,transparent_100%)] blur-[0.2px]"
-        aria-hidden
-      />
-
-      <div className="mb-6 rounded-2xl border border-[#eadce5] bg-white p-5">
+      <div className="mb-6 rounded-2xl border border-[#efe6ec] bg-white p-5">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[#eadce5] bg-[#fff7fb]">
             <span className="text-[10px] font-semibold tracking-wide text-[#8f5d78]">SPA</span>
@@ -61,7 +58,7 @@ export function ExtrasStep() {
         </div>
       </div>
 
-      <div className="mb-6 space-y-4">
+      <div className="mb-6 space-y-3">
         {selectedAddOns.map((addOn) => {
           const isSelected = addOn.selected;
           return (
@@ -71,7 +68,7 @@ export function ExtrasStep() {
               className={`relative w-full rounded-2xl border p-5 text-left transition-all duration-200 ${
                 isSelected
                   ? 'border-[#d7b0c7] bg-[#fff8fc] shadow-[0_12px_20px_-24px_rgba(116,47,93,0.25)] hover:-translate-y-[1px] active:scale-[0.99]'
-                  : 'border-[#eadce5] bg-white hover:border-[#d7b0c7] hover:shadow-[0_14px_22px_-26px_rgba(194,77,134,0.22)] active:scale-[0.99]'
+                  : 'border-[#efe6ec] bg-white hover:border-[#d7b0c7] hover:shadow-[0_14px_22px_-26px_rgba(194,77,134,0.22)] active:scale-[0.99]'
               }`}
             >
               {mostPopularId && addOn.id === mostPopularId && (
@@ -124,7 +121,7 @@ export function ExtrasStep() {
           id="booking-sticky-primary-action"
           type="button"
           onClick={nextStep}
-          className="cta-premium flex-[2] rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] py-4 text-base font-semibold text-white shadow-[0_14px_32px_-14px_rgba(194,77,134,0.5)] transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-12px_rgba(194,77,134,0.45)] active:scale-[0.99]"
+          className="cta-premium flex-[2] rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] py-4 text-base font-semibold text-white shadow-[0_14px_32px_-14px_rgba(159,69,111,0.45)] transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-12px_rgba(159,69,111,0.45)] active:scale-[0.99]"
         >
           {selectedCount > 0 ? `${t('extras.continue')} (+€${selectedExtrasTotal})` : t('extras.continue')}
         </button>

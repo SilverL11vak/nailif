@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { isAnalyticsEnabled } from '@/lib/analytics-enabled';
 import { trackEvent } from '@/lib/behavior-tracking';
 
 function getScrollPercent(): number {
@@ -16,7 +17,10 @@ export function BehaviorTracking() {
 
   const depthMilestones = useMemo(() => [25, 50, 75, 100], []);
 
+  const enabled = isAnalyticsEnabled();
+
   useEffect(() => {
+    if (!enabled) return;
     const onScroll = () => {
       const percent = Math.min(100, Math.max(0, getScrollPercent()));
       for (const m of depthMilestones) {
@@ -59,7 +63,7 @@ export function BehaviorTracking() {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('click', onClickCapture, true);
     };
-  }, [depthMilestones]);
+  }, [depthMilestones, enabled]);
 
   return null;
 }

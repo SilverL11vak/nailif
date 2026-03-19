@@ -1,4 +1,5 @@
 import { sql } from '@/lib/db';
+import { getServiceOrVariantPricing } from '@/lib/catalog';
 import type { EngineTimeSlot } from '../types';
 import {
   BOOKING_DEPOSIT_EUR,
@@ -18,6 +19,7 @@ export interface BookingPricingDbSnapshot {
 
 export async function recomputeBookingPricingFromDb(input: {
   serviceId: string;
+  serviceVariantId?: string | null;
   addOnIds: string[];
   slot: EngineTimeSlot;
 }): Promise<BookingPricingTotals> {
@@ -26,28 +28,15 @@ export async function recomputeBookingPricingFromDb(input: {
 
 export async function recomputeBookingPricingFromDbWithSnapshots(input: {
   serviceId: string;
+  serviceVariantId?: string | null;
   addOnIds: string[];
   slot: EngineTimeSlot;
 }): Promise<BookingPricingDbSnapshot> {
-  // De-dupe to prevent accidental double counting.
   const uniqueAddOnIds = [...new Set(input.addOnIds)];
 
-  const [serviceRow] = await sql<
-    Array<{
-      id: string;
-      duration: number;
-      price: number;
-    }>
-  >`
-    SELECT id, duration, price
-    FROM services
-    WHERE id = ${input.serviceId}
-      AND active = TRUE
-    LIMIT 1
-  `;
-
+  const serviceRow = await getServiceOrVariantPricing(input.serviceId, input.serviceVariantId ?? undefined);
   if (!serviceRow) {
-    throw new Error('Invalid or inactive service');
+    throw new Error('Invalid or inactive service or variant');
   }
 
   const addOns = uniqueAddOnIds.length
@@ -62,6 +51,7 @@ export async function recomputeBookingPricingFromDbWithSnapshots(input: {
         FROM booking_addons
         WHERE id IN ${sql(uniqueAddOnIds)}
           AND active = TRUE
+          AND service_id = ${input.serviceId}
       `
     : [];
 
@@ -81,4 +71,3 @@ export async function recomputeBookingPricingFromDbWithSnapshots(input: {
     totals,
   };
 }
-

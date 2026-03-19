@@ -4,12 +4,15 @@ import {
   ensureBookingsTable,
   insertBooking,
   setBookingStripeSession,
+  cancelExpiredPendingBookingsForSlot,
   type BookingInsert,
 } from '@/lib/bookings';
 import { ensureOrdersTable, createOrder, setOrderStripeSession } from '@/lib/orders';
 import type { EngineTimeSlot } from '../types';
 import type { BookingPricingDbSnapshot } from '../pricing/pricing-engine';
 import { BOOKING_DEPOSIT_EUR } from '../pricing/pricing-engine';
+import { calculateBookingCheckoutPricingFromStore } from '../pricing/calculate-booking-checkout-pricing';
+import { calculateBookingCommercePricing } from '../pricing/calculate-booking-commerce-pricing';
 
 export type BookingCreateResult =
   | { ok: true; bookingId: string; checkoutUrl: string }
@@ -20,9 +23,11 @@ export async function createBookingCheckoutSession(input: {
   resolvedSlot: EngineTimeSlot;
   serviceForInsert: BookingInsert['service'];
   pricingSnapshot: BookingPricingDbSnapshot;
+  productsForInsert: BookingInsert['products'];
+  productsTotalPrice: number;
   baseUrl: string;
 }): Promise<BookingCreateResult> {
-  const { payload, resolvedSlot, serviceForInsert, pricingSnapshot, baseUrl } = input;
+  const { payload, resolvedSlot, serviceForInsert, pricingSnapshot, productsForInsert, productsTotalPrice, baseUrl } = input;
 
   await ensureBookingsTable();
   await ensureOrdersTable();
@@ -30,23 +35,53 @@ export async function createBookingCheckoutSession(input: {
   let bookingId: string | null = null;
 
   try {
+    const pricingSnapshotForSession = calculateBookingCommercePricing({
+      baseServicePrice: pricingSnapshot.service.price,
+      baseServiceDuration: pricingSnapshot.service.duration,
+      extras: pricingSnapshot.addOns.map((addOn) => ({
+        id: addOn.id,
+        name: '',
+        unitPrice: addOn.price,
+        quantity: 1,
+        durationImpact: addOn.duration,
+      })),
+      products: productsForInsert,
+      depositAmount: BOOKING_DEPOSIT_EUR,
+      slotSurchargeTotal:
+        Math.max(0, pricingSnapshot.totals.totalPrice - pricingSnapshot.service.price - pricingSnapshot.addOns.reduce((sum, addOn) => sum + addOn.price, 0)),
+    });
+    const checkoutPricing = calculateBookingCheckoutPricingFromStore({
+      baseServicePrice: pricingSnapshotForSession.baseServicePrice,
+      serviceTotal: pricingSnapshotForSession.serviceTotal,
+      depositAmount: pricingSnapshotForSession.depositAmount,
+      productsTotal: pricingSnapshotForSession.productsTotal,
+    });
+    const serviceCheckoutAmount = Math.max(0, checkoutPricing.payNowTotal - checkoutPricing.productsTotal);
+
+    // Free up any expired pending_payment bookings for this slot so the
+    // unique index doesn't block legitimate retries.
+    await cancelExpiredPendingBookingsForSlot(resolvedSlot.date, resolvedSlot.time);
+
     // Atomic booking reserve relies on the DB uniqueness constraint.
     const booking = await insertBooking({
       ...payload,
       service: serviceForInsert,
       slot: resolvedSlot,
+      products: productsForInsert,
+      productsTotalPrice,
       status: 'pending_payment',
       paymentStatus: 'pending',
       depositAmount: BOOKING_DEPOSIT_EUR,
       totalPrice: pricingSnapshot.totals.totalPrice,
       totalDuration: pricingSnapshot.totals.totalDuration,
+      pricingSnapshot: pricingSnapshotForSession,
     });
 
     bookingId = booking.id;
 
     const orderId = await createOrder({
       orderType: 'booking_deposit',
-      amountTotal: BOOKING_DEPOSIT_EUR,
+      amountTotal: checkoutPricing.payNowTotal,
       currency: 'eur',
       customerName: `${payload.contact.firstName} ${payload.contact.lastName ?? ''}`.trim(),
       customerEmail: payload.contact.email ?? undefined,
@@ -55,30 +90,50 @@ export async function createBookingCheckoutSession(input: {
       items: [
         {
           id: payload.service.id,
-          name: `${payload.service.name} deposit`,
+          name: `${payload.service.name} checkout`,
           quantity: 1,
-          price: BOOKING_DEPOSIT_EUR,
+          price: serviceCheckoutAmount,
         },
+        ...productsForInsert.map((p) => ({
+          id: p.productId,
+          name: p.name,
+          quantity: p.quantity,
+          price: p.unitPrice,
+        })),
       ],
     });
 
     const stripe = getStripeServer();
+
+    const lineItems = [
+      {
+        quantity: 1,
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(serviceCheckoutAmount * 100),
+          product_data: {
+            name: `Booking checkout - ${payload.service.name}`,
+            description: 'Service balance after deposit credit.',
+          },
+        },
+      },
+      ...productsForInsert.map((p) => ({
+        quantity: p.quantity,
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(p.unitPrice * 100),
+          product_data: {
+            name: p.name,
+            images: p.imageUrl ? [p.imageUrl] : undefined,
+          },
+        },
+      })),
+    ];
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       submit_type: 'book',
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: 'eur',
-            unit_amount: BOOKING_DEPOSIT_EUR * 100,
-            product_data: {
-              name: `Booking deposit - ${payload.service.name}`,
-              description: 'Advance payment to secure your Nailify slot.',
-            },
-          },
-        },
-      ],
+      line_items: lineItems,
       customer_email: payload.contact.email ?? undefined,
       metadata: {
         flow: 'booking_deposit',
@@ -124,4 +179,3 @@ export async function createBookingCheckoutSession(input: {
     return { ok: false, status: 500, code: code === 'stripe' ? 'stripe_failed' : 'server_error', message };
   }
 }
-

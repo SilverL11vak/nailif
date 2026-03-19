@@ -7,49 +7,48 @@ import { useBookingStore } from '@/store/booking-store';
 
 const addOnCache = new Map<string, AddOn[]>();
 
-const fallbackAddOns: Record<'et' | 'en', AddOn[]> = {
-  et: [
-    { id: 'nail-art', name: 'Küünedisain', description: 'Isikupärane detail sinu valitud stiiliga.', duration: 15, price: 12, selected: false },
-    { id: 'repair', name: 'Parandus', description: 'Kiire korrigeerimine murdunud või nõrgenenud küünele.', duration: 10, price: 8, selected: false },
-    { id: 'chrome-finish', name: 'Kroomviimistlus', description: 'Luksuslik peegelläige viimaseks viimistluseks.', duration: 10, price: 10, selected: false },
-    { id: 'french-detail', name: 'French detail', description: 'Puhas klassikaline joon elegantseks tulemuseks.', duration: 10, price: 9, selected: false },
-  ],
-  en: [
-    { id: 'nail-art', name: 'Nail art', description: 'Personalized detail aligned with your selected style.', duration: 15, price: 12, selected: false },
-    { id: 'repair', name: 'Repair', description: 'Fast correction for broken or weakened nails.', duration: 10, price: 8, selected: false },
-    { id: 'chrome-finish', name: 'Chrome finish', description: 'Luxurious mirror shine as a finishing touch.', duration: 10, price: 10, selected: false },
-    { id: 'french-detail', name: 'French detail', description: 'Clean classic line for an elegant result.', duration: 10, price: 9, selected: false },
-  ],
-};
-
-export function useBookingAddOns() {
+export function useBookingAddOns(serviceId?: string | null) {
   const { language } = useTranslation();
   const selectedAddOns = useBookingStore((state) => state.selectedAddOns);
   const setAddOns = useBookingStore((state) => state.setAddOns);
-  const [loading, setLoading] = useState<boolean>(() => !addOnCache.has(language));
+  const cacheKey = `${language}:${serviceId ?? ''}`;
+  const [loading, setLoading] = useState<boolean>(() => !addOnCache.has(cacheKey));
 
   useEffect(() => {
     let mounted = true;
+
     const load = async () => {
-      if (addOnCache.has(language)) {
-        setAddOns(addOnCache.get(language) ?? []);
+      if (!serviceId) {
+        setAddOns([]);
         setLoading(false);
         return;
       }
 
+      if (addOnCache.has(cacheKey)) {
+        setAddOns(addOnCache.get(cacheKey) ?? []);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+
       try {
-        const response = await fetch(`/api/booking-addons?lang=${language}`);
-        if (!response.ok) throw new Error('Failed to load booking add-ons');
+        const response = await fetch(
+          `/api/booking-addons?lang=${language}&serviceId=${encodeURIComponent(serviceId)}`
+        );
+        if (!response.ok) {
+          if (!mounted) return;
+          setAddOns([]);
+          return;
+        }
         const data = (await response.json()) as { addOns?: AddOn[] };
         if (!mounted) return;
         const list = Array.isArray(data.addOns) ? data.addOns : [];
-        addOnCache.set(language, list);
+        addOnCache.set(cacheKey, list);
         setAddOns(list);
       } catch (error) {
         console.error('useBookingAddOns error:', error);
-        const fallback = fallbackAddOns[language] ?? fallbackAddOns.et;
         if (mounted) {
-          setAddOns(fallback);
+          setAddOns([]);
         }
       } finally {
         if (mounted) setLoading(false);
@@ -60,7 +59,7 @@ export function useBookingAddOns() {
     return () => {
       mounted = false;
     };
-  }, [language, setAddOns]);
+  }, [cacheKey, language, serviceId, setAddOns]);
 
   return useMemo(
     () => ({

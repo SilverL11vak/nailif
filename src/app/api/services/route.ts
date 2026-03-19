@@ -23,13 +23,8 @@ function slugify(value: string) {
     .slice(0, 80);
 }
 
-function isCategory(value: string): value is Service['category'] {
-  return (
-    value === 'manicure' ||
-    value === 'pedicure' ||
-    value === 'extensions' ||
-    value === 'nail-art'
-  );
+function isCategory(value: string): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 export async function GET(request: Request) {

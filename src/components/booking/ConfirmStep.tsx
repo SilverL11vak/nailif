@@ -5,14 +5,14 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import type { ContactInfo } from '@/store/booking-types';
 import { useTranslation } from '@/lib/i18n';
-import { CheckCircle2, Lock, RefreshCw, ShieldCheck, Star, UploadCloud } from 'lucide-react';
-import { clearBookingSession, trackEvent, touchBookingActivity } from '@/lib/analytics-client';
+import { Lock, Camera } from 'lucide-react';
+import { trackEvent, touchBookingActivity } from '@/lib/analytics-client';
 import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
+import { getPotentialBundleSavings, recommendCrossSellProduct, type CareProductLite } from '@/lib/care-funnel';
 
-const DEPOSIT_EUROS = 10;
 const LOCK_STORAGE_KEY = 'booking_slot_lock';
-const LOCK_DURATION_MS = 5 * 60 * 1000;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
 
 const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -38,55 +38,67 @@ export function ConfirmStep() {
   const expiryFiredRef = useRef(false);
   const expiresAtRef = useRef<number>(0);
 
-  const selectedService = useBookingStore((state) => state.selectedService);
-  const selectedSlot = useBookingStore((state) => state.selectedSlot);
-  const selectedAddOns = useBookingStore((state) => state.selectedAddOns);
-  const contactInfo = useBookingStore((state) => state.contactInfo);
-  const setContactInfo = useBookingStore((state) => state.setContactInfo);
-  const totalPrice = useBookingStore((state) => state.totalPrice);
-  const totalDuration = useBookingStore((state) => state.totalDuration);
-  const selectSlot = useBookingStore((state) => state.selectSlot);
-  const setStep = useBookingStore((state) => state.setStep);
-  const setStatus = useBookingStore((state) => state.setStatus);
+  const selectedService = useBookingStore((s) => s.selectedService);
+  const selectedVariant = useBookingStore((s) => s.selectedVariant);
+  const selectedSlot = useBookingStore((s) => s.selectedSlot);
+  const selectedAddOns = useBookingStore((s) => s.selectedAddOns);
+  const selectedProducts = useBookingStore((s) => s.selectedProducts);
+  const contactInfo = useBookingStore((s) => s.contactInfo);
+  const setContactInfo = useBookingStore((s) => s.setContactInfo);
+  const totalPrice = useBookingStore((s) => s.totalPrice);
+  const totalDuration = useBookingStore((s) => s.totalDuration);
+  const pricingSummary = useBookingStore((s) => s.pricing);
+  const removeProductFromBooking = useBookingStore((s) => s.removeProductFromBooking);
+  const addProductToBooking = useBookingStore((s) => s.addProductToBooking);
+  const setProductDeliveryMethod = useBookingStore((s) => s.setProductDeliveryMethod);
+  const selectSlot = useBookingStore((s) => s.selectSlot);
+  const setStep = useBookingStore((s) => s.setStep);
+  const setStatus = useBookingStore((s) => s.setStatus);
+  const calculateTotals = useBookingStore((s) => s.calculateTotals);
 
-  const selectedExtras = selectedAddOns.filter((addOn) => addOn.selected);
+  const selectedExtras = selectedAddOns.filter((a) => a.selected);
   const en = language === 'en';
+
+  const productsTotalPrice = pricingSummary.productsTotal;
+  const payLaterTotal = pricingSummary.payLaterTotal;
+  const payNowTotal = pricingSummary.payNowTotal;
+  const depositAmount = pricingSummary.depositAmount;
+  const selectedProductCount = selectedProducts.reduce((sum, product) => sum + product.quantity, 0);
+  const potentialBundleSavings = getPotentialBundleSavings(selectedProductCount);
 
   const copy = useMemo(
     () => ({
-      title: en ? 'Almost done — your time is reserved' : 'Peaaegu valmis — sinu aeg on lukus',
-      subtitle: en ? 'Complete your booking to secure this appointment.' : 'Lõpeta broneering, et see aeg jääks ainult sulle.',
-      timerHint: en ? 'If the timer expires, your slot will be released.' : 'Kui lahkud sellelt lehelt võib sinu reserveeritud aeg vabaneda.',
-      locked: 'Time locked for you',
-      depositTitle: en ? `€${DEPOSIT_EUROS} deposit secures your time` : 'Ettemaks hoiab sinu aja ainult sulle',
-      depositSub: en
-        ? 'This prevents last-minute cancellations and guarantees your appointment.'
-        : 'See hoiab ära viimase hetke tühistamised ja tagab sinu aja.',
-      depositChipStripe: en ? 'Secure Stripe payment' : 'Turvaline Stripe makse',
-      depositChipEncrypted: en ? 'Encrypted data' : 'Krüpteeritud andmed',
-      depositChipCancel: en ? 'Free cancellation up to 24h' : 'Tasuta tühistamine kuni 24h',
-      depositChipEmail: en ? 'Instant confirmation email' : 'Kohene kinnituse email',
+      timerText: en
+        ? 'This time is reserved for you'
+        : 'See aeg on sulle ajutiselt reserveeritud',
+      timerSub: en
+        ? `Complete your booking within ${formatLockMmSs(remainingSec)}`
+        : `Lõpeta broneering ${formatLockMmSs(remainingSec)} jooksul`,
       formTitle: en ? 'Your details' : 'Sinu andmed',
       firstName: en ? 'First name' : 'Eesnimi',
       phone: en ? 'Phone' : 'Telefon',
       email: en ? 'Email (optional)' : 'E-post (valikuline)',
-      notes: en ? 'Quick note (optional)' : 'Kiire info sinu küünte kohta (valikuline)',
-      inspiration: en ? 'Inspiration photo (optional)' : 'Inspiratsioonipilt (valikuline)',
+      notes: en ? 'Quick note (optional)' : 'Kiire märkus (valikuline)',
+      uploadLabel: en ? 'Add inspiration photo' : 'Lisa inspiratsioonipilt',
+      uploadHint: en ? 'Optional' : 'Valikuline',
       trustChip1: en ? 'Free rescheduling' : 'Tasuta ümberbroneerimine',
-      trustChip2: en ? 'Certified hygiene' : 'Sertifitseeritud hügieen',
-      trustChip3: en ? 'Private studio' : 'Privaatne stuudio',
-      trustStrip1: en ? '4.9 rating' : '4.9 hinnang',
-      trustStrip2: en ? '1200+ happy clients' : '1200+ rahul klienti',
-      trustStrip3: en ? 'Sterilised tools' : 'Steriliseeritud tööriistad',
-      trustStrip4: en ? 'Cancel free up to 24h' : 'Tasuta tühistamine kuni 24h',
-      cta: en ? 'Confirm my appointment' : 'Kinnita minu broneering',
-      ctaLoading: en ? 'Securing your time…' : 'Broneerin sinu aega...',
-      ctaSub: en ? 'You will be redirected to secure payment' : 'Teid suunatakse turvalisse maksele',
+      trustChip2: en ? 'Instant confirmation' : 'Kohe kinnitatud aeg',
+      trustChip3: en ? 'Certified technician' : 'Sertifitseeritud tehnik',
+      hybridCart: en ? 'Booking + care cart' : 'Broneering + hoolduskorv',
+      deliveryTitle: en ? 'Delivery method' : 'Tarneviis',
+      pickup: en ? 'Pick up during visit' : 'Võtan visiidil kaasa',
+      home: en ? 'Deliver home' : 'Saada koju',
+      commitTitle: en ? 'Confirm your time' : 'Kinnita oma aeg',
+      payNowLabel: en ? 'Pay today' : 'Täna maksad',
+      remainingLabel: en
+        ? `Remaining €${payLaterTotal} at salon after service`
+        : `Ülejäänud €${payLaterTotal} salongis pärast teenust`,
+      cta: en ? `Confirm time & pay €${payNowTotal}` : `Kinnita aeg ja maksa €${payNowTotal}`,
+      ctaLoading: en ? 'Securing your appointment…' : 'Broneerime sinu aega…',
+      ctaSub: en ? 'Secure payment via Stripe' : 'Turvaline makse läbi Stripe',
       toastExpired: en ? 'This time is no longer reserved' : 'See aeg pole enam broneeritud',
-      needContact: en ? 'Please complete your details.' : 'Palun täida oma andmed.',
-      at: en ? 'at' : 'kell',
     }),
-    [en]
+    [en, payNowTotal, payLaterTotal, remainingSec]
   );
 
   const phoneRegex = /^\+\d[\d\s-]{5,}$/;
@@ -98,8 +110,8 @@ export function ConfirmStep() {
     email: contactInfo?.email ?? '',
     notes: contactInfo?.notes ?? '',
     inspirationImage: contactInfo?.inspirationImage ?? '',
+    currentNailImage: contactInfo?.currentNailImage ?? '',
   }));
-
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -111,6 +123,7 @@ export function ConfirmStep() {
       email: contactInfo.email ?? '',
       notes: contactInfo.notes ?? '',
       inspirationImage: contactInfo.inspirationImage ?? '',
+      currentNailImage: contactInfo.currentNailImage ?? '',
     });
     setFormErrors({});
     setTouched({});
@@ -120,16 +133,12 @@ export function ConfirmStep() {
     trackBehaviorEvent('booking_payment_view', {
       serviceId: selectedService?.id,
       slotId: selectedSlot?.id,
-      depositAmount: DEPOSIT_EUROS,
+      depositAmount,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedService?.id, selectedSlot?.id]);
+  }, [depositAmount, selectedService?.id, selectedSlot?.id]);
 
   useEffect(() => {
-    if (!selectedSlot) {
-      setLockReady(false);
-      return;
-    }
+    if (!selectedSlot) { setLockReady(false); return; }
     setLockReady(false);
     expiryFiredRef.current = false;
     const now = Date.now();
@@ -138,54 +147,35 @@ export function ConfirmStep() {
       const raw = localStorage.getItem(LOCK_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as { slotId?: string; expiresAt?: number };
-        if (parsed.slotId === selectedSlot.id && typeof parsed.expiresAt === 'number') {
-          expires = parsed.expiresAt;
-        }
+        if (parsed.slotId === selectedSlot.id && typeof parsed.expiresAt === 'number') expires = parsed.expiresAt;
       }
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
     expiresAtRef.current = expires;
     localStorage.setItem(LOCK_STORAGE_KEY, JSON.stringify({ slotId: selectedSlot.id, expiresAt: expires }));
-    const initialLeft = Math.max(0, Math.ceil((expires - now) / 1000));
-    setRemainingSec(initialLeft);
+    setRemainingSec(Math.max(0, Math.ceil((expires - now) / 1000)));
     setLockReady(true);
-
     const id = window.setInterval(() => {
-      const left = Math.max(0, Math.ceil((expiresAtRef.current - Date.now()) / 1000));
-      setRemainingSec(left);
+      setRemainingSec(Math.max(0, Math.ceil((expiresAtRef.current - Date.now()) / 1000)));
     }, 1000);
-
     return () => window.clearInterval(id);
-  }, [selectedSlot?.id]);
+  }, [selectedSlot]);
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setLockPulse((p) => !p);
-    }, 3000);
+    const id = window.setInterval(() => setLockPulse((p) => !p), 3000);
     return () => window.clearInterval(id);
   }, []);
 
   const onLockExpired = useCallback(() => {
     if (expiryFiredRef.current || !selectedSlot) return;
     expiryFiredRef.current = true;
-    try {
-      localStorage.removeItem(LOCK_STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
+    try { localStorage.removeItem(LOCK_STORAGE_KEY); } catch { /* ignore */ }
     setToast(copy.toastExpired);
     selectSlot(null);
     setStep(2);
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem('booking_shake_slots', '1');
-    }
+    if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('booking_shake_slots', '1');
     window.setTimeout(() => setToast(null), 5000);
     window.requestAnimationFrame(() => {
-      document.getElementById('booking-datetime-slot-area')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      document.getElementById('booking-datetime-slot-area')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }, [copy.toastExpired, selectSlot, setStep, selectedSlot]);
 
@@ -194,71 +184,61 @@ export function ConfirmStep() {
     onLockExpired();
   }, [remainingSec, selectedSlot, lockReady, onLockExpired]);
 
+  const pricingRetryRef = useRef(false);
+
   const handleConfirm = async (payloadContact: ContactInfo): Promise<boolean> => {
     if (!selectedService || !selectedSlot) return false;
-
     setIsLoading(true);
     setStatus('confirming');
     touchBookingActivity();
     trackBehaviorEvent('payment_started', { paymentMethod: 'stripe' });
-    trackEvent({
-      eventType: 'booking_payment_start',
-      step: 5,
-      serviceId: selectedService.id,
-      slotId: selectedSlot.id,
-    });
-    trackFunnelEvent({
-      event: 'payment_started',
-      serviceId: selectedService.id,
-      slotId: selectedSlot.id,
-      metadata: { totalPrice, totalDuration, source: 'booking_confirm_step' },
-      language,
-    });
+    trackEvent({ eventType: 'booking_payment_start', step: 5, serviceId: selectedService.id, slotId: selectedSlot.id });
+    trackFunnelEvent({ event: 'payment_started', serviceId: selectedService.id, slotId: selectedSlot.id, metadata: { totalPrice, totalDuration, source: 'booking_confirm_step' }, language });
+
+    const effectiveName = (selectedVariant?.name || selectedVariant?.nameEt) ?? selectedService.name;
+    const effectivePrice = typeof selectedVariant?.price === 'number' ? selectedVariant.price : selectedService.price;
+    const effectiveDuration = typeof selectedVariant?.duration === 'number' ? selectedVariant.duration : selectedService.duration;
+    const checkoutService = { ...selectedService, name: effectiveName, price: effectivePrice, duration: effectiveDuration, ...(selectedVariant && { variantId: selectedVariant.id }) };
 
     try {
       const response = await fetch('/api/bookings/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source: 'guided',
-          service: selectedService,
-          slot: selectedSlot,
-          contact: payloadContact,
-          addOns: selectedExtras,
-          totalPrice,
-          totalDuration,
-        }),
+        body: JSON.stringify({ source: 'guided', service: checkoutService, slot: selectedSlot, contact: payloadContact, addOns: selectedExtras, totalPrice, totalDuration, products: selectedProducts, productsTotalPrice, pricingSnapshot: pricingSummary, locale: language }),
       });
-
+      const data = (await response.json()) as { checkoutUrl?: string; error?: string; code?: string };
       if (!response.ok) {
-        throw new Error('Booking checkout failed');
+        const serverMsg = data.error || 'Booking checkout failed';
+        const code = data.code;
+        console.error('Checkout API error:', response.status, code, serverMsg);
+        if (code === 'slot_unavailable' || code === 'slot_conflict') {
+          setToast(en ? 'This time slot is no longer available.' : 'See aeg pole enam saadaval.');
+          selectSlot(null); setStep(2); setIsLoading(false); return false;
+        }
+        if (code === 'pricing_mismatch') {
+          if (!pricingRetryRef.current) {
+            pricingRetryRef.current = true; calculateTotals(); setIsLoading(false);
+            await new Promise((r) => setTimeout(r, 100));
+            return handleConfirm(payloadContact);
+          }
+          pricingRetryRef.current = false;
+          setToast(en ? 'Pricing has changed — please review.' : 'Hind on muutunud — palun vaata üle.');
+          setIsLoading(false); return false;
+        }
+        throw new Error(serverMsg);
       }
-
-      const data = (await response.json()) as { checkoutUrl?: string };
-      if (!data.checkoutUrl) {
-        throw new Error('Missing Stripe checkout URL');
-      }
-
-      try {
-        localStorage.removeItem(LOCK_STORAGE_KEY);
-      } catch {
-        /* ignore */
-      }
+      pricingRetryRef.current = false;
+      if (!data.checkoutUrl) throw new Error('Missing Stripe checkout URL');
+      try { localStorage.removeItem(LOCK_STORAGE_KEY); } catch { /* ignore */ }
       window.location.href = data.checkoutUrl;
       return true;
     } catch (error) {
       console.error('Confirm booking error:', error);
-      setStatus('error');
-      trackBehaviorEvent('payment_failed', { reason: error instanceof Error ? error.message : 'checkout_failed' });
-      trackEvent({
-        eventType: 'booking_payment_fail',
-        step: 5,
-        serviceId: selectedService?.id,
-        slotId: selectedSlot?.id,
-      });
-      clearBookingSession();
-      setIsLoading(false);
-      return false;
+      const reason = error instanceof Error ? error.message : 'checkout_failed';
+      setStatus('error'); setToast(reason);
+      trackBehaviorEvent('payment_failed', { reason });
+      trackEvent({ eventType: 'booking_payment_fail', step: 5, serviceId: selectedService?.id, slotId: selectedSlot?.id });
+      setIsLoading(false); return false;
     }
   };
 
@@ -266,67 +246,76 @@ export function ConfirmStep() {
   const phoneValid = phoneRegex.test(form.phone.trim());
   const emailInput = form.email.trim();
   const emailValid = !emailInput || emailRegex.test(emailInput);
-
   const phonePrefix = '+372';
   const phoneRest = form.phone.trim().startsWith(phonePrefix) ? form.phone.trim().slice(phonePrefix.length).trim() : form.phone.trim();
-
   const canPay = firstNameValid && phoneValid && emailValid && remainingSec > 0 && lockReady && !isLoading;
 
-  const [ctaGlowOnce, setCtaGlowOnce] = useState(false);
+  const [ctaGlow, setCtaGlow] = useState(false);
   const [inspirationUploading, setInspirationUploading] = useState(false);
-
+  const [currentNailsUploading, setCurrentNailsUploading] = useState(false);
+  const [suggestedCare, setSuggestedCare] = useState<CareProductLite | null>(null);
   const ctaAnchorRef = useRef<HTMLDivElement>(null);
   const didAutoScrollRef = useRef(false);
   const inspirationInputRef = useRef<HTMLInputElement>(null);
+  const currentNailsInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!canPay) return;
-    if (didAutoScrollRef.current) return;
+    if (typeof window === 'undefined' || !canPay || didAutoScrollRef.current) return;
     if (!window.matchMedia('(max-width: 1023px)').matches) return;
-
     didAutoScrollRef.current = true;
-    requestAnimationFrame(() => {
-      ctaAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    });
+    requestAnimationFrame(() => ctaAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }));
   }, [canPay]);
 
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const response = await fetch(`/api/products?lang=${language}`, { cache: 'force-cache' });
+        if (!response.ok) return;
+        const data = (await response.json()) as { products?: CareProductLite[] };
+        const all = data.products ?? [];
+        if (!all.length) return;
+        const pick = recommendCrossSellProduct(all, selectedService, selectedProducts.map((p) => p.productId));
+        if (mounted) setSuggestedCare(pick);
+      } catch {
+        // best-effort bridge
+      }
+    };
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [language, selectedProducts, selectedService]);
+
   const validateForm = () => {
-    const nextErrors: Record<string, string> = {};
-
-    if (!form.firstName.trim()) nextErrors.firstName = t('contact.required');
-    if (!form.phone.trim()) nextErrors.phone = t('contact.required');
-    else if (!phoneValid) nextErrors.phone = t('contact.validPhone');
-
-    if (emailInput && !emailValid) nextErrors.email = t('contact.validEmail');
-
-    setFormErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    const errs: Record<string, string> = {};
+    if (!form.firstName.trim()) errs.firstName = t('contact.required');
+    if (!form.phone.trim()) errs.phone = t('contact.required');
+    else if (!phoneValid) errs.phone = t('contact.validPhone');
+    if (emailInput && !emailValid) errs.email = t('contact.validEmail');
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
-  const handleInspirationUpload = async (files: FileList | null) => {
+  const handleImageUpload = async (kind: 'inspiration' | 'current', files: FileList | null) => {
     if (!files || files.length === 0) return;
     const file = files[0];
-    if (file.size > 3 * 1024 * 1024) {
-      setFormErrors((prev) => ({
-        ...prev,
-        inspiration: en ? 'Image is too large (max 3 MB).' : 'Pilt on liiga suur (max 3 MB).',
-      }));
-      return;
-    }
-    setInspirationUploading(true);
+    if (file.size > 3 * 1024 * 1024) { setFormErrors((p) => ({ ...p, inspiration: en ? 'Max 3 MB.' : 'Max 3 MB.' })); return; }
+    if (kind === 'inspiration') setInspirationUploading(true);
+    else setCurrentNailsUploading(true);
     try {
       const dataUrl = await fileToDataUrl(file);
-      setForm((prev) => ({ ...prev, inspirationImage: dataUrl }));
-      setFormErrors((prev) => ({ ...prev, inspiration: '' }));
-    } catch {
-      setFormErrors((prev) => ({
-        ...prev,
-        inspiration: en ? 'Image upload failed.' : 'Pildi lisamine ebaõnnestus.',
-      }));
-    } finally {
-      setInspirationUploading(false);
-      if (inspirationInputRef.current) inspirationInputRef.current.value = '';
+      setForm((p) => ({ ...p, ...(kind === 'inspiration' ? { inspirationImage: dataUrl } : { currentNailImage: dataUrl }) }));
+      setFormErrors((p) => ({ ...p, inspiration: '' }));
+    } catch { setFormErrors((p) => ({ ...p, inspiration: en ? 'Upload failed.' : 'Laadimine ebaõnnestus.' })); }
+    finally {
+      if (kind === 'inspiration') {
+        setInspirationUploading(false);
+        if (inspirationInputRef.current) inspirationInputRef.current.value = '';
+      } else {
+        setCurrentNailsUploading(false);
+        if (currentNailsInputRef.current) currentNailsInputRef.current.value = '';
+      }
     }
   };
 
@@ -339,564 +328,409 @@ export function ConfirmStep() {
     );
   }
 
-  const dateShort = new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-
-  const durationMin = totalDuration || selectedService.duration || 0;
-  const totalPriceDisplay = totalPrice || selectedService.price || 0;
-
-  const lockLine = `${copy.locked} — ${formatLockMmSs(remainingSec)}`;
+  const dateLong = new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dateShort = new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', { day: 'numeric', month: 'short' });
+  const effectiveDurationForDisplay = typeof selectedVariant?.duration === 'number' ? selectedVariant.duration : selectedService.duration;
+  const durationMin = totalDuration || effectiveDurationForDisplay || 0;
+  const effectiveServiceName = (selectedVariant?.name || selectedVariant?.nameEt) ?? selectedService.name;
 
   const handleSubmit = async () => {
     setTouched({ firstName: true, phone: true, email: true, notes: true, inspiration: true });
-    if (!validateForm()) {
-      setCtaGlowOnce(false);
-      return;
-    }
+    if (!validateForm()) { setCtaGlow(false); return; }
     if (!selectedService || !selectedSlot) return;
-
     const payloadContact: ContactInfo = {
       firstName: form.firstName.trim(),
       phone: form.phone.trim(),
-      email: emailInput ? emailInput : undefined,
-      notes: form.notes.trim() ? form.notes.trim() : undefined,
+      email: emailInput || undefined,
+      notes: form.notes.trim() || undefined,
       inspirationImage: form.inspirationImage || undefined,
+      currentNailImage: form.currentNailImage || undefined,
     };
-
     setContactInfo(payloadContact);
     const ok = await handleConfirm(payloadContact);
-    if (!ok) {
-      setCtaGlowOnce(false);
-    }
+    if (!ok) setCtaGlow(false);
   };
 
+  const fireCta = () => {
+    if (!canPay || isLoading) return;
+    setCtaGlow(true);
+    window.setTimeout(() => setCtaGlow(false), 1100);
+    void handleSubmit();
+  };
+
+  const inputCls = (hasError: boolean) =>
+    `h-[48px] w-full rounded-[14px] border bg-white px-4 text-[14px] shadow-[inset_0_1px_3px_rgba(0,0,0,0.04)] outline-none transition-all ${
+      hasError
+        ? 'border-red-300 focus:border-red-400 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.1)]'
+        : 'border-[#e8e8e8] focus:border-[#c24d86]/40 focus:shadow-[0_0_0_3px_rgba(159,69,111,0.08)]'
+    }`;
+
+  /* ─── Payment Commitment Card (shared between desktop sidebar + mobile) ─── */
+  const PaymentCard = ({ mobile }: { mobile?: boolean }) => (
+    <div className={mobile ? '' : 'rounded-[18px] border border-[#f0f0f0] bg-[#fafafa] p-5'}>
+      {!mobile && (
+        <p className="mb-4 text-[13px] font-semibold text-[#241b23]">{copy.commitTitle}</p>
+      )}
+
+      {/* Price hero */}
+      <div className={`${mobile ? '' : 'rounded-xl bg-[#fff9fc] px-4 py-3'}`}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">{copy.payNowLabel}</p>
+        <p className="mt-0.5 text-[28px] font-bold tabular-nums leading-none text-[#9f456f]">{`€${payNowTotal}`}</p>
+      </div>
+      <p className={`${mobile ? 'mt-1' : 'mt-3'} text-[12px] text-[#8a7a85]`}>{copy.remainingLabel}</p>
+
+      {/* Benefits */}
+      {!mobile && (
+        <div className="mt-4 space-y-2">
+          {[copy.trustChip1, copy.trustChip2, copy.trustChip3].map((label) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#f4edf1]">
+                <svg className="h-2.5 w-2.5 text-[#9f456f]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              </span>
+              <span className="text-[12px] text-[#5d5258]">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* CTA */}
+      <button
+        type="button"
+        onClick={fireCta}
+        disabled={!canPay}
+        className={`${mobile ? 'mt-2.5' : 'mt-5'} flex h-[56px] w-full items-center justify-center rounded-[16px] bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-[15px] font-semibold text-white shadow-[0_14px_32px_-14px_rgba(159,69,111,0.5)] transition-all duration-200 hover:shadow-[0_18px_42px_-16px_rgba(159,69,111,0.42)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${
+          ctaGlow ? 'confirm-cta-glow' : ''
+        }`}
+      >
+        {isLoading ? copy.ctaLoading : copy.cta}
+      </button>
+      <p className={`${mobile ? 'mt-1' : 'mt-2'} text-center text-[10px] text-[#b8a8b0]`}>{copy.ctaSub}</p>
+    </div>
+  );
+
   return (
-    <div className="animate-fade-in mx-auto w-full max-w-[640px] pb-40 lg:pb-10">
+    <div className="animate-fade-in mx-auto w-full pb-52 lg:pb-8 text-[#1a1a1a]">
+      {/* Toast */}
       {toast && (
-        <div
-          className="fixed left-1/2 top-24 z-[60] max-w-sm -translate-x-1/2 rounded-2xl border border-[#e8dce4] bg-white px-5 py-3.5 text-center text-sm font-medium text-[#4a3d44] shadow-[0_20px_50px_-24px_rgba(57,33,52,0.35)]"
-          role="status"
-        >
+        <div className="fixed left-1/2 top-20 z-[60] max-w-sm -translate-x-1/2 rounded-[16px] border border-[#efefef] bg-white px-5 py-3 text-center text-sm font-medium text-[#444] shadow-[0_12px_36px_-16px_rgba(0,0,0,0.10)]" role="status">
           {toast}
         </div>
       )}
 
-      <div className="flex flex-col">
-        {/* LEFT: emotional confirmation + form */}
-        <div className="flex flex-col">
-          <header className="mb-4 text-center">
-            <h1 className="font-brand text-[28px] font-medium leading-[1.2] tracking-tight text-[#1f171d]">
-              {en ? 'Your details' : 'Teie andmed'}
-            </h1>
-            <p className="mt-2 text-[15px] leading-[1.55] font-medium text-[#5d4a56]">
-              {en ? "We'll send your confirmation here" : 'Saadame kinnituse siia'}
-            </p>
+      {/* Loading overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ede5ea] border-t-[#9f456f]" />
+          <p className="mt-4 text-[14px] font-medium text-[#5d4a56]">{copy.ctaLoading}</p>
+          <p className="mt-1 text-[12px] text-[#a898a8]">{copy.ctaSub}</p>
+        </div>
+      )}
 
-            <div
-              className={`hidden xl:mx-auto xl:mt-3 xl:inline-flex items-center gap-2 rounded-full border border-[#efe0e8] bg-white/80 px-4 py-2 text-sm font-semibold text-[#6a3b57] shadow-[0_16px_40px_-32px_rgba(57,33,52,0.12)] backdrop-blur-sm ${
-                lockPulse ? 'booking-countdown-badge-pulse' : ''
-              }`}
-            >
-              <Lock className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-              <span>
-                {copy.locked} — {formatLockMmSs(remainingSec)}
-              </span>
-            </div>
-          </header>
+      {/* ─── Timer Strip ─── */}
+      <div
+        className={`sticky top-[72px] z-20 mb-5 flex items-center gap-3 rounded-[16px] border border-[#f0e0e8] bg-[#FFF5F9] px-4 py-3 ${
+          lockPulse ? 'confirm-lock-pulse' : ''
+        }`}
+      >
+        <Lock className="h-4 w-4 shrink-0 text-[#c88cab]" strokeWidth={1.8} aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-[#6a3b57]">{copy.timerText}</p>
+          <p className="mt-0.5 text-[11px] text-[#8a7a85]">{copy.timerSub}</p>
+        </div>
+        <span className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-[18px] font-bold tabular-nums text-[#9f456f] shadow-[0_2px_8px_-4px_rgba(159,69,111,0.12)]">
+          {formatLockMmSs(remainingSec)}
+        </span>
+      </div>
 
-          {/* Booking summary strip */}
-          <div className="mb-5 rounded-[22px] border border-[#f0e8ed] bg-[linear-gradient(180deg,rgba(255,244,251,0.92)_0%,rgba(255,255,255,0.98)_100%)] px-4 py-3 shadow-[0_12px_26px_-20px_rgba(194,77,134,0.18)]">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">
-                  {en ? 'My booking' : 'Minu broneering'}
-                </p>
-                <p className="mt-1 line-clamp-1 text-[15px] leading-[1.25] font-semibold text-[#2f2530]">
-                  {selectedService.name}
-                </p>
-                <p className="mt-0.5 text-[12px] font-medium text-[#8a7a88]">
-                  {dateShort} · {selectedSlot.time}
-                  {durationMin ? <span className="ml-2 text-[#a89a9f]">· {durationMin} min</span> : null}
-                </p>
+      {/* ─── 2-Column Desktop / Single Column Mobile ─── */}
+      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-8">
+        {/* LEFT COLUMN */}
+        <div className="min-w-0">
+          {/* Summary Card */}
+          <div className="mb-4 rounded-[18px] border border-[#f0f0f0] bg-[#fafafa] p-5 sm:p-6">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">{copy.hybridCart}</p>
+            <h3 className="mt-2 text-[17px] font-semibold text-[#241b23]">{effectiveServiceName}</h3>
+            <div className="mt-2 space-y-1 text-[13px] text-[#5d5258]">
+              <p>{dateLong} · {selectedSlot.time}</p>
+              {durationMin > 0 && <p>{durationMin} min</p>}
+              <p>Sandra · Mustamäe tee 55, Tallinn</p>
+            </div>
+
+            <div className="mt-4 space-y-1.5 border-t border-[#f2eaed] pt-3 text-[13px]">
+              <div className="flex justify-between">
+                <span className="text-[#7a6a75]">{en ? 'Service price' : 'Teenuse hind'}</span>
+                <span className="font-semibold tabular-nums text-[#2f2530]">{`€${totalPrice}`}</span>
               </div>
-              <div className="shrink-0 text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#b8a8b0]">
-                  {en ? 'Total' : 'Kokku'}
-                </p>
-                <p className="mt-1 text-[22px] font-semibold tabular-nums text-[#c24d86]">
-                  €{totalPriceDisplay}
-                </p>
+              {productsTotalPrice > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[#7a6a75]">{en ? 'Products' : 'Tooted'}</span>
+                  <span className="font-semibold tabular-nums text-[#2f2530]">{`€${productsTotalPrice}`}</span>
+                </div>
+              )}
+              <div className="flex justify-between rounded-lg bg-[#fff9fc] px-2.5 py-1.5">
+                <span className="font-semibold text-[#6a3b57]">{en ? 'Pay today' : 'Ette maksta täna'}</span>
+                <span className="font-bold tabular-nums text-[#9f456f]">{`€${payNowTotal}`}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#8a7a85]">{en ? 'Remaining at salon' : 'Ülejäänud salongis'}</span>
+                <span className="font-medium tabular-nums text-[#8a7a85]">{`€${payLaterTotal}`}</span>
               </div>
             </div>
+
+            {potentialBundleSavings > 0 && (
+              <div className="mt-2 rounded-lg border border-[#ead9e3] bg-[#fff9fc] px-3 py-2 text-[11px] text-[#7a4563]">
+                {en
+                  ? `Bundle insight: add this as a care set and save up to €${potentialBundleSavings}.`
+                  : `Komplekti soovitus: hoolduskomplektina saad säästa kuni €${potentialBundleSavings}.`}
+              </div>
+            )}
+
+            {selectedProducts.length > 0 && (
+              <div className="mt-3 border-t border-[#f2eaed] pt-3">
+                <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#a898a8]">{en ? 'Products' : 'Tooted'}</p>
+                {selectedProducts.map((p) => (
+                  <div key={p.productId} className="py-1.5 text-[12px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-[#2f2530]">{p.name}{p.quantity > 1 ? ` ×${p.quantity}` : ''}</span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="font-semibold tabular-nums text-[#9f456f]">{`€${p.unitPrice * p.quantity}`}</span>
+                        <button type="button" onClick={() => removeProductFromBooking(p.productId)} className="text-[10px] font-medium text-[#b85c8a] underline underline-offset-2">{en ? 'Remove' : 'Eemalda'}</button>
+                      </div>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <span className="text-[10px] text-[#8a7a85]">{copy.deliveryTitle}:</span>
+                      <button
+                        type="button"
+                        onClick={() => setProductDeliveryMethod(p.productId, 'pickup_visit')}
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
+                          (p.deliveryMethod ?? 'pickup_visit') === 'pickup_visit'
+                            ? 'bg-[#f3e8ef] text-[#7a4563]'
+                            : 'bg-[#f5f5f5] text-[#8a7a85]'
+                        }`}
+                      >
+                        {copy.pickup}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProductDeliveryMethod(p.productId, 'home_delivery')}
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
+                          p.deliveryMethod === 'home_delivery'
+                            ? 'bg-[#f3e8ef] text-[#7a4563]'
+                            : 'bg-[#f5f5f5] text-[#8a7a85]'
+                        }`}
+                      >
+                        {copy.home}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {suggestedCare && (
+              <div className="mt-3 rounded-[12px] border border-[#efe3e9] bg-[#fffafd] p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9d7a90]">
+                  {en ? 'Clients often add this' : 'Kliendid lisavad sageli'}
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#8a7a85]">
+                  {en ? 'Supports longer-lasting appointment results.' : 'Aitab tulemust kauem püsivana hoida.'}
+                </p>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#f0e8ec] bg-white">
+                    {suggestedCare.imageUrl ? (
+                      <Image src={suggestedCare.imageUrl} alt={suggestedCare.name} fill className="object-cover" unoptimized />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[#b8a8b0]">+</div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-semibold text-[#2f2530]">{suggestedCare.name}</p>
+                    <p className="text-[11px] text-[#7a6a75]">€{suggestedCare.price}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addProductToBooking({
+                        productId: suggestedCare.id,
+                        name: suggestedCare.name,
+                        unitPrice: suggestedCare.price,
+                        deliveryMethod: 'pickup_visit',
+                        imageUrl: suggestedCare.imageUrl ?? null,
+                      })
+                    }
+                    className="rounded-full border border-[#dfcdd7] px-3 py-1 text-[11px] font-semibold text-[#6a3b57] hover:bg-white"
+                  >
+                    {en ? 'Add' : 'Lisa'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div
-            className="hidden xl:block mb-4 h-px w-full bg-[linear-gradient(90deg,transparent_0%,rgba(194,77,134,0.25)_50%,transparent_100%)] blur-[0.2px]"
-            aria-hidden
-          />
-
-          {/* Client details form */}
+          {/* Details Form */}
           <form
-            className="mb-5 rounded-[22px] border border-[#eadce5] bg-white/80 p-5 backdrop-blur-sm lg:p-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handleSubmit();
-            }}
+            className="rounded-[18px] border border-[#f0f0f0] bg-white p-5 sm:p-6"
+            onSubmit={(e) => { e.preventDefault(); void handleSubmit(); }}
           >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#8a7a88]">{copy.formTitle}</p>
-              {!canPay && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50/90 px-3 py-1 text-[12px] font-semibold text-amber-900/90">
-                  <Lock className="h-4 w-4 text-[#9d6b8a]" strokeWidth={2} aria-hidden />
-                  {en ? 'Finish to confirm' : 'Kinnitamiseks lõpeta'}
-                </span>
-              )}
-            </div>
+            <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">{copy.formTitle}</p>
 
-            {/* Trust chips (compact, premium) */}
-            <div className="mb-5 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/75 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
-                <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={2} aria-hidden />
-                {en ? 'Free rescheduling' : 'Tasuta ümberbroneerimine'}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/75 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
-                <CheckCircle2 className="h-4 w-4 text-[#2d8a5e]" strokeWidth={2} aria-hidden />
-                {en ? 'Instant confirmation' : 'Kiire kinnitus'}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#ead6e2] bg-white/75 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
-                <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={2} aria-hidden />
-                {en ? 'Certified nail technician' : 'Sertifitseeritud küünetehnik'}
-              </span>
-            </div>
-
-            <div className="space-y-8">
-              <div className="space-y-4">
-              {/* First name */}
+            {/* Name + Phone row */}
+            <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[14px] font-medium text-[#443630]">
-                    {copy.firstName} <span className="text-[#c24d86]">*</span>
-                  </span>
-                  {touched.firstName && firstNameValid ? (
-                    <CheckCircle2 className="h-5 w-5 text-[#2d8a5e]" aria-hidden />
-                  ) : null}
-                </div>
+                <span className="text-[12px] font-medium text-[#3a2a35]">{copy.firstName} <span className="text-[#c24d86]">*</span></span>
                 <input
-                  type="text"
-                  name="firstName"
-                  value={form.firstName}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setForm((prev) => ({ ...prev, firstName: v }));
-                    setFormErrors((prev) => ({ ...prev, firstName: '' }));
-                  }}
-                  onBlur={() => setTouched((prev) => ({ ...prev, firstName: true }))}
-                  className={`mt-2 h-[56px] w-full rounded-[14px] border bg-white px-4 text-[16px] outline-none transition sm:text-sm ${
-                    touched.firstName && !firstNameValid
-                      ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-300/20'
-                      : 'border-[#e3dbd4] focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20'
-                  }`}
-                  placeholder={en ? 'Your first name' : 'Eesnimi'}
+                  type="text" name="firstName" value={form.firstName}
+                  onChange={(e) => { setForm((p) => ({ ...p, firstName: e.target.value })); setFormErrors((p) => ({ ...p, firstName: '' })); }}
+                  onBlur={() => setTouched((p) => ({ ...p, firstName: true }))}
+                  className={`mt-1 ${inputCls(Boolean(touched.firstName && !firstNameValid))}`}
+                  placeholder={en ? 'First name' : 'Eesnimi'}
                   aria-invalid={Boolean(formErrors.firstName)}
                 />
-                {touched.firstName && formErrors.firstName ? (
-                  <p className="mt-1 text-xs text-red-500">{formErrors.firstName}</p>
-                ) : null}
+                {touched.firstName && formErrors.firstName && <p className="mt-0.5 text-[10px] text-red-500">{formErrors.firstName}</p>}
               </label>
 
-              {/* Phone */}
               <label className="block">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[14px] font-medium text-[#443630]">
-                    {copy.phone} <span className="text-[#c24d86]">*</span>
-                  </span>
-                  {touched.phone && phoneValid ? (
-                    <CheckCircle2 className="h-5 w-5 text-[#2d8a5e]" aria-hidden />
-                  ) : null}
-                </div>
-
-                <div
-                  className={`mt-2 flex h-[56px] items-center gap-2 rounded-[14px] border bg-white px-3 transition sm:text-sm ${
-                    touched.phone && !phoneValid
-                      ? 'border-red-300 focus-within:border-red-400 focus-within:ring-2 focus-within:ring-red-300/20'
-                      : 'border-[#e3dbd4] focus-within:border-[#c24d86]/60 focus-within:ring-2 focus-within:ring-[#c24d86]/20'
-                  }`}
-                >
-                  <span className="flex h-full items-center text-[16px] font-semibold text-[#443630]">
-                    {phonePrefix}
-                  </span>
+                <span className="text-[12px] font-medium text-[#3a2a35]">{copy.phone} <span className="text-[#c24d86]">*</span></span>
+                <div className={`mt-1 flex h-[48px] items-center gap-1.5 rounded-[14px] border bg-white px-4 shadow-[inset_0_1px_3px_rgba(0,0,0,0.04)] transition-all ${
+                  touched.phone && !phoneValid
+                    ? 'border-red-300 focus-within:border-red-400 focus-within:shadow-[0_0_0_3px_rgba(239,68,68,0.1)]'
+                    : 'border-[#e8e8e8] focus-within:border-[#c24d86]/40 focus-within:shadow-[0_0_0_3px_rgba(159,69,111,0.08)]'
+                }`}>
+                  <span className="text-[14px] font-semibold text-[#3a2a35]">{phonePrefix}</span>
                   <input
-                    type="tel"
-                    name="phone"
-                    value={phoneRest}
-                    onChange={(e) => {
-                      const rest = e.target.value;
-                      const trimmed = rest.trim();
-                      const full = trimmed ? `${phonePrefix} ${trimmed}` : '';
-                      setForm((prev) => ({ ...prev, phone: full }));
-                      setFormErrors((prev) => ({ ...prev, phone: '' }));
-                    }}
-                    onBlur={() => setTouched((prev) => ({ ...prev, phone: true }))}
-                    className="flex-1 bg-transparent px-0 py-0 text-[16px] outline-none placeholder:text-[#a89a9f]"
-                    placeholder={en ? '5xx xxx' : '5xx xxx'}
-                    aria-invalid={Boolean(formErrors.phone)}
-                    inputMode="tel"
+                    type="tel" name="phone" value={phoneRest}
+                    onChange={(e) => { const v = e.target.value.trim(); setForm((p) => ({ ...p, phone: v ? `${phonePrefix} ${v}` : '' })); setFormErrors((p) => ({ ...p, phone: '' })); }}
+                    onBlur={() => setTouched((p) => ({ ...p, phone: true }))}
+                    className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[#b8a8b0]"
+                    placeholder="5xx xxxx" inputMode="tel" aria-invalid={Boolean(formErrors.phone)}
                   />
                 </div>
-                {touched.phone && formErrors.phone ? <p className="mt-1 text-xs text-red-500">{formErrors.phone}</p> : null}
+                {touched.phone && formErrors.phone && <p className="mt-0.5 text-[10px] text-red-500">{formErrors.phone}</p>}
               </label>
+            </div>
 
-              </div>
+            {/* Email */}
+            <label className="mt-3 block">
+              <span className="text-[12px] font-medium text-[#7a6a75]">{copy.email}</span>
+              <input
+                type="email" name="email" value={form.email}
+                onChange={(e) => { setForm((p) => ({ ...p, email: e.target.value })); setFormErrors((p) => ({ ...p, email: '' })); }}
+                onBlur={() => setTouched((p) => ({ ...p, email: true }))}
+                className={`mt-1 ${inputCls(Boolean(touched.email && emailInput && !emailValid))}`}
+                placeholder={en ? 'name@email.com' : 'nimi@email.com'}
+                aria-invalid={Boolean(formErrors.email)}
+              />
+              {touched.email && formErrors.email && <p className="mt-0.5 text-[10px] text-red-500">{formErrors.email}</p>}
+            </label>
 
-              <div className="space-y-4">
-              {/* Email */}
-              <label className="block">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[14px] font-medium text-[#443630]">{copy.email}</span>
-                  {touched.email && emailInput && emailValid ? (
-                    <CheckCircle2 className="h-5 w-5 text-[#2d8a5e]" aria-hidden />
-                  ) : null}
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setForm((prev) => ({ ...prev, email: v }));
-                    setFormErrors((prev) => ({ ...prev, email: '' }));
-                  }}
-                  onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
-                  className={`mt-2 h-[56px] w-full rounded-[14px] border bg-white px-4 text-[16px] outline-none transition sm:text-sm ${
-                    touched.email && emailInput && !emailValid
-                      ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-300/20'
-                      : 'border-[#e3dbd4] focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20'
-                  }`}
-                  placeholder={en ? 'name@email.com' : 'nimi@email.com'}
-                  aria-invalid={Boolean(formErrors.email)}
-                />
-                {touched.email && formErrors.email ? <p className="mt-1 text-xs text-red-500">{formErrors.email}</p> : null}
-              </label>
-
-              {/* Notes */}
-              <label className="block">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[13px] font-medium text-[#7d6275]">{copy.notes}</span>
-                </div>
+            {/* Notes */}
+            <label className="mt-3 block">
+              <span className="text-[11px] font-medium text-[#8a7a85]">{copy.notes}</span>
                 <textarea
-                  name="notes"
-                  value={form.notes}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setForm((prev) => ({ ...prev, notes: v }));
-                  }}
-                  onBlur={() => setTouched((prev) => ({ ...prev, notes: true }))}
-                  className="mt-2 min-h-[88px] w-full resize-none rounded-[14px] border border-[#e3dbd4] bg-white px-4 py-4 text-[16px] outline-none transition focus:border-[#c24d86]/60 focus:ring-2 focus:ring-[#c24d86]/20 sm:text-sm"
-                  placeholder={en ? 'Add a quick note…' : 'Lisa märkus…'}
-                />
-              </label>
+                name="notes" value={form.notes}
+                onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                className="mt-1 min-h-[52px] w-full resize-none rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3 text-[14px] shadow-[inset_0_1px_3px_rgba(0,0,0,0.04)] outline-none transition-all focus:border-[#c24d86]/40 focus:shadow-[0_0_0_3px_rgba(159,69,111,0.08)]"
+                placeholder={en ? 'E.g. nail shape preference...' : 'Nt. küünekuju eelistus...'}
+              />
+            </label>
 
-              </div>
-
-              {/* Inspiration upload */}
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[12px] font-medium text-[#443630]">{en ? 'Inspiration photos' : 'Inspiratsioon'}</p>
-                    <p className="mt-1 text-[11px] font-medium text-[#7d6275]">
-                      {en ? 'Optional — helps us prepare.' : 'Valikuline — aitab meil ette valmistada.'}
-                    </p>
-                  </div>
-                  {form.inspirationImage ? (
-                    <CheckCircle2 className="mt-1 h-5 w-5 text-[#2d8a5e]" aria-hidden />
-                  ) : null}
-                </div>
-
-                <input
-                  ref={inspirationInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => void handleInspirationUpload(e.target.files)}
-                />
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => inspirationInputRef.current?.click()}
-                    disabled={inspirationUploading}
-                    className="group flex h-[72px] flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/70 px-2 py-2 text-center transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
-                    aria-busy={inspirationUploading}
-                  >
-                    <UploadCloud className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                    <span className="text-[12px] font-semibold text-[#6f5d69]">
-                      {en ? 'Inspiration photo' : 'Inspiratsioonipilt'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => inspirationInputRef.current?.click()}
-                    disabled={inspirationUploading}
-                    className="group flex h-[72px] flex-col items-center justify-center gap-2 rounded-[14px] border border-dashed border-[#e1d6cd] bg-white/70 px-2 py-2 text-center transition hover:border-[#c79c84] hover:bg-[#fff6fb] active:scale-[0.99]"
-                    aria-busy={inspirationUploading}
-                  >
-                    <UploadCloud className="h-4 w-4 text-[#c24d86]" strokeWidth={2} aria-hidden />
-                    <span className="text-[12px] font-semibold text-[#6f5d69]">
-                      {en ? 'Current nails photo' : 'Praegused küüned'}
-                    </span>
-                  </button>
-                </div>
-
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {/* Inspiration */}
+              <div className="rounded-[14px] border border-[#efeaed] bg-[#fcfbfc] p-3">
+                <p className="mb-1 text-[11px] font-medium text-[#8a7a85]">{copy.uploadLabel} ({copy.uploadHint})</p>
+                <p className="mb-2 text-[11px] text-[#a898a8]">{en ? 'Inspiration for desired style' : 'Inspiratsioon soovitud stiilist'}</p>
+                <input ref={inspirationInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleImageUpload('inspiration', e.target.files)} />
                 {form.inspirationImage ? (
-                  <div className="mt-3">
-                    <div className="relative aspect-[16/9] overflow-hidden rounded-[14px] border border-[#eadce5] bg-white">
-                      <Image
-                        src={form.inspirationImage}
-                        alt={en ? 'Inspiration preview' : 'Inspiratsiooni eelvaade'}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-[56px] w-[56px] shrink-0 overflow-hidden rounded-xl border border-[#f0e8ec]">
+                      <Image src={form.inspirationImage} alt="" fill className="object-cover" unoptimized />
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
-                      <button
-                        type="button"
-                        onClick={() => inspirationInputRef.current?.click()}
-                        className="text-[12px] font-semibold text-[#c24d86] underline decoration-[#c24d86]/30 underline-offset-4 transition hover:decoration-[#c24d86]"
-                      >
-                        {en ? 'Replace' : 'Asenda'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setForm((prev) => ({ ...prev, inspirationImage: '' }))}
-                        className="text-[12px] font-semibold text-[#d24f61] underline decoration-[#d24f61]/30 underline-offset-4 transition hover:decoration-[#d24f61]"
-                      >
-                        {en ? 'Remove' : 'Eemalda'}
-                      </button>
+                    <div>
+                      <button type="button" onClick={() => inspirationInputRef.current?.click()} className="text-[11px] font-medium text-[#9f456f] underline underline-offset-2">{en ? 'Replace' : 'Asenda'}</button>
+                      <span className="mx-1.5 text-[#d0c4ca]">·</span>
+                      <button type="button" onClick={() => setForm((p) => ({ ...p, inspirationImage: '' }))} className="text-[11px] font-medium text-[#b85c6a] underline underline-offset-2">{en ? 'Remove' : 'Eemalda'}</button>
                     </div>
                   </div>
                 ) : (
-                  inspirationUploading ? (
-                    <p className="mt-2 text-[12px] font-medium text-[#7d6275]">
-                      {en ? 'Uploading…' : 'Laen üles…'}
-                    </p>
-                  ) : null
+                  <button
+                    type="button" onClick={() => inspirationInputRef.current?.click()} disabled={inspirationUploading}
+                    className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[12px] border border-dashed border-[#e0e0e0] bg-white text-[12px] font-medium text-[#888] transition hover:border-[#c8a8bc] hover:text-[#9f456f]"
+                  >
+                    <Camera className="h-4 w-4" strokeWidth={1.5} />
+                    {inspirationUploading ? (en ? 'Uploading…' : 'Laen…') : copy.uploadLabel}
+                  </button>
                 )}
+              </div>
 
-                {formErrors.inspiration ? <p className="mt-2 text-xs text-red-500">{formErrors.inspiration}</p> : null}
+              {/* Current nails photo */}
+              <div className="rounded-[14px] border border-[#efeaed] bg-[#fcfbfc] p-3">
+                <p className="mb-1 text-[11px] font-medium text-[#8a7a85]">{en ? 'Add photo of your current nails (optional)' : 'Lisa foto oma küüntest (valikuline)'}</p>
+                <p className="mb-2 text-[11px] text-[#a898a8]">{en ? 'Helps your technician prepare better' : 'Aitab tehnikul paremini ette valmistuda'}</p>
+                <input ref={currentNailsInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleImageUpload('current', e.target.files)} />
+                {form.currentNailImage ? (
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-[56px] w-[56px] shrink-0 overflow-hidden rounded-xl border border-[#f0e8ec]">
+                      <Image src={form.currentNailImage} alt="" fill className="object-cover" unoptimized />
+                    </div>
+                    <div>
+                      <button type="button" onClick={() => currentNailsInputRef.current?.click()} className="text-[11px] font-medium text-[#9f456f] underline underline-offset-2">{en ? 'Replace' : 'Asenda'}</button>
+                      <span className="mx-1.5 text-[#d0c4ca]">·</span>
+                      <button type="button" onClick={() => setForm((p) => ({ ...p, currentNailImage: '' }))} className="text-[11px] font-medium text-[#b85c6a] underline underline-offset-2">{en ? 'Remove' : 'Eemalda'}</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button" onClick={() => currentNailsInputRef.current?.click()} disabled={currentNailsUploading}
+                    className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[12px] border border-dashed border-[#e0e0e0] bg-white text-[12px] font-medium text-[#888] transition hover:border-[#c8a8bc] hover:text-[#9f456f]"
+                  >
+                    <Camera className="h-4 w-4" strokeWidth={1.5} />
+                    {currentNailsUploading ? (en ? 'Uploading…' : 'Laen…') : (en ? 'Add photo of current nails' : 'Lisa foto oma küüntest')}
+                  </button>
+                )}
               </div>
             </div>
+            {formErrors.inspiration && <p className="mt-0.5 text-[10px] text-red-500">{formErrors.inspiration}</p>}
           </form>
-
-          {/* Trust micro block is shown directly under CTA */}
-
-          {/* Desktop CTA (mobile uses sticky bar) */}
-          <div className="hidden lg:block">
-            <div className="mb-4" />
-            <button
-              type="button"
-              onClick={() => {
-                if (!canPay || isLoading) return;
-                setCtaGlowOnce(true);
-                window.setTimeout(() => setCtaGlowOnce(false), 1100);
-                void handleSubmit();
-              }}
-              disabled={!canPay}
-              className={`h-[56px] w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] px-6 py-0 text-[15px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(194,77,134,0.45)] transition-all duration-200 hover:shadow-[0_16px_36px_-18px_rgba(194,77,134,0.38)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 ${
-                ctaGlowOnce ? 'booking-cta-glow-once' : ''
-              }`}
-            >
-              {isLoading ? copy.ctaLoading : copy.cta}
-            </button>
-            {/* Trust micro block under CTA */}
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
-                <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
-                {en ? '⭐ 4.9 rating' : '⭐ 4.9 hinnang'}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
-                <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
-                {en ? '🧼 Medical level hygiene' : '🧼 Meditsiiniline hügieen'}
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1.5 text-[11px] font-semibold text-[#5d4a56]">
-                <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
-                {en ? '🔁 Free rescheduling' : '🔁 Tasuta ümberbroneerimine'}
-              </span>
-            </div>
-            <p className="mt-2 text-center text-xs font-medium text-[#9a8a94]">{copy.ctaSub}</p>
-          </div>
         </div>
+
+        {/* RIGHT COLUMN — Desktop Sticky Payment Card */}
+        <aside className="hidden lg:sticky lg:top-[88px] lg:block">
+          <PaymentCard />
+        </aside>
       </div>
 
-      {/* Mobile sticky CTA */}
+      {/* ─── Mobile Sticky CTA ─── */}
       <div ref={ctaAnchorRef} id="confirm-step-cta-anchor" className="h-px" aria-hidden />
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[50] h-32 bg-[linear-gradient(180deg,transparent_0%,#fff9fb_55%,#fff5f9_100%)] lg:hidden" />
-
-      <div className="fixed inset-x-0 bottom-0 z-[55] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
-        <div className="mx-auto w-full max-w-lg rounded-[22px] border border-white/80 bg-white/90 p-3 shadow-[0_16px_48px_-20px_rgba(57,33,52,0.28)] backdrop-blur-xl">
-          <div className="mb-2 flex items-center justify-between gap-3 border-b border-[#f0eaee] pb-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <Lock className="h-4 w-4 shrink-0 text-[#9d7a8f]" strokeWidth={2} aria-hidden />
-              <span className="truncate text-xs font-medium text-[#6d5a66]">{lockLine}</span>
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[50] h-32 bg-[linear-gradient(180deg,transparent_0%,rgba(248,247,246,0.95)_55%,#f8f7f6_100%)] lg:hidden" />
+      <div className="fixed inset-x-0 bottom-0 z-[55] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 lg:hidden">
+        <div className="mx-auto w-full max-w-md rounded-[16px] border border-[#efefef] bg-white p-3 shadow-[0_12px_36px_-16px_rgba(0,0,0,0.10)]">
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold text-[#2f2530]">{effectiveServiceName}</p>
+              <p className="truncate text-[11px] text-[#8a7a85]">{dateShort} · {selectedSlot.time}</p>
             </div>
-            <span className="shrink-0 font-brand text-lg font-semibold tabular-nums text-[#2c2430]">{formatLockMmSs(remainingSec)}</span>
+            <div className="shrink-0 text-right">
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-[#a898a8]">{copy.payNowLabel}</p>
+              <p className="text-[18px] font-bold tabular-nums leading-none text-[#9f456f]">{`€${payNowTotal}`}</p>
+            </div>
           </div>
-
-          <p className="mb-1 truncate text-[13px] font-semibold text-[#2f2530]">{selectedService.name}</p>
-          <p className="mb-2 truncate text-xs text-[#8a7a88]">
-            {dateShort} · {selectedSlot.time}
-          </p>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (!canPay || isLoading) return;
-              setCtaGlowOnce(true);
-              window.setTimeout(() => setCtaGlowOnce(false), 1100);
-              void handleSubmit();
-            }}
-            disabled={!canPay}
-            className={`h-[56px] w-full rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] px-5 py-0 text-[15px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(194,77,134,0.45)] transition-all active:scale-[0.98] disabled:opacity-45 ${
-              ctaGlowOnce ? 'booking-cta-glow-once' : ''
-            }`}
-          >
-            {isLoading ? copy.ctaLoading : copy.cta}
-          </button>
-          {/* Trust micro block under CTA */}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1 text-[10px] font-semibold text-[#5d4a56]">
-              <Star className="h-4 w-4 text-[#b85c8a]" strokeWidth={1.8} aria-hidden />
-              {en ? '⭐ 4.9 rating' : '⭐ 4.9 hinnang'}
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1 text-[10px] font-semibold text-[#5d4a56]">
-              <ShieldCheck className="h-4 w-4 text-[#6b9b7a]" strokeWidth={1.8} aria-hidden />
-              {en ? '🧼 Medical level hygiene' : '🧼 Meditsiiniline hügieen'}
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#f0e6ec] bg-white/70 px-2 py-1 text-[10px] font-semibold text-[#5d4a56]">
-              <RefreshCw className="h-4 w-4 text-[#9d6b8a]" strokeWidth={1.8} aria-hidden />
-              {en ? '🔁 Free rescheduling' : '🔁 Tasuta ümberbroneerimine'}
-            </span>
-          </div>
-          <p className="mt-1 text-center text-[11px] font-medium text-[#9a8a94]">{copy.ctaSub}</p>
+          <PaymentCard mobile />
         </div>
       </div>
+
       <style jsx global>{`
-        @keyframes bookingTrustChipFadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        @keyframes confirm-lock-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(194,77,134,0); }
+          50% { box-shadow: 0 0 0 4px rgba(194,77,134,0.06); }
         }
-        .booking-trust-chip-anim {
-          animation: bookingTrustChipFadeIn 520ms ease-out both;
+        .confirm-lock-pulse { animation: confirm-lock-pulse 780ms ease-out both; }
+        @keyframes confirm-cta-glow {
+          0% { box-shadow: 0 14px 32px -14px rgba(159,69,111,0.5), 0 0 0 0 rgba(194,77,134,0); }
+          40% { box-shadow: 0 22px 52px -12px rgba(159,69,111,0.5), 0 0 0 6px rgba(194,77,134,0.14); }
+          100% { box-shadow: 0 14px 32px -14px rgba(159,69,111,0.5), 0 0 0 0 rgba(194,77,134,0); }
         }
-
-        @keyframes booking-cta-glow-once {
-          0% {
-            box-shadow:
-              0 16px 36px -14px rgba(194, 77, 134, 0.55),
-              0 0 0 0 rgba(194, 77, 134, 0.0);
-          }
-          40% {
-            box-shadow:
-              0 22px 52px -12px rgba(194, 77, 134, 0.58),
-              0 0 0 6px rgba(194, 77, 134, 0.18);
-          }
-          100% {
-            box-shadow:
-              0 16px 36px -14px rgba(194, 77, 134, 0.55),
-              0 0 0 0 rgba(194, 77, 134, 0.0);
-          }
-        }
-        .booking-cta-glow-once {
-          animation: booking-cta-glow-once 740ms ease-out both;
-        }
-
-        @keyframes booking-countdown-badge-pulse {
-          0%,
-          100% {
-            box-shadow: 0 0 0 0 rgba(194, 77, 134, 0);
-            transform: translateY(0) scale(1);
-          }
-          50% {
-            box-shadow: 0 0 0 3px rgba(194, 77, 134, 0.18);
-            transform: translateY(-1px) scale(1.01);
-          }
-        }
-        .booking-countdown-badge-pulse {
-          animation: booking-countdown-badge-pulse 780ms ease-out both;
-        }
-
-        @keyframes booking-summary-shimmer {
-          0% {
-            opacity: 0;
-            transform: translateX(-55%);
-          }
-          10% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0.9;
-            transform: translateX(55%);
-          }
-        }
-        .booking-summary-shimmer {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.65) 45%, transparent 100%);
-          transform: translateX(-55%);
-          animation: booking-summary-shimmer 900ms ease-out both;
-        }
-
-        @keyframes booking-benefit-tick-ok {
-          0% {
-            transform: scale(0.7);
-            opacity: 0.6;
-          }
-          45% {
-            transform: scale(1.15);
-            opacity: 1;
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-        .booking-benefit-tick-ok {
-          animation: booking-benefit-tick-ok 540ms cubic-bezier(0.22, 0.8, 0.22, 1) both;
-        }
-
-        @keyframes bookingSummaryFloat {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-2px);
-          }
-        }
-        .booking-summary-float {
-          animation: bookingSummaryFloat 2600ms ease-in-out infinite;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .booking-summary-float,
-          .booking-cta-glow-once,
-          .booking-countdown-badge-pulse,
-          .booking-summary-shimmer,
-          .booking-benefit-tick-ok,
-          .booking-trust-chip-anim {
-            animation: none !important;
-          }
-        }
+        .confirm-cta-glow { animation: confirm-cta-glow 740ms ease-out both; }
+        @media (prefers-reduced-motion: reduce) { .confirm-lock-pulse, .confirm-cta-glow { animation: none !important; } }
       `}</style>
     </div>
   );

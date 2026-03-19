@@ -33,7 +33,10 @@ function getCookieLanguage(): Language | null {
 export function I18nProvider({ children, initialLanguage = DEFAULT_LOCALE }: { children: ReactNode; initialLanguage?: Language }) {
   const pathname = usePathname();
   const pathnameLocale = getLocaleFromPathname(pathname);
-  const [language, setLanguageState] = useState<Language>(pathnameLocale ?? initialLanguage);
+  // Important for hydration stability:
+  // use deterministic initial state so server/client first render match exactly.
+  // Route/cookie/localStorage reconciliation happens in effect after mount.
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   useEffect(() => {
     const persistedLanguage =

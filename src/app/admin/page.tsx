@@ -8,7 +8,7 @@ import { AdminAnalyticsSummaryStrip } from '@/components/admin/AdminAnalyticsSum
 import { AdminSalonOverview } from '@/components/admin/AdminSalonOverview';
 import { getAdminFromCookies } from '@/lib/admin-auth';
 import { getAdminDashboardStats } from '@/lib/admin-dashboard';
-import { Calendar, Package, Plus } from 'lucide-react';
+import { Calendar, Package, Plus, Wrench } from 'lucide-react';
 
 function formatHeaderDate(date: Date) {
   return new Intl.DateTimeFormat('en-GB', {
@@ -23,6 +23,18 @@ function greeting(hour: number) {
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
+}
+
+function formatShortEtDate(dateStr: string) {
+  try {
+    return new Date(`${dateStr}T00:00:00`).toLocaleDateString('et-EE', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  } catch {
+    return dateStr;
+  }
 }
 
 export default async function AdminHomePage() {
@@ -47,6 +59,9 @@ export default async function AdminHomePage() {
     revenueToday: stats.revenueToday,
     revenueThisWeek: stats.revenueThisWeek,
   };
+  const nextFreeSlotHint = stats.nextFreeSlot
+    ? `Next free: ${formatShortEtDate(stats.nextFreeSlot.slotDate)} ${stats.nextFreeSlot.slotTime}`
+    : 'No upcoming free slots';
 
   return (
     <main className="min-h-screen bg-[#f5f2ef]">
@@ -97,6 +112,13 @@ export default async function AdminHomePage() {
               <Package className="h-4 w-4 text-[#b85c8a]" />
               Add product
             </Link>
+            <Link
+              href="/admin/tools"
+              className="inline-flex items-center gap-2 rounded-full border border-[#e5ddd8] bg-white px-4 py-2.5 text-sm font-semibold text-[#5c4f55] shadow-sm hover:bg-[#faf8f6]"
+            >
+              <Wrench className="h-4 w-4 text-[#b85c8a]" />
+              Tools
+            </Link>
           </div>
         </div>
 
@@ -131,9 +153,9 @@ export default async function AdminHomePage() {
               hint: 'On the calendar',
             },
             {
-              label: 'Free slots',
+              label: 'Free slots today',
               value: stats.freeSlotsToday,
-              hint: 'Available today',
+              hint: nextFreeSlotHint,
             },
             {
               label: 'Revenue today',
@@ -172,6 +194,13 @@ export default async function AdminHomePage() {
             className="text-sm font-medium text-[#8a7c82] underline-offset-2 hover:text-[#c24d86] hover:underline"
           >
             Booking copy & add-ons
+          </Link>
+          <span className="text-[#e0d8d4]">·</span>
+          <Link
+            href="/admin/tools"
+            className="text-sm font-medium text-[#8a7c82] underline-offset-2 hover:text-[#c24d86] hover:underline"
+          >
+            Tools
           </Link>
           <span className="text-[#e0d8d4]">·</span>
           <Link href="/" className="text-sm font-medium text-[#8a7c82] underline-offset-2 hover:text-[#c24d86] hover:underline">

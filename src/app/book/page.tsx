@@ -1,12 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { ServiceStep } from '@/components/booking/ServiceStep';
 import { DateTimeStep } from '@/components/booking/DateTimeStep';
-import { ContactStep } from '@/components/booking/ContactStep';
 import { ExtrasStep } from '@/components/booking/ExtrasStep';
 import { ConfirmStep } from '@/components/booking/ConfirmStep';
 import { useServices } from '@/hooks/use-services';
@@ -22,6 +21,7 @@ import {
   trackSessionStart,
 } from '@/lib/analytics-client';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
+import { consumeBookingProductIntent } from '@/lib/booking-product-intent';
 
 const nailStyles = [
   { id: '1', name: 'Glossy Pink French', slug: 'glossy-pink-french', recommendedServiceId: 'gel-manicure', emoji: 'P' },
@@ -43,19 +43,23 @@ function BookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const currentStep = useBookingStore((state) => state.currentStep);
-  const prevStep = useBookingStore((state) => state.prevStep);
-  const setMode = useBookingStore((state) => state.setMode);
-  const selectedService = useBookingStore((state) => state.selectedService);
-  const selectedSlot = useBookingStore((state) => state.selectedSlot);
-  const setSelectedStyle = useBookingStore((state) => state.setSelectedStyle);
-  const selectService = useBookingStore((state) => state.selectService);
-  const selectDate = useBookingStore((state) => state.selectDate);
-  const setStep = useBookingStore((state) => state.setStep);
-  const nextStep = useBookingStore((state) => state.nextStep);
-  const totalPrice = useBookingStore((state) => state.totalPrice);
+  const currentStep = useBookingStore((s) => s.currentStep);
+  const prevStep = useBookingStore((s) => s.prevStep);
+  const setMode = useBookingStore((s) => s.setMode);
+  const selectedService = useBookingStore((s) => s.selectedService);
+  const selectedVariant = useBookingStore((s) => s.selectedVariant);
+  const selectedAddOns = useBookingStore((s) => s.selectedAddOns);
+  const selectedProducts = useBookingStore((s) => s.selectedProducts);
+  const selectedSlot = useBookingStore((s) => s.selectedSlot);
+  const addProductToBooking = useBookingStore((s) => s.addProductToBooking);
+  const setSelectedStyle = useBookingStore((s) => s.setSelectedStyle);
+  const selectService = useBookingStore((s) => s.selectService);
+  const selectDate = useBookingStore((s) => s.selectDate);
+  const setStep = useBookingStore((s) => s.setStep);
+  const nextStep = useBookingStore((s) => s.nextStep);
+  const totalPrice = useBookingStore((s) => s.totalPrice);
   const { services } = useServices();
-  useBookingAddOns();
+  const { loading: addOnsLoading } = useBookingAddOns(selectedService?.id ?? null);
 
   const [isStepTransitioning, setIsStepTransitioning] = useState(false);
   const activeTimelineRef = useRef<HTMLButtonElement | null>(null);
@@ -70,281 +74,115 @@ function BookingContent() {
   const hesitationSentForStepRef = useRef<number | null>(null);
   const hesitationTimerRef = useRef<number | null>(null);
 
+  const en = language === 'en';
+
   const copy = useMemo(
     () =>
-      language === 'en'
-        ? {
-            header: 'Booking with Sandra',
-            helper: 'Take your time - you can always adjust.',
-            stageService: 'Service',
-            stageServicePreview: 'Choose your ideal base service',
-            stageTime: 'Time',
-            stageTimePreview: 'Find the best moment for your visit',
-            stageDetails: 'Details',
-            stageDetailsPreview: 'Share your preferences and notes',
-            stageConfirm: 'Confirmation',
-            stageConfirmPreview: 'Review and confirm with confidence',
-            edit: 'Edit',
-            summary: 'Booking summary',
-            pickService: 'Select service',
-            studio: 'Mustamäe studio',
-            dateTime: 'Date and time',
-            pickSlot: 'Choose time',
-            total: 'Total',
-            sos: 'SOS surcharge',
-            noSos: 'No surcharge',
-            duration: 'Approximate duration',
-            tech: 'Technician',
-            funnel1: 'Choose service',
-            funnel2: 'Choose time',
-            funnel3: 'Confirm booking',
-            stepLabel: 'Step',
-            progressTitle: 'Your booking',
-            mobileSelectService: 'Select a service',
-            mobileContinueTime: 'Choose time',
-            mobilePickSlot: 'Pick a time',
-            mobileContinue: 'Continue',
-            mobileConfirm: 'Confirm booking',
-          }
-        : {
-            header: 'Broneerimine Sandraga',
-            helper: 'Vali rahulikult - saad alati muuta.',
-            stageService: 'Teenus',
-            stageServicePreview: 'Vali oma soovitud põhiteenus',
-            stageTime: 'Aeg',
-            stageTimePreview: 'Leia visiidiks sobivaim aeg',
-            stageDetails: 'Detailid',
-            stageDetailsPreview: 'Lisa eelistused ja märkused',
-            stageConfirm: 'Kinnitus',
-            stageConfirmPreview: 'Vaata üle ja kinnita enesekindlalt',
-            edit: 'Muuda',
-            summary: 'Broneeringu kokkuvõte',
-            pickService: 'Vali teenus',
-            studio: 'Mustamäe stuudio',
-            dateTime: 'Kuupäev ja aeg',
-            pickSlot: 'Vali aeg',
-            total: 'Kokku',
-            sos: 'SOS lisatasu',
-            noSos: 'Lisatasuta',
-            duration: 'Ligikaudne kestus',
-            tech: 'Tehnik',
-            funnel1: 'Vali teenus',
-            funnel2: 'Vali aeg',
-            funnel3: 'Kinnita broneering',
-            stepLabel: 'Samm',
-            progressTitle: 'Sinu broneering',
-            mobileSelectService: 'Vali teenus',
-            mobileContinueTime: 'Vali aeg',
-            mobilePickSlot: 'Vali kellaaeg',
-            mobileContinue: 'Jätka',
-            mobileConfirm: 'Kinnita broneering',
-          },
-    [language]
+      en
+        ? { funnel1: 'Service', funnel2: 'Time', funnel3: 'Confirm', progressTitle: 'Your booking' }
+        : { funnel1: 'Teenus', funnel2: 'Aeg', funnel3: 'Kinnitus', progressTitle: 'Sinu broneering' },
+    [en]
   );
+
+  /* ─── All booking logic hooks (unchanged) ─── */
 
   useEffect(() => {
     const styleSlug = searchParams.get('style');
     const serviceId = searchParams.get('service');
     const dateParam = searchParams.get('date');
-
     if (serviceId) {
-      const directService = services.find((service) => service.id === serviceId);
+      const directService = services.find((svc) => svc.id === serviceId);
       if (directService) {
         selectService(directService);
         setStep(2);
-        if (dateParam) {
-          const parsed = new Date(`${dateParam}T00:00:00`);
-          if (!Number.isNaN(parsed.getTime())) {
-            selectDate(parsed);
-          }
-        }
+        if (dateParam) { const p = new Date(`${dateParam}T00:00:00`); if (!Number.isNaN(p.getTime())) selectDate(p); }
       }
     }
-
     if (styleSlug) {
       const style = nailStyles.find((item) => item.slug === styleSlug);
       if (style) {
         setSelectedStyle(style);
-        const recommendedService = services.find((service) => service.id === style.recommendedServiceId);
-        if (recommendedService && !selectedService) {
-          selectService(recommendedService);
-          setTimeout(() => {
-            nextStep();
-            serviceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 250);
+        const rec = services.find((svc) => svc.id === style.recommendedServiceId);
+        if (rec && !selectedService) {
+          selectService(rec);
+          setTimeout(() => { nextStep(); serviceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 250);
         }
       }
     }
   }, [searchParams, setSelectedStyle, selectService, selectedService, nextStep, services, selectDate, setStep]);
 
-  // Analytics: session lifecycle start + booking open
   useEffect(() => {
-    trackSessionStart({
-      locale: language,
-      path: typeof window !== 'undefined' ? window.location.pathname : '/book',
-      referrer: typeof document !== 'undefined' ? document.referrer : '',
-    });
+    const pp = consumeBookingProductIntent();
+    if (!pp) return;
+    if (selectedProducts.some((item) => item.productId === pp.productId)) return;
+    addProductToBooking(pp);
+  }, [addProductToBooking, selectedProducts]);
+
+  useEffect(() => {
+    trackSessionStart({ locale: language, path: typeof window !== 'undefined' ? window.location.pathname : '/book', referrer: typeof document !== 'undefined' ? document.referrer : '' });
     trackEvent({ eventType: 'booking_open', step: 0 });
     touchBookingActivity();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Analytics: update last step + key milestones.
   useEffect(() => {
     touchBookingActivity();
     setLastFunnelStep(currentStep);
     stepStartedAtRef.current = Date.now();
     hesitationSentForStepRef.current = null;
-
     if (currentStep === 1) return;
-    if (currentStep === 3) {
-      trackEvent({
-        eventType: 'booking_details_started',
-        step: 3,
-        serviceId: selectedService?.id,
-        slotId: selectedSlot?.id,
-      });
-    }
+    if (currentStep === 4) trackEvent({ eventType: 'booking_details_started', step: 4, serviceId: selectedService?.id, slotId: selectedSlot?.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
 
-  // Analytics: inactivity + abandon detection (non-blocking).
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     const resetInactivity = () => {
       touchBookingActivity();
       if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
       if (hesitationTimerRef.current) window.clearTimeout(hesitationTimerRef.current);
-
-      // Lightweight hesitation detection (>10s idle on step)
       hesitationTimerRef.current = window.setTimeout(() => {
-        if (hasBookingSuccess()) return;
-        if (hesitationSentForStepRef.current === currentStep) return;
+        if (hasBookingSuccess() || hesitationSentForStepRef.current === currentStep) return;
         hesitationSentForStepRef.current = currentStep;
         trackBehaviorEvent('hesitation_detected', { step: currentStep, duration: 10_000 });
       }, 10_000);
-
       inactivityTimerRef.current = window.setTimeout(() => {
-        if (abandonSentRef.current) return;
-        if (hasBookingSuccess()) return;
+        if (abandonSentRef.current || hasBookingSuccess()) return;
         abandonSentRef.current = true;
-        trackEvent({
-          eventType: 'booking_abandon',
-          step: getLastFunnelStep() ?? currentStep,
-          serviceId: selectedService?.id,
-          slotId: selectedSlot?.id,
-          metadata: { reason: 'inactivity_timeout' },
-        });
-        trackBehaviorEvent('booking_abandon', {
-          step: getLastFunnelStep() ?? currentStep,
-          serviceId: selectedService?.id,
-          slotId: selectedSlot?.id,
-          timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
-        });
+        trackEvent({ eventType: 'booking_abandon', step: getLastFunnelStep() ?? currentStep, serviceId: selectedService?.id, slotId: selectedSlot?.id, metadata: { reason: 'inactivity_timeout' } });
+        trackBehaviorEvent('booking_abandon', { step: getLastFunnelStep() ?? currentStep, serviceId: selectedService?.id, slotId: selectedSlot?.id, timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current) });
         clearBookingSession();
       }, INACTIVITY_MS);
     };
-
-    const resetInactivityListener: EventListener = () => resetInactivity();
-
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        resetInactivity();
-        if (abandonSentRef.current) return;
-        if (hasBookingSuccess()) return;
-        trackBehaviorEvent('booking_tab_hidden', { step: getLastFunnelStep() ?? currentStep });
-      }
-    };
-
-    const onBeforeUnload = () => {
-      resetInactivity();
-      if (abandonSentRef.current) return;
-      if (hasBookingSuccess()) return;
-      abandonSentRef.current = true;
-      trackEvent({
-        eventType: 'booking_abandon',
-        step: getLastFunnelStep() ?? currentStep,
-        serviceId: selectedService?.id,
-        slotId: selectedSlot?.id,
-        metadata: { reason: 'page_unload' },
-      });
-      trackBehaviorEvent('booking_abandon', {
-        step: getLastFunnelStep() ?? currentStep,
-        serviceId: selectedService?.id,
-        slotId: selectedSlot?.id,
-        timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
-      });
-      clearBookingSession();
-    };
-
-    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
-    for (const e of events) window.addEventListener(e, resetInactivityListener, { passive: true } as AddEventListenerOptions);
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('beforeunload', onBeforeUnload);
+    const rl: EventListener = () => resetInactivity();
+    const onVis = () => { if (document.visibilityState === 'hidden') { resetInactivity(); if (!abandonSentRef.current && !hasBookingSuccess()) trackBehaviorEvent('booking_tab_hidden', { step: getLastFunnelStep() ?? currentStep }); } };
+    const onBu = () => { resetInactivity(); if (abandonSentRef.current || hasBookingSuccess()) return; abandonSentRef.current = true; trackEvent({ eventType: 'booking_abandon', step: getLastFunnelStep() ?? currentStep, serviceId: selectedService?.id, slotId: selectedSlot?.id, metadata: { reason: 'page_unload' } }); trackBehaviorEvent('booking_abandon', { step: getLastFunnelStep() ?? currentStep, serviceId: selectedService?.id, slotId: selectedSlot?.id, timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current) }); clearBookingSession(); };
+    const evts: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    for (const e of evts) window.addEventListener(e, rl, { passive: true } as AddEventListenerOptions);
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('beforeunload', onBu);
     resetInactivity();
-
-    return () => {
-      for (const e of events) window.removeEventListener(e, resetInactivityListener);
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('beforeunload', onBeforeUnload);
-      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
-      if (hesitationTimerRef.current) window.clearTimeout(hesitationTimerRef.current);
-    };
+    return () => { for (const e of evts) window.removeEventListener(e, rl); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('beforeunload', onBu); if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current); if (hesitationTimerRef.current) window.clearTimeout(hesitationTimerRef.current); };
   }, [currentStep, selectedService?.id, selectedSlot?.id]);
 
-  // Analytics: route change / unmount abandon (SPA-safe)
   useEffect(() => {
-    return () => {
-      if (abandonSentRef.current) return;
-      if (hasBookingSuccess()) return;
-      abandonSentRef.current = true;
-      trackBehaviorEvent('booking_abandon', {
-        step: getLastFunnelStep() ?? currentStep,
-        serviceId: selectedService?.id,
-        slotId: selectedSlot?.id,
-        timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current),
-      });
-    };
+    return () => { if (abandonSentRef.current || hasBookingSuccess()) return; abandonSentRef.current = true; trackBehaviorEvent('booking_abandon', { step: getLastFunnelStep() ?? currentStep, serviceId: selectedService?.id, slotId: selectedSlot?.id, timeOnStep: Math.max(0, Date.now() - stepStartedAtRef.current) }); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    setMode('guided');
-  }, [setMode]);
-
-  useEffect(() => {
-    if (!transitionsEnabled) return;
-    setIsStepTransitioning(true);
-    const timer = window.setTimeout(() => setIsStepTransitioning(false), 260);
-    return () => window.clearTimeout(timer);
-  }, [currentStep, transitionsEnabled]);
-
-  useEffect(() => {
-    activeTimelineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    activePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [currentStep]);
+  useEffect(() => { setMode('guided'); }, [setMode]);
+  useEffect(() => { if (!transitionsEnabled) return; setIsStepTransitioning(true); const t = window.setTimeout(() => setIsStepTransitioning(false), 280); return () => window.clearTimeout(t); }, [currentStep, transitionsEnabled]);
+  useEffect(() => { if (currentStep !== 3 || addOnsLoading || selectedAddOns.length > 0) return; setStep(4); }, [addOnsLoading, currentStep, selectedAddOns.length, setStep]);
+  useEffect(() => { activeTimelineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); activePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, [currentStep]);
 
   const funnelStep = funnelStepFromBookingStep(currentStep);
-  const progressFillPct = funnelStep === 1 ? 33.333 : funnelStep === 2 ? 66.667 : 100;
-  const selectedSlotLabel = selectedSlot
-    ? `${new Date(selectedSlot.date).toLocaleDateString(language === 'en' ? 'en-GB' : 'et-EE', { weekday: 'short', day: 'numeric', month: 'short' })} ${t('confirm.at')} ${selectedSlot.time}`
-    : null;
-
   const funnelSteps = [
     { n: 1 as const, title: copy.funnel1 },
     { n: 2 as const, title: copy.funnel2 },
     { n: 3 as const, title: copy.funnel3 },
   ];
 
-  const prefetchSlotsNav = () => {
-    const now = new Date();
-    const to = new Date(now);
-    to.setDate(to.getDate() + 40);
-    const from = now.toISOString().slice(0, 10);
-    const toStr = to.toISOString().slice(0, 10);
-    void fetch(`/api/slots?from=${from}&to=${toStr}`).catch(() => null);
-  };
+  const prefetchSlotsNav = () => { const now = new Date(); const to = new Date(now); to.setDate(to.getDate() + 40); void fetch(`/api/slots?from=${now.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}`).catch(() => null); };
 
   const handleFunnelStepClick = (n: 1 | 2 | 3) => {
     if (n === 1 && currentStep > 1) setStep(1);
@@ -352,385 +190,227 @@ function BookingContent() {
     if (n === 3 && currentStep > 3) setStep(3);
   };
 
+  const handleBack = () => { if (currentStep > 1) prevStep(); else router.push('/'); };
+
   const handleMobileStickyCta = () => {
-    if (currentStep === 1) {
-      if (!selectedService) return;
-      prefetchSlotsNav();
-      nextStep();
-    } else if (currentStep === 2) {
-      if (!selectedSlot) return;
-      nextStep();
-    } else {
-      document.getElementById('booking-sticky-primary-action')?.click();
-    }
+    if (currentStep === 1 && selectedService) { prefetchSlotsNav(); nextStep(); }
   };
 
-  // Mobile polish: avoid dual-primary CTA (hero card CTA + bottom sticky CTA).
-  // The sticky CTA shows only after the hero CTA button scrolls out of view.
-  // Assume hero CTA exists for steps 3/4 where it is rendered inside the form.
-  const [heroPrimaryCtaFound, setHeroPrimaryCtaFound] = useState(currentStep === 3 || currentStep === 4);
-  const [heroPrimaryCtaInView, setHeroPrimaryCtaInView] = useState(true);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (currentStep === 2 || currentStep === 5) {
-      setHeroPrimaryCtaFound(false);
-      return;
-    }
-
-    let observer: IntersectionObserver | null = null;
-    let rafId = 0;
-    let attempts = 0;
-
-    const tryAttach = () => {
-      attempts += 1;
-      const el = document.getElementById('booking-sticky-primary-action');
-      if (!el) {
-        if (attempts < 25) {
-          rafId = window.setTimeout(tryAttach, 40);
-          return;
-        }
-        setHeroPrimaryCtaFound(false);
-        setHeroPrimaryCtaInView(true);
-        return;
-      }
-
-      setHeroPrimaryCtaFound(true);
-      observer?.disconnect();
-      observer = new IntersectionObserver(
-        (entries) => {
-          const entry = entries[0];
-          const ratio = entry?.intersectionRatio ?? 0;
-          setHeroPrimaryCtaInView(ratio > 0.12);
-        },
-        { threshold: [0, 0.12, 0.25], root: null, rootMargin: '0px 0px 0px 0px' }
-      );
-      observer.observe(el);
-    };
-
-    tryAttach();
-
-    return () => {
-      if (observer) observer.disconnect();
-      if (rafId) window.clearTimeout(rafId);
-    };
-  }, [currentStep]);
-
-  const showMobileStickyPrimary = !heroPrimaryCtaFound || !heroPrimaryCtaInView;
-
-  const mobileCtaDisabled =
-    (currentStep === 1 && !selectedService) || (currentStep === 2 && !selectedSlot);
-
-  const mobileCtaLabel =
-    currentStep === 1
-      ? selectedService
-        ? copy.mobileContinueTime
-        : copy.mobileSelectService
-      : currentStep === 2
-        ? selectedSlot
-          ? copy.mobileContinue
-          : copy.mobilePickSlot
-        : currentStep === 5
-          ? copy.mobileConfirm
-          : copy.mobileContinue;
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      prevStep();
-    } else {
-      router.push('/');
-    }
-  };
+  const effectivePrice = typeof selectedVariant?.price === 'number' ? selectedVariant.price : selectedService?.price ?? 0;
+  const effectiveDuration = typeof selectedVariant?.duration === 'number' ? selectedVariant.duration : selectedService?.duration ?? 0;
+  const effectiveServiceName = selectedService
+    ? (selectedVariant?.name || selectedVariant?.nameEt || selectedService.name)
+    : '';
 
   const renderStep = () => {
     switch (currentStep) {
-      case 1:
-        return <ServiceStep />;
-      case 2:
-        return <DateTimeStep step3AnchorRef={step3Ref} />;
-      case 3:
-        return <ContactStep />;
-      case 4:
-        return <ExtrasStep />;
-      case 5:
-        return <ConfirmStep />;
-      default:
-        return <ServiceStep />;
+      case 1: return <ServiceStep />;
+      case 2: return <DateTimeStep step3AnchorRef={step3Ref} />;
+      case 3: return <ExtrasStep />;
+      case 4: case 5: return <ConfirmStep />;
+      default: return <ServiceStep />;
     }
   };
 
+  const isConfirm = currentStep >= 3;
+
   return (
     <div
-      className={`min-h-screen bg-[radial-gradient(ellipse_at_top,_#fffdfa_0%,_#fff6fb_50%,_#fef5f9_100%)] xl:pb-12 ${
-        currentStep === 5
-          ? 'pb-[calc(12rem+env(safe-area-inset-bottom))]'
-          : 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]'
+      className={`min-h-screen bg-[#f8f7f6] ${
+        isConfirm ? 'pb-[calc(14rem+env(safe-area-inset-bottom))] lg:pb-10'
+        : currentStep === 2 ? 'pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-10'
+        : 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-10'
       }`}
     >
-      <header className="sticky top-0 z-40 border-b border-[#f0e6ec]/80 bg-white/80 backdrop-blur-xl">
-        <div
-          className={`mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-4 ${
-            currentStep === 3 || currentStep === 5 ? 'py-2.5' : 'py-3'
-          } sm:px-6`}
-        >
-          <button
-            type="button"
-            onClick={handleBack}
-            className={`inline-flex shrink-0 items-center gap-2 rounded-full border border-[#ecdbe5] bg-white px-3 ${
-              currentStep === 3 || currentStep === 5 ? 'py-1.5' : 'py-2'
-            } text-sm font-medium text-[#634f5f] transition-[background-color,transform] duration-[180ms] hover:bg-[#fff8fc] active:scale-[0.98]`}
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+      {/* ─── Header ─── */}
+      <header className="sticky top-0 z-40 bg-[#f8f7f6]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[720px] items-center justify-between gap-3 px-5 py-3">
+          <button type="button" onClick={handleBack} className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium text-[#555] transition hover:bg-white active:scale-[0.97]">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
             {t('booking.back')}
           </button>
-          <div className="min-w-0 text-center">
-            <p
-              className={`${
-                currentStep === 3 || currentStep === 5 ? 'whitespace-normal break-words leading-tight' : 'truncate'
-              } text-[11px] font-semibold uppercase tracking-[0.22em] text-[#c24d86]`}
-            >
-              {copy.progressTitle} · {copy.stepLabel} {funnelStep} / 3
-            </p>
-            <p
-              className={`${
-                currentStep === 3 || currentStep === 5 ? 'whitespace-normal break-words leading-tight text-[12px]' : 'truncate text-xs'
-              } text-[#8a7a88]`}
-            >
-              {copy.header}
-            </p>
-          </div>
-          <div className="w-14 shrink-0 sm:w-20" aria-hidden />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9f456f]">{copy.progressTitle}</p>
+          <div className="w-16 shrink-0" aria-hidden />
         </div>
       </header>
 
+      {/* ─── Main ─── */}
       <main
-        className={`mx-auto w-full px-5 sm:px-6 lg:px-8 ${
-          currentStep === 2 ? 'max-w-[1040px] pt-8 pb-20' : 'max-w-[1200px] pt-6 md:pt-10 lg:pt-[48px] xl:pt-20'
+        ref={serviceRef}
+        className={`mx-auto px-4 pt-4 sm:px-5 md:pt-8 ${
+          currentStep === 1
+            ? 'max-w-[1080px]'
+            : currentStep === 2
+              ? 'max-w-[960px]'
+              : currentStep >= 4
+                ? 'max-w-[1040px]'
+                : 'max-w-[720px]'
         }`}
       >
-        <div
-          className={`grid items-start gap-8 xl:gap-10 ${currentStep === 2 ? '' : 'xl:grid-cols-[minmax(0,1fr)_300px]'}`}
+        <section
+          className={`overflow-hidden rounded-[24px] border border-[#efefef] bg-white shadow-[0_8px_40px_-16px_rgba(0,0,0,0.07)] transition-shadow duration-200 ${
+            isStepTransitioning ? 'shadow-[0_12px_48px_-12px_rgba(159,69,111,0.08)]' : ''
+          }`}
         >
-          <section
-            ref={serviceRef}
-            className={`overflow-hidden rounded-[24px] bg-white/90 shadow-[0_24px_64px_-40px_rgba(95,38,77,0.28)] ring-1 ring-[#f0e6ec]/90 transition-shadow duration-[180ms] xl:rounded-[28px] ${
-              isStepTransitioning ? 'shadow-[0_32px_72px_-36px_rgba(194,77,134,0.22)]' : ''
-            }`}
-          >
-            <div className="h-1 w-full bg-[#f4eaef]">
-              <div
-                className="h-full rounded-r-full bg-[linear-gradient(90deg,#e8b8d4_0%,#c24d86_55%,#a93d71_100%)] transition-[width] duration-[180ms] ease-out"
-                style={{ width: `${progressFillPct}%` }}
-              />
-            </div>
+          {/* ─── Micro Progress Navigation ─── */}
+          <div className="flex items-center justify-center px-5 py-4">
+            {funnelSteps.map(({ n, title }, i) => {
+              const isActive = funnelStep === n;
+              const isDone = funnelStep > n;
+              const isNextPreview = currentStep === 1 && selectedService && n === 2;
+              const canJump = (n === 1 && currentStep > 1) || (n === 2 && currentStep > 2) || (n === 3 && currentStep > 3);
 
-            <div
-              className={`border-b border-[#f5eaef] px-4 ${currentStep === 3 || currentStep === 5 ? 'py-3' : 'py-5'} sm:px-6 md:px-8 md:py-8`}
-            >
-              <p
-                className={`mb-3 text-center text-[10px] font-medium uppercase tracking-[0.24em] text-[#b8a0ae] ${
-                  currentStep === 3 || currentStep === 5 ? 'mb-2' : ''
-                }`}
-              >
-                {copy.helper}
-              </p>
-              <div
-                className={`grid ${
-                  currentStep === 3 || currentStep === 5 ? 'grid-cols-3 gap-1.5' : 'grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4'
-                }`}
-              >
-                {funnelSteps.map(({ n, title }) => {
-                  const isActive = funnelStep === n;
-                  const isDone = funnelStep > n;
-                  const canJumpBack = (n === 1 && currentStep > 1) || (n === 2 && currentStep > 2) || (n === 3 && currentStep > 3);
-                  return (
-                    <button
-                      key={n}
-                      type="button"
-                      ref={isActive ? activeTimelineRef : undefined}
-                      tabIndex={canJumpBack || isActive ? 0 : -1}
-                      aria-current={isActive ? 'step' : undefined}
-                      onClick={() => {
-                        if (canJumpBack) handleFunnelStepClick(n);
-                      }}
-                      className={`transition-all duration-[180ms] ${
-                        currentStep === 3 || currentStep === 5
-                          ? 'rounded-xl px-2.5 py-1.5 text-center sm:py-2'
-                          : 'rounded-2xl px-4 py-2.5 text-left sm:py-3'
-                      } ${
-                        isActive
-                          ? 'bg-white/70 border border-[#c24d86]/25 ring-1 ring-[#f0e8ed]'
-                          : isDone
-                            ? 'bg-white/55 opacity-85 ring-1 ring-[#eee5ea] hover:bg-[#fffafc] hover:opacity-95'
-                            : 'pointer-events-none bg-[#faf8f9]/70 opacity-[0.28] ring-1 ring-transparent'
-                      } ${canJumpBack ? 'cursor-pointer' : isActive ? 'cursor-default' : ''}`}
-                    >
-                      <span
-                        className={`block font-bold uppercase tracking-[0.14em] text-[#c24d86] ${
-                          currentStep === 3 || currentStep === 5
-                            ? 'text-[10px] leading-[1.1] whitespace-nowrap overflow-hidden text-ellipsis'
-                            : 'text-[11px]'
-                        }`}
-                      >
-                        {language === 'en' ? `STEP ${n}` : `${copy.stepLabel} ${n}`} —{' '}
-                        <span className="font-semibold normal-case tracking-normal text-[#2f2530]">{title}</span>
+              return (
+                <Fragment key={n}>
+                  {i > 0 && (
+                    <div className={`mx-2 h-px w-6 sm:w-10 transition-colors duration-300 ${isDone || isActive ? 'bg-[#d8b0c4]' : 'bg-[#efefef]'}`} />
+                  )}
+                  <button
+                    type="button"
+                    ref={isActive ? activeTimelineRef : undefined}
+                    tabIndex={canJump ? 0 : -1}
+                    aria-current={isActive ? 'step' : undefined}
+                    onClick={() => { if (canJump) handleFunnelStepClick(n); }}
+                    className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-[12px] font-semibold transition-all duration-200 ${
+                      isActive ? 'bg-[#FFF5F9] text-[#9f456f]'
+                      : isDone ? 'bg-transparent text-[#9f456f]'
+                      : isNextPreview ? 'bg-[#fff8fb] text-[#b77a99] ring-1 ring-[#edd8e4] pointer-events-none'
+                      : 'bg-transparent text-[#bbb] pointer-events-none'
+                    } ${canJump ? 'cursor-pointer hover:bg-[#fff0f5]' : 'cursor-default'}`}
+                  >
+                    {isDone ? (
+                      <span className="flex h-[20px] w-[20px] items-center justify-center rounded-full bg-[#9f456f]">
+                        <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                       </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                    ) : isActive ? (
+                      <span className="flex h-[20px] w-[20px] items-center justify-center rounded-full bg-[#9f456f] text-[10px] font-bold text-white">{n}</span>
+                    ) : isNextPreview ? (
+                      <span className="flex h-[20px] w-[20px] items-center justify-center rounded-full border-[1.5px] border-[#e3c8d7] text-[10px] font-bold text-[#b77a99]">2</span>
+                    ) : (
+                      <span className="flex h-[20px] w-[20px] items-center justify-center rounded-full border-[1.5px] border-[#ddd] text-[10px] font-bold text-[#bbb]">{n}</span>
+                    )}
+                    <span className="hidden sm:inline">{title}</span>
+                  </button>
+                </Fragment>
+              );
+            })}
+          </div>
 
-            <div
-              ref={activePanelRef}
-              className={`px-4 pb-14 pt-14 sm:px-6 sm:pb-12 sm:pt-8 md:px-8 md:pb-14 xl:px-10 ${
-                transitionsEnabled ? 'booking-step-fade' : ''
-              } ${isStepTransitioning ? 'will-change-transform' : ''}`}
-              key={currentStep}
-            >
-              <div
-                ref={step3Ref}
-                className="pointer-events-none h-0 w-full scroll-mt-[76px]"
-                aria-hidden
-                tabIndex={-1}
-              />
-              {renderStep()}
-            </div>
-          </section>
-
-          <aside className={currentStep === 2 || currentStep === 3 || currentStep === 5 ? 'hidden' : 'hidden xl:block'}>
-            <div className="sticky top-24 rounded-2xl bg-white/75 p-6 shadow-[0_20px_48px_-28px_rgba(57,33,52,0.18)] backdrop-blur-xl">
-              <div className="mb-5 flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c24d86] text-xs font-bold text-white">
-                  {funnelStep}
-                </span>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8899c]">
-                    {copy.stepLabel} {funnelStep} / 3
-                  </p>
-                  <p className="text-sm font-semibold text-[#2f2530]">
-                    {funnelStep === 1 ? copy.funnel1 : funnelStep === 2 ? copy.funnel2 : copy.funnel3}
-                  </p>
+          {/* ─── Step content ─── */}
+          <div
+            ref={activePanelRef}
+            className={`px-5 pb-8 pt-2 sm:px-6 md:px-8 ${transitionsEnabled ? 'booking-step-slide' : ''} ${isStepTransitioning ? 'will-change-transform' : ''}`}
+            key={currentStep}
+          >
+            <div ref={step3Ref} className="pointer-events-none h-0 w-full scroll-mt-[76px]" aria-hidden tabIndex={-1} />
+            {currentStep === 1 ? (
+              <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8">
+                <div className="min-w-0">
+                  <ServiceStep />
                 </div>
+                <aside className="sticky top-[92px] hidden self-start lg:block">
+                  <div className="rounded-[18px] border border-[#efefef] bg-[#fcfbfc] p-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">
+                      {en ? 'Booking snapshot' : 'Minu valik'}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[#9a8a94]">
+                      {en ? 'Step 1 of 3' : 'Samm 1 / 3'}
+                    </p>
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{en ? 'Service' : 'Teenus'}</p>
+                        <p className="mt-1 text-[15px] font-semibold text-[#1a1a1a]">
+                          {effectiveServiceName || (en ? 'Choose service' : 'Vali teenus')}
+                        </p>
+                        {selectedService && selectedVariant ? (
+                          <p className="mt-1 text-[12px] text-[#7f727a]">
+                            {selectedVariant.duration} {en ? 'min' : 'min'} · {`€${selectedVariant.price}`}
+                          </p>
+                        ) : selectedService ? (
+                          <p className="mt-1 text-[12px] text-[#7f727a]">
+                            {selectedService.duration} {en ? 'min' : 'min'}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="h-px bg-[#eee8ec]" />
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{en ? 'Price' : 'Hind'}</p>
+                          <p className="mt-1 text-[22px] font-bold tabular-nums text-[#9f456f]">
+                            {selectedService ? `€${effectivePrice}` : '—'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{en ? 'Time' : 'Aeg'}</p>
+                          <p className="mt-1 text-[13px] font-medium text-[#5f555b]">
+                            {selectedSlot ? `${selectedSlot.date} · ${selectedSlot.time}` : (en ? 'Choose time' : 'Vali aeg')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-[#efe8ec] bg-white px-3 py-2">
+                        <p className="text-[11px] text-[#7f727a]">
+                          {selectedService
+                            ? (en
+                                ? `Selected duration: ${effectiveDuration} min`
+                                : `Valitud kestus: ${effectiveDuration} min`)
+                            : (en ? 'Choose a service to continue' : 'Jätkamiseks vali teenus')}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-[#9a8a94]">
+                        {en ? 'You can change this later' : 'Seda saab hiljem muuta'}
+                      </p>
+                    </div>
+                  </div>
+                </aside>
               </div>
-              <div className="space-y-4 border-t border-[#f0e8ed] pt-5">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.pickService}</p>
-                  <p className="mt-0.5 font-brand text-lg font-semibold text-[#3a2a35]">{selectedService?.name ?? '—'}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.dateTime}</p>
-                  <p className="mt-0.5 text-sm font-medium text-[#5d4558]">{selectedSlotLabel ?? copy.pickSlot}</p>
-                </div>
-                <div className="flex items-end justify-between border-t border-dashed border-[#ebe0e6] pt-4">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a898a8]">{copy.total}</span>
-                  <span className="text-2xl font-semibold tabular-nums text-[#c24d86]">
-                    €{totalPrice || selectedService?.price || 0}
-                  </span>
-                </div>
-              </div>
-              {selectedSlot?.isSos && (
-                <p className="mt-3 text-xs text-[#9d6b8a]">
-                  {copy.sos}: {selectedSlot.sosSurcharge ? `+€${selectedSlot.sosSurcharge}` : copy.noSos}
-                </p>
-              )}
-            </div>
-          </aside>
-        </div>
+            ) : (
+              renderStep()
+            )}
+          </div>
+        </section>
       </main>
 
-      {currentStep !== 2 && currentStep !== 3 && currentStep !== 5 && (
+      {/* ─── Mobile sticky CTA — Step 1 (only when service selected) ─── */}
+      {currentStep === 1 && selectedService && (
         <>
-      <div
-        className={`pointer-events-none fixed inset-x-0 bottom-0 z-[55] h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,250,252,0.92)_45%,#fff8fb_100%)] xl:hidden booking-mobile-sticky-grad ${
-          showMobileStickyPrimary ? 'booking-mobile-sticky-grad-show' : 'booking-mobile-sticky-grad-hide'
-        }`}
-        aria-hidden
-      />
-
-      <div
-        className={`fixed inset-x-0 bottom-0 z-[60] flex justify-center px-3 pt-2 xl:hidden booking-mobile-sticky-outer ${
-          showMobileStickyPrimary ? 'booking-mobile-sticky-outer-show' : 'booking-mobile-sticky-outer-hide'
-        }`}
-        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
-      >
-        <div className="pointer-events-auto flex h-14 w-full max-w-lg items-center gap-2 rounded-full border border-white/60 bg-white/65 px-4 shadow-[0_10px_28px_-16px_rgba(57,33,52,0.22)] backdrop-blur-xl">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-[#2f2530]">{selectedService?.name || copy.pickService}</p>
-            <p className="text-sm font-semibold tabular-nums text-[#c24d86]">€{totalPrice || selectedService?.price || 0}</p>
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(248,247,246,0.95)_50%,#f8f7f6_100%)] lg:hidden" aria-hidden />
+          <div className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 lg:hidden" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+            <div className="booking-mobile-cta-enter booking-mobile-cta-spring pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border border-[#efefef] bg-white p-3 shadow-[0_12px_36px_-16px_rgba(0,0,0,0.10)]">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-[#1a1a1a]">{effectiveServiceName || selectedService.name}</p>
+                <p className="truncate text-[12px] text-[#7f727a]">{effectiveDuration} min · {`€${totalPrice || effectivePrice}`}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleMobileStickyCta}
+                className="shrink-0 rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] px-6 py-3 text-[13px] font-semibold text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.97]"
+              >
+                {en ? 'Continue' : 'Jätka'}
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            disabled={mobileCtaDisabled}
-            onClick={handleMobileStickyCta}
-            className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold text-white shadow-[0_6px_18px_-10px_rgba(194,77,134,0.55)] transition-all duration-[180ms] ${
-              mobileCtaDisabled
-                ? 'cursor-not-allowed bg-[#e8dce2] text-[#9a8a94] shadow-none'
-                : 'bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_50%,#a93d71_100%)] hover:shadow-[0_10px_24px_-10px_rgba(194,77,134,0.45)] active:scale-[0.98]'
-            }`}
-          >
-            {mobileCtaLabel}
-          </button>
-        </div>
-      </div>
         </>
       )}
 
       <style jsx global>{`
-        .booking-step-fade {
-          animation: bookingStepFade 180ms ease-out both;
+        @keyframes bookingStepSlide {
+          from { opacity: 0; transform: translateX(20px); }
+          to { opacity: 1; transform: translateX(0); }
         }
-        @keyframes bookingStepFade {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .booking-step-slide { animation: bookingStepSlide 240ms cubic-bezier(0.22, 0.68, 0, 1) both; }
+        @keyframes bookingMobileCtaEnter {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
         }
+        .booking-mobile-cta-enter { animation: bookingMobileCtaEnter 260ms ease-out both; }
+        @keyframes bookingMobileCtaSpring {
+          0% { transform: translateY(16px) scale(0.985); opacity: 0; }
+          70% { transform: translateY(-2px) scale(1.005); opacity: 1; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .booking-mobile-cta-spring { animation: bookingMobileCtaSpring 240ms cubic-bezier(0.22, 0.68, 0, 1) both; }
         @media (prefers-reduced-motion: reduce) {
-          .booking-step-fade {
-            animation: none;
-          }
-        }
-        .booking-cta-primary:hover:not(:disabled) {
-          box-shadow: 0 16px 40px -10px rgba(194, 77, 134, 0.45);
-        }
-
-        .booking-mobile-sticky-grad {
-          transition: opacity 220ms ease, transform 220ms ease;
-          opacity: 0;
-          transform: translateY(16px);
-        }
-        .booking-mobile-sticky-grad-show {
-          opacity: 1;
-          transform: translateY(0);
-        }
-        .booking-mobile-sticky-grad-hide {
-          opacity: 0;
-          transform: translateY(16px);
-          pointer-events: none;
-        }
-
-        .booking-mobile-sticky-outer {
-          transition: opacity 220ms ease, transform 220ms ease;
-          opacity: 0;
-          transform: translateY(16px);
-          pointer-events: none;
-        }
-        .booking-mobile-sticky-outer-show {
-          opacity: 1;
-          transform: translateY(0);
-          pointer-events: auto;
-        }
-        .booking-mobile-sticky-outer-hide {
-          opacity: 0;
-          transform: translateY(16px);
-          pointer-events: none;
+          .booking-step-slide, .booking-mobile-cta-enter, .booking-mobile-cta-spring { animation: none; }
         }
       `}</style>
     </div>
@@ -741,12 +421,11 @@ export default function BookingPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,#fffdfa_0%,#fff6fb_42%,#fff9fc_100%)]">
-          <div className="mx-auto max-w-4xl px-4 pb-12 pt-20 sm:px-6">
+        <div className="min-h-screen bg-[#f8f7f6]">
+          <div className="mx-auto max-w-[720px] px-5 pb-12 pt-16">
             <SkeletonBlock className="mb-6 h-10 w-56 rounded-full" />
             <SkeletonBlock className="mb-4 h-5 w-2/3 rounded-full" />
-            <SkeletonBlock className="mb-8 h-5 w-1/2 rounded-full" />
-            <SkeletonBlock className="h-[420px] rounded-[32px]" />
+            <SkeletonBlock className="h-[420px] rounded-[24px]" />
           </div>
         </div>
       }

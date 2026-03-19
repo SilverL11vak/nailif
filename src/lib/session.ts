@@ -250,15 +250,15 @@ export async function deleteSessionData(
  */
 export async function cleanupExpiredSessions(limit = 100): Promise<number> {
   await ensureSessionTables();
-  
-  const result = await sql<{ count: string }[]>`
-    DELETE FROM user_sessions 
-    WHERE expires_at < NOW() 
-    LIMIT ${limit}
-    RETURNING (SELECT COUNT(*)::text FROM user_sessions WHERE expires_at < NOW())
+  // PostgreSQL DELETE does not support LIMIT; use subquery to cap rows deleted
+  const deleted = await sql<{ session_id: string }[]>`
+    DELETE FROM user_sessions
+    WHERE session_id IN (
+      SELECT session_id FROM user_sessions WHERE expires_at < NOW() LIMIT ${limit}
+    )
+    RETURNING session_id
   `;
-  
-  return parseInt(result[0]?.count || '0', 10);
+  return deleted.length;
 }
 
 // ============================================================================

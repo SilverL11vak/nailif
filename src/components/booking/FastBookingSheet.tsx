@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
 import type { Service, TimeSlot, ContactInfo } from '@/store/booking-types';
 import { useBookingStore } from '@/store/booking-store';
+import { calculateBookingCommercePricing } from '@/lib/booking-engine/pricing/calculate-booking-commerce-pricing';
 
 interface FastBookingSheetProps {
   isOpen: boolean;
@@ -34,6 +35,13 @@ export function FastBookingSheet({
   const [error, setError] = useState<string | null>(null);
 
   const { setContactInfo, setStatus, calculateTotals } = useBookingStore();
+  const selectedProducts = useBookingStore((state) => state.selectedProducts);
+  const pricingSnapshot = calculateBookingCommercePricing({
+    baseServicePrice: service.price,
+    baseServiceDuration: service.duration,
+    products: selectedProducts,
+  });
+  const productsTotalPrice = pricingSnapshot.productsTotal;
 
   // Reset state when sheet opens
   useEffect(() => {
@@ -85,14 +93,40 @@ export function FastBookingSheet({
           addOns: [],
           totalPrice: service.price,
           totalDuration: service.duration,
+          products: selectedProducts,
+          productsTotalPrice,
+          pricingSnapshot,
+          locale: language,
         }),
       });
 
+      const data = (await response.json()) as { checkoutUrl?: string; error?: string; code?: string };
+
       if (!response.ok) {
-        throw new Error(t('error.somethingWrong'));
+        const serverMsg = data.error || t('error.somethingWrong');
+        const code = data.code;
+        console.error('Fast checkout API error:', response.status, code, serverMsg);
+
+        if (code === 'slot_unavailable' || code === 'slot_conflict') {
+          setError(language === 'en'
+            ? 'This time slot is no longer available. Please choose another.'
+            : 'See aeg pole enam saadaval. Palun vali teine.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (code === 'pricing_mismatch') {
+          calculateTotals();
+          setError(language === 'en'
+            ? 'Pricing has been updated — please try again.'
+            : 'Hind on uuendatud — palun proovi uuesti.');
+          setIsLoading(false);
+          return;
+        }
+
+        throw new Error(serverMsg);
       }
 
-      const data = (await response.json()) as { checkoutUrl?: string };
       if (!data.checkoutUrl) {
         throw new Error('Missing Stripe checkout URL');
       }
@@ -358,6 +392,5 @@ export function FastBookingSheet({
 }
 
 export default FastBookingSheet;
-
 
 

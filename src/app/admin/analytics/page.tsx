@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { AdminAnalyticsToggle } from '@/components/admin/AdminAnalyticsToggle';
 import { AdminLogoutButton } from '@/components/admin/AdminLogoutButton';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { getAdminFromCookies } from '@/lib/admin-auth';
 import { getAdminAnalyticsSummary, type AdminAnalyticsSummary as Summary } from '@/lib/admin-analytics-summary';
+import { getAnalyticsEnabled } from '@/lib/app-settings';
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -314,6 +316,7 @@ export default async function AdminAnalyticsPage() {
   const admin = await getAdminFromCookies();
   if (!admin) redirect('/admin/login');
 
+  const analyticsEnabled = await getAnalyticsEnabled();
   let data: Summary | null = null;
   let error: string | null = null;
   try {
@@ -338,6 +341,9 @@ export default async function AdminAnalyticsPage() {
         </header>
 
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+          <section className="mb-8">
+            <AdminAnalyticsToggle initialEnabled={analyticsEnabled} />
+          </section>
           <div className="rounded-[26px] border border-[#efe5ea] bg-white p-6 shadow-[0_18px_46px_-34px_rgba(57,33,52,0.26)]">
             <p className="text-sm font-semibold text-[#2f2530]">Analytics unavailable</p>
             <p className="mt-2 text-sm text-[#7a6a72]">{error ?? 'Failed to load analytics.'}</p>
@@ -370,37 +376,52 @@ export default async function AdminAnalyticsPage() {
           </p>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <KpiCard title="Booking Sessions Today" value={String(k.sessionsToday)} trend={k.sessionsTrendPct} />
-          <KpiCard title="Completed Bookings" value={String(k.completedBookings)} trend={k.completedTrendPct} />
-          <KpiCard title="Revenue Today" value={k.revenueToday.toFixed(0)} suffix="€" trend={k.revenueTrendPct} />
-          <KpiCard title="Abandon Rate" value={Math.round(k.abandonRate * 100).toString()} suffix="%" trend={k.abandonTrendPct} />
+        <section className="mb-8">
+          <AdminAnalyticsToggle initialEnabled={analyticsEnabled} />
         </section>
 
-        <section className="mt-8 grid gap-6 xl:grid-cols-2">
-          <FunnelViz steps={data.funnel.steps} />
-          <SlotDemand items={data.slotDemand} />
-        </section>
-
-        <section className="mt-8">
-          <ServiceTable rows={data.serviceConversion} />
-        </section>
-
-        <section className="mt-8">
-          <div className="mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">Abandonment intelligence</p>
-            <h2 className="mt-2 font-brand text-2xl font-semibold tracking-tight text-[#1f171d]">Where users hesitate</h2>
+        {!analyticsEnabled ? (
+          <div className="mb-8 rounded-[20px] border border-amber-200 bg-amber-50/90 p-5 text-[15px] text-amber-900">
+            <p className="font-semibold">Analytics tracking is currently disabled.</p>
+            <p className="mt-1 text-[14px] text-amber-800">
+              No events or sessions are being collected. Turn the toggle above on when you want to resume tracking.
+            </p>
           </div>
-          <AbandonIntel data={data.abandonIntel} />
-        </section>
+        ) : null}
 
-        <section className="mt-8">
-          <TimelineGraph points={data.timeline} />
-        </section>
+        <div className={!analyticsEnabled ? 'opacity-60' : ''}>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <KpiCard title="Booking Sessions Today" value={String(k.sessionsToday)} trend={k.sessionsTrendPct} />
+            <KpiCard title="Completed Bookings" value={String(k.completedBookings)} trend={k.completedTrendPct} />
+            <KpiCard title="Revenue Today" value={k.revenueToday.toFixed(0)} suffix="€" trend={k.revenueTrendPct} />
+            <KpiCard title="Abandon Rate" value={Math.round(k.abandonRate * 100).toString()} suffix="%" trend={k.abandonTrendPct} />
+          </section>
 
-        <section className="mt-8">
-          <Recommendations items={data.recommendations} />
-        </section>
+          <section className="mt-8 grid gap-6 xl:grid-cols-2">
+            <FunnelViz steps={data.funnel.steps} />
+            <SlotDemand items={data.slotDemand} />
+          </section>
+
+          <section className="mt-8">
+            <ServiceTable rows={data.serviceConversion} />
+          </section>
+
+          <section className="mt-8">
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#a79aa4]">Abandonment intelligence</p>
+              <h2 className="mt-2 font-brand text-2xl font-semibold tracking-tight text-[#1f171d]">Where users hesitate</h2>
+            </div>
+            <AbandonIntel data={data.abandonIntel} />
+          </section>
+
+          <section className="mt-8">
+            <TimelineGraph points={data.timeline} />
+          </section>
+
+          <section className="mt-8">
+            <Recommendations items={data.recommendations} />
+          </section>
+        </div>
       </div>
     </div>
   );
