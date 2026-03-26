@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import {
 import { ArrowRight } from 'lucide-react';
 
 const HERO_SLOT_STORAGE_KEY = 'hero_next_slot_lite_v1';
+const HOLD_DURATION = 15 * 60;
 
 export function HeroBookingWidget() {
   const { t, language } = useTranslation();
@@ -28,12 +29,29 @@ export function HeroBookingWidget() {
   const [incomingTime, setIncomingTime] = useState<string | null>(null);
   const [timeTransitioning, setTimeTransitioning] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(HOLD_DURATION);
   const pulseOnceRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setReduceMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 0) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!nextSlot) return;
+    setSecondsLeft(HOLD_DURATION);
+  }, [nextSlot?.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -119,9 +137,9 @@ export function HeroBookingWidget() {
   const urgencyMicro = useMemo(() => {
     if (!nextSlot) {
       if (slotsLoading && !showSlowFallback) {
-        return language === 'en' ? 'Checking next available time…' : 'Kontrollime järgmist vaba aega…';
+        return language === 'en' ? 'Checking next available time...' : 'Kontrollime j\u00E4rgmist vaba aega...';
       }
-      return language === 'en' ? 'See all available times' : 'Vaata kõiki vabu aegu';
+      return language === 'en' ? 'See all available times' : 'Vaata k\u00F5iki vabu aegu';
     }
     const todayDate = getTodayInTallinn();
     const currentTime = getCurrentTimeInTallinn();
@@ -130,11 +148,11 @@ export function HeroBookingWidget() {
     if (isToday) {
       // Check if this specific time has passed
       if (nextSlot.time <= currentTime) {
-        return language === 'en' ? 'Only a few times left today' : 'Täna veel 2 aega';
+        return language === 'en' ? 'Only a few times left today' : 'T\u00E4na veel 2 aega';
       }
-      if (h >= 9 && h < 12) return language === 'en' ? 'Morning times are filling' : 'Hommikused ajad täituvad';
-      if (h >= 17) return language === 'en' ? 'Evening times filling fast' : 'Õhtused ajad täituvad';
-      return language === 'en' ? 'Today still has limited openings' : 'Täna veel 2 aega';
+      if (h >= 9 && h < 12) return language === 'en' ? 'Morning times are filling' : 'Hommikused ajad t\u00E4ituvad';
+      if (h >= 17) return language === 'en' ? 'Evening times filling fast' : '\u00D5htused ajad t\u00E4ituvad';
+      return language === 'en' ? 'Today still has limited openings' : 'T\u00E4na veel 2 aega';
     }
     return language === 'en' ? 'Limited openings ahead' : 'Avamisi on piiratud';
   }, [nextSlot, language, slotsLoading, showSlowFallback]);
@@ -145,12 +163,12 @@ export function HeroBookingWidget() {
         label:
           slotsLoading && !showSlowFallback
             ? language === 'en'
-              ? 'Checking next available time…'
-              : 'Kontrollime järgmist vaba aega…'
+              ? 'Checking next available time...'
+              : 'Kontrollime j\u00E4rgmist vaba aega...'
             : language === 'en'
               ? 'See available times'
               : 'Vaata vabu aegu',
-        time: slotsLoading && !showSlowFallback ? '…' : language === 'en' ? 'Choose your time' : 'Vali oma aeg',
+        time: slotsLoading && !showSlowFallback ? '...' : language === 'en' ? 'Choose your time' : 'Vali oma aeg',
       };
     }
 
@@ -159,14 +177,14 @@ export function HeroBookingWidget() {
 
     if (nextSlot.date === todayDate) {
       return {
-        label: language === 'en' ? 'Next available time today' : 'Järgmine vaba aeg täna',
+        label: language === 'en' ? 'Next available time today' : 'J\u00E4rgmine vaba aeg t\u00E4na',
         time: nextSlot.time,
       };
     }
 
     if (nextSlot.date === tomorrowDate) {
       return {
-        label: language === 'en' ? 'Next available time tomorrow' : 'Järgmine vaba aeg homme',
+        label: language === 'en' ? 'Next available time tomorrow' : 'J\u00E4rgmine vaba aeg homme',
         time: nextSlot.time,
       };
     }
@@ -178,7 +196,7 @@ export function HeroBookingWidget() {
     });
 
     return {
-      label: language === 'en' ? `Next available: ${formatted}` : `Järgmine vaba aeg: ${formatted}`,
+      label: language === 'en' ? `Next available: ${formatted}` : `J\u00E4rgmine vaba aeg: ${formatted}`,
       time: nextSlot.time,
     };
   }, [nextSlot, language, slotsLoading, showSlowFallback]);
@@ -209,6 +227,8 @@ export function HeroBookingWidget() {
     const time = nextSlot.time;
     return language === 'en' ? `Reserve ${time} time` : `Broneeri kell ${time}`;
   };
+
+  const progress = Math.max(0, (secondsLeft / HOLD_DURATION) * 100);
 
   const handleReserve = () => {
     if (isReserving) return;
@@ -248,10 +268,10 @@ export function HeroBookingWidget() {
   return (
     <div
       id="hero-booking-widget"
-      className="group relative overflow-hidden rounded-2xl border border-[#f0e6ec] bg-white p-5 shadow-[0_30px_80px_-44px_rgba(95,38,77,0.34)] transition-all duration-[170ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] md:p-6 md:hover:-translate-y-[2px] md:hover:border-[#e6d6e0] md:hover:shadow-[0_36px_88px_-50px_rgba(95,38,77,0.42)] lg:p-8"
+      className="group relative overflow-hidden rounded-[24px] border border-[rgba(201,165,154,0.25)] bg-white/78 p-5 shadow-[0_40px_90px_rgba(20,12,18,0.18)] backdrop-blur-[16px] transition-all duration-[170ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] md:p-6 md:hover:-translate-y-[2px] lg:p-8"
     >
       {/* Gradient top bar */}
-      <div className="absolute left-0 right-0 top-0 h-1 bg-[linear-gradient(90deg,#e8b8d4_0%,#c24d86_55%,#a93d71_100%)]" aria-hidden />
+      <div className="absolute left-0 right-0 top-0 h-1 bg-[linear-gradient(90deg,#C0588B_0%,#E2B6C8_100%)]" aria-hidden />
       
       {/* Ambient glows */}
       <div className="pointer-events-none absolute right-0 top-0 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(215,157,192,0.22)_0%,transparent_70%)]" aria-hidden />
@@ -261,10 +281,10 @@ export function HeroBookingWidget() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8f7f89]">
-            {language === 'en' ? 'Next Available' : 'Järgmine aeg'}
+            {language === 'en' ? 'Next Available' : 'J\u00E4rgmine aeg'}
           </p>
           <p className="mt-1 text-[16px] font-medium text-[#7a6a74]">
-            {slotsLoading || isCardBooting ? (language === 'en' ? 'Checking availability…' : 'Kontrollime saadavust…') : bookingHeadlineParts.label}
+            {slotsLoading || isCardBooting ? (language === 'en' ? 'Checking availability...' : 'Kontrollime saadavust...') : bookingHeadlineParts.label}
           </p>
           {slotsLoading || isCardBooting ? (
             <div className="mt-2 space-y-2">
@@ -279,7 +299,7 @@ export function HeroBookingWidget() {
                     timeTransitioning ? 'translate-y-[-6px] opacity-0' : 'translate-y-0 opacity-100'
                   }`}
                 >
-                  {slotVisible ? (displayTime || bookingHeadlineParts.time) : '—'}
+                  {slotVisible ? (displayTime || bookingHeadlineParts.time) : '\u2014'}
                 </span>
                 {incomingTime && (
                   <span className="hero-time-enter absolute inset-0">
@@ -301,10 +321,10 @@ export function HeroBookingWidget() {
       </div>
 
       {/* Micro progress strip */}
-      <div className={`mt-4 rounded-2xl border px-3 py-2 text-[12px] font-medium transition-colors duration-300 ${
+      <div className={`mt-4 rounded-[14px] border px-[14px] py-[10px] text-[12px] font-medium transition-colors duration-300 ${
         nextSlot 
-          ? 'border-[#efe0e8] bg-[#fff7fb] text-[#6a3b57]' 
-          : 'border-[#efe0e8] bg-[#faf6f8] text-[#8a7a88]'
+          ? 'border-[#E7D4DE] bg-[#F7EEF3] text-[#6a3b57]' 
+          : 'border-[#E7D4DE] bg-[#F7EEF3] text-[#8a7a88]'
       }`}>
         <span className="inline-flex items-center gap-2">
           {nextSlot && (
@@ -314,12 +334,17 @@ export function HeroBookingWidget() {
             </span>
           )}
           {nextSlot
-            ? (language === 'en' ? 'This time is held for you for 15 min' : 'See aeg hoitud sulle 15 min')
+            ? (secondsLeft > 0
+                ? (language === 'en' ? `Held for you ${Math.ceil(secondsLeft / 60)} min` : `Hoitud sulle ${Math.ceil(secondsLeft / 60)} min`)
+                : (language === 'en' ? 'Time released. Choose a new slot.' : 'Aeg vabastati. Vali uus aeg.'))
             : urgencyMicro}
         </span>
         {nextSlot && (
-          <div className="mt-2 h-1 overflow-hidden rounded-full bg-[#f2dfe9]">
-            <div className={`hero-progress-run h-full w-1/2 rounded-full bg-[linear-gradient(90deg,#c24d86_0%,#a93d71_100%)] ${reduceMotion ? '' : 'hero-progress-shimmer'}`} />
+          <div className="mt-2 h-[6px] overflow-hidden rounded-full bg-[#eddde5]">
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#C0588B_0%,#E6A9C4_100%)]"
+              style={{ width: `${progress}%`, transition: 'width 1s linear' }}
+            />
           </div>
         )}
       </div>
@@ -328,12 +353,12 @@ export function HeroBookingWidget() {
         <p className="mt-2 text-[12px] text-[#7f6275]">
           {language === 'en'
             ? 'Check all available times on the booking page.'
-            : 'Kontrolli kõiki saadaolevaid aegu broneerimislehel.'}
+            : 'Kontrolli k\u00F5iki saadaolevaid aegu broneerimislehel.'}
         </p>
       )}
 
       <p className="mt-3 text-[12px] font-medium text-[#8a7a88]">
-        {language === 'en' ? 'Structured gel polish from €30' : 'Modelleeritud geellakk alates €30'}
+        {language === 'en' ? 'Structured gel polish from \u20AC30' : 'Modelleeritud geellakk alates \u20AC30'}
       </p>
 
       <div className="relative mt-5">
@@ -342,16 +367,12 @@ export function HeroBookingWidget() {
           type="button"
           onClick={handleReserve}
           disabled={isReserving}
-          className={`group/cta relative w-full rounded-2xl px-5 py-4 text-[15px] font-semibold text-white shadow-[0_16px_36px_-14px_rgba(194,77,134,0.48)] transition-all duration-[170ms] [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] active:scale-[0.988] ${
-            !nextSlot
-              ? 'bg-[linear-gradient(135deg,#9e6d85_0%,#8f5f79_55%,#7b5368_100%)] hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-18px_rgba(122,83,104,0.45)] active:scale-[0.99]'
-              : `bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_55%,#8f3362_100%)] hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-18px_rgba(194,77,134,0.55)] active:scale-[0.99] ${
-                  ctaPulse ? 'ring-4 ring-[#c24d86]/25' : ''
-                } hero-booking-cta-pulse ${isReserving ? 'opacity-90' : ''}`
-          }`}
+          className={`group/cta hero-booking-cta-pulse relative h-[52px] w-full rounded-full bg-gradient-to-r from-[#C15A8A] to-[#9F3D6B] px-8 text-[15px] font-medium text-white shadow-[0_10px_24px_rgba(159,61,107,0.25)] transition-all duration-300 [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] hover:shadow-[0_12px_30px_rgba(159,61,107,0.35)] active:scale-[0.97] ${
+            ctaPulse ? 'ring-4 ring-[#c24d86]/25' : ''
+          } ${isReserving ? 'opacity-90' : ''}`}
         >
           <span className="inline-flex items-center justify-center gap-2">
-            {isReserving ? (language === 'en' ? 'Holding your slot…' : 'Hoiame sinu aega…') : reserveLabel()}
+            {isReserving ? (language === 'en' ? 'Holding your slot...' : 'Hoiame sinu aega...') : reserveLabel()}
             {nextSlot && (
               <ArrowRight className="h-4 w-4 transition-transform duration-[170ms] group-hover/cta:translate-x-[2px]" strokeWidth={2.2} />
             )}
@@ -365,14 +386,22 @@ export function HeroBookingWidget() {
       </div>
 
       <p className="mt-2 text-center text-[12px] font-medium text-[#8a7a88] opacity-70">
-        {language === 'en' 
-          ? (nextSlot ? 'Selected time is held for you for 15 minutes' : 'Select a time to continue')
-          : (nextSlot ? 'Valitud aeg hoitakse sulle 15 minutit' : 'Vali aeg jätkamiseks')}
+        {language === 'en'
+          ? (nextSlot
+              ? (secondsLeft > 0
+                  ? `Selected time is held for ${Math.ceil(secondsLeft / 60)} minutes`
+                  : 'Time released. Choose a new slot.')
+              : 'Select a time to continue')
+          : (nextSlot
+              ? (secondsLeft > 0
+                  ? `Valitud aeg hoitakse sulle ${Math.ceil(secondsLeft / 60)} minutit`
+                  : 'Aeg vabastati. Vali uus aeg.')
+              : 'Vali aeg j\u00E4tkamiseks')}
       </p>
 
       <div className="mt-5 flex items-center justify-center gap-3 border-t border-[#f1e3ec] pt-5 text-[11px] text-[#7f6275]">
         <span>{t('trust.rating')} ({t('trust.clients')})</span>
-        <span className="text-[#d8c5d1]">•</span>
+        <span className="text-[#d8c5d1]">{'\u2022'}</span>
         <span>{t('widget.hygiene')}</span>
       </div>
 
@@ -394,18 +423,15 @@ export function HeroBookingWidget() {
         .hero-live-dot-pulse {
           animation: heroLiveDotPulse 2200ms ease-in-out infinite;
         }
-        .hero-progress-shimmer {
-          animation: heroProgressShimmer 2400ms ease-in-out infinite;
-        }
         .hero-commit-bar {
           animation: heroCommitBar 200ms ease-out both;
         }
         @keyframes heroCtaPulse {
           0%, 84%, 100% {
-            box-shadow: 0 16px 36px -14px rgba(194, 77, 134, 0.45);
+            box-shadow: 0 14px 32px rgba(158, 62, 112, 0.35);
           }
           90% {
-            box-shadow: 0 22px 52px -18px rgba(194, 77, 134, 0.62);
+            box-shadow: 0 22px 46px rgba(158, 62, 112, 0.45);
           }
         }
         @keyframes heroTimeEnter {
@@ -424,13 +450,8 @@ export function HeroBookingWidget() {
           0%, 100% { opacity: 0.24; transform: scale(1); }
           50% { opacity: 0.52; transform: scale(1.14); }
         }
-        @keyframes heroProgressShimmer {
-          0%, 100% { filter: brightness(1); }
-          50% { filter: brightness(1.08); }
-        }
         @media (prefers-reduced-motion: reduce) {
           .hero-live-dot-pulse,
-          .hero-progress-shimmer,
           .hero-time-enter {
             animation: none !important;
           }
@@ -441,3 +462,4 @@ export function HeroBookingWidget() {
 }
 
 export default HeroBookingWidget;
+
