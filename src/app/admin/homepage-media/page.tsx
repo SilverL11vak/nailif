@@ -9,7 +9,7 @@ type MediaType = 'image' | 'video';
 
 interface HomepageMediaItem {
   key: string;
-  label: string;
+  label: { et: string; en: string };
   section: string;
   imageUrl: string;
   mediaType: MediaType;
@@ -19,7 +19,8 @@ interface HomepageMediaItem {
 
 interface MediaDraft {
   imageUrl: string;
-  label: string;
+  labelEt: string;
+  labelEn: string;
   section: string;
   mediaType: MediaType;
   videoLoop: boolean;
@@ -101,7 +102,8 @@ export default function AdminHomepageMediaPage() {
         nextItems.reduce<Record<string, MediaDraft>>((acc, item) => {
           acc[item.key] = {
             imageUrl: item.imageUrl ?? '',
-            label: item.label ?? '',
+            labelEt: item.label?.et ?? '',
+            labelEn: item.label?.en ?? '',
             section: item.section ?? 'general',
             mediaType: item.mediaType === 'video' ? 'video' : 'image',
             videoLoop: Boolean(item.videoLoop),
@@ -137,7 +139,8 @@ export default function AdminHomepageMediaPage() {
     if (!draft) return sum;
     const changed =
       draft.imageUrl !== (item.imageUrl ?? '') ||
-      draft.label !== (item.label ?? '') ||
+      draft.labelEt !== (item.label?.et ?? '') ||
+      draft.labelEn !== (item.label?.en ?? '') ||
       draft.section !== (item.section ?? 'general') ||
       draft.mediaType !== (item.mediaType === 'video' ? 'video' : 'image') ||
       draft.videoLoop !== Boolean(item.videoLoop) ||
@@ -165,7 +168,10 @@ export default function AdminHomepageMediaPage() {
         return {
           key: item.key,
           imageUrl: (draft?.imageUrl ?? '').trim(),
-          label: draft?.label ?? item.label,
+          label: {
+            et: draft?.labelEt ?? item.label?.et ?? '',
+            en: draft?.labelEn ?? item.label?.en ?? '',
+          },
           section: draft?.section ?? item.section,
           sortOrder: draft?.sortOrder ?? item.sortOrder,
           mediaType: draft?.mediaType ?? item.mediaType,
@@ -197,7 +203,8 @@ export default function AdminHomepageMediaPage() {
   const handleResetMedia = (item: HomepageMediaItem) => {
     updateDraft(item.key, {
       imageUrl: item.imageUrl ?? '',
-      label: item.label ?? '',
+      labelEt: item.label?.et ?? '',
+      labelEn: item.label?.en ?? '',
       section: item.section ?? 'general',
       mediaType: item.mediaType === 'video' ? 'video' : 'image',
       videoLoop: Boolean(item.videoLoop),
@@ -217,7 +224,7 @@ export default function AdminHomepageMediaPage() {
         imageUrl: dataUrl,
         mediaType: file.type.startsWith('video/') ? 'video' : 'image',
       });
-      setSuccess(`"${item.label}" uuendatud. Salvesta muudatused.`);
+      setSuccess(`"${item.label?.et || item.key}" uuendatud. Salvesta muudatused.`);
     } catch (uploadError) {
       console.error(uploadError);
       setError('Meedia upload ebaonnestus. Proovi uuesti.');
@@ -234,7 +241,7 @@ export default function AdminHomepageMediaPage() {
 
     const newItem: HomepageMediaItem = {
       key,
-      label: normalizedLabel,
+      label: { et: normalizedLabel, en: normalizedLabel },
       section: 'hero',
       imageUrl: '',
       mediaType: newHeroType,
@@ -247,7 +254,8 @@ export default function AdminHomepageMediaPage() {
       ...prev,
       [key]: {
         imageUrl: '',
-        label: normalizedLabel,
+        labelEt: normalizedLabel,
+        labelEn: normalizedLabel,
         section: 'hero',
         mediaType: newHeroType,
         videoLoop: newHeroType === 'video',
@@ -368,7 +376,8 @@ export default function AdminHomepageMediaPage() {
                     const hasMedia = draftValue.length > 0 && !isBroken;
                     const isChanged =
                       draft.imageUrl !== (item.imageUrl ?? '') ||
-                      draft.label !== (item.label ?? '') ||
+                      draft.labelEt !== (item.label?.et ?? '') ||
+                      draft.labelEn !== (item.label?.en ?? '') ||
                       draft.section !== (item.section ?? 'general') ||
                       draft.mediaType !== (item.mediaType === 'video' ? 'video' : 'image') ||
                       draft.videoLoop !== Boolean(item.videoLoop) ||
@@ -398,7 +407,7 @@ export default function AdminHomepageMediaPage() {
                             ) : (
                               <Image
                                 src={draftValue}
-                                alt={draft.label || item.label}
+                                alt={draft.labelEt || item.label?.et || item.key}
                                 fill
                                 className="object-cover"
                                 unoptimized
@@ -411,10 +420,18 @@ export default function AdminHomepageMediaPage() {
                         </div>
 
                         <label className="block text-xs font-medium text-[#4b5563]">
-                          Nimi
+                            Nimi
                           <input
-                            value={draft.label}
-                            onChange={(event) => updateDraft(item.key, { label: event.target.value })}
+                            value={draft.labelEt}
+                            onChange={(event) => updateDraft(item.key, { labelEt: event.target.value })}
+                            className="mt-1 w-full rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-xs outline-none focus:border-[#9ca3af]"
+                          />
+                        </label>
+                        <label className="mt-2 block text-xs font-medium text-[#4b5563]">
+                          Name (EN)
+                          <input
+                            value={draft.labelEn}
+                            onChange={(event) => updateDraft(item.key, { labelEn: event.target.value })}
                             className="mt-1 w-full rounded-xl border border-[#d1d5db] bg-white px-3 py-2 text-xs outline-none focus:border-[#9ca3af]"
                           />
                         </label>

@@ -249,8 +249,8 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#fafafa]">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <main className="admin-v2-page">
+      <div className="admin-v2-container py-8">
         <AdminPageHeader
           overline="Sisu"
           title="Tooted"
@@ -265,7 +265,7 @@ export default function AdminProductsPage() {
         />
 
         {/* Horizontal context: search + filters */}
-        <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+        <section className="admin-v2-surface mb-7 p-5">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
             <input
@@ -273,14 +273,14 @@ export default function AdminProductsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Otsi toote nime või kategooria järgi..."
-              className="w-full rounded-xl border border-[#e5e7eb] bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
+              className="admin-v2-input w-full py-2.5 pl-10 pr-4 text-sm"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[140px]"
+              className="admin-v2-select min-w-[140px] px-3 py-2 text-sm"
             >
               <option value="all">Kõik kategooriad</option>
               {categories.map((c) => (
@@ -290,7 +290,7 @@ export default function AdminProductsPage() {
             <select
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
-              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[120px]"
+              className="admin-v2-select min-w-[120px] px-3 py-2 text-sm"
             >
               <option value="all">Kõik</option>
               <option value="active">Aktiivsed</option>
@@ -299,10 +299,10 @@ export default function AdminProductsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 min-w-[160px]"
+              className="admin-v2-select min-w-[160px] px-3 py-2 text-sm"
             >
-              <option value="name">Nimi A–Ü</option>
-              <option value="nameDesc">Nimi Ü–A</option>
+              <option value="name">Nimi A-Ü</option>
+              <option value="nameDesc">Nimi Ü-A</option>
               <option value="price">Hind kasvav</option>
               <option value="priceDesc">Hind kahanev</option>
               <option value="newest">Uusimad esimesena</option>
@@ -310,7 +310,7 @@ export default function AdminProductsPage() {
             <button
               type="button"
               onClick={() => setHelpCollapsed(!helpCollapsed)}
-              className="inline-flex items-center gap-1 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              className="admin-v2-btn-ghost inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm"
             >
               {helpCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               Abi
@@ -319,13 +319,13 @@ export default function AdminProductsPage() {
           {!helpCollapsed && (
             <div className="mt-3 rounded-xl border border-[#e5e7eb] bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
               <p className="font-medium text-slate-800 mb-1">Kuidas tooteid hallata</p>
-              <ol className="list-decimal space-y-0.5 pl-4"> <li>Sisesta toote nimi, hind ja kirjeldus.</li><li>Lisa pilt ja laoseis.</li><li>Vajuta „Salvesta toode”.</li></ol>
+              <ol className="list-decimal space-y-0.5 pl-4"> <li>Sisesta toote nimi, hind ja kirjeldus.</li><li>Lisa pilt ja laoseis.</li><li>Vajuta &quot;Salvesta toode&quot;.</li></ol>
             </div>
           )}
         </section>
 
         {toast && (
-          <div className="fixed right-6 top-6 z-[70] rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-lg">
+          <div className="fixed right-6 top-6 z-[70] rounded-xl border border-[#eadbe4] bg-white/95 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-[0_20px_35px_-22px_rgba(73,50,66,0.6)] backdrop-blur">
             {toast}
           </div>
         )}
@@ -334,7 +334,7 @@ export default function AdminProductsPage() {
         )}
 
         {/* Main content card: product list */}
-        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+        <section className="admin-v2-surface p-6">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-800">Toodete nimekiri</h2>
             <p className="text-sm text-slate-500">
@@ -350,7 +350,7 @@ export default function AdminProductsPage() {
               </div>
               <p className="mt-4 text-sm text-slate-500">Tooteid ei leitud.</p>
               <p className="mt-1 text-xs text-slate-400">Lisa toode või muuda filtreid.</p>
-              <button type="button" onClick={openNewProduct} className="mt-5 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900">
+              <button type="button" onClick={openNewProduct} className="admin-v2-btn-primary mt-5">
                 Lisa toode
               </button>
             </div>
@@ -359,7 +359,7 @@ export default function AdminProductsPage() {
             {filteredAndSortedProducts.map((product) => (
               <article
                 key={product.id}
-                className="group flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-200"
+                className="admin-v2-card group flex flex-col overflow-hidden rounded-2xl"
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
                   {product.imageUrl ? (
@@ -369,7 +369,7 @@ export default function AdminProductsPage() {
                       width={640}
                       height={480}
                       unoptimized
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-slate-400">
@@ -402,18 +402,18 @@ export default function AdminProductsPage() {
                       <span className="text-lg font-semibold text-slate-800">EUR {product.price}</span>
                       <span className="ml-2 text-xs text-slate-500">Laos: {product.stock}</span>
                     </div>
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                       <button
                         type="button"
                         onClick={() => openEditProduct(product)}
-                        className="rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        className="admin-v2-btn-secondary rounded-full px-3 py-1.5 text-xs"
                       >
                         Muuda
                       </button>
                       <button
                         type="button"
                         onClick={() => void deleteProduct(product.id, product.nameEt ?? product.name)}
-                        className="rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                        className="admin-v2-btn-danger rounded-full px-3 py-1.5 text-xs"
                       >
                         Kustuta
                       </button>
@@ -435,13 +435,13 @@ export default function AdminProductsPage() {
             onClick={() => setIsDrawerOpen(false)}
             aria-hidden
           />
-          <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[#e5e7eb] bg-white shadow-xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e5e7eb] bg-white px-6 py-4">
+          <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-[#eedee8] bg-[#fffdfd] shadow-[0_28px_56px_-34px_rgba(37,25,34,0.5)]">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e8dce4] bg-white/95 px-6 py-4 backdrop-blur-sm">
               <h2 className="text-lg font-semibold text-slate-800">{draft.id ? 'Muuda toodet' : 'Lisa toode'}</h2>
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="rounded-lg border border-[#e5e7eb] px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="admin-v2-btn-secondary px-3 py-1.5 text-sm"
               >
                 Sulge
               </button>
@@ -456,7 +456,7 @@ export default function AdminProductsPage() {
               )}
 
               {/* Basic info */}
-              <fieldset className="rounded-2xl border border-[#e5e7eb] bg-white p-5">
+              <fieldset className="admin-v2-surface-soft p-5">
                 <legend className="px-2 text-sm font-semibold text-slate-800">Põhiandmed (eesti)</legend>
                 <div className="mt-3 space-y-4">
                   <label className="block">
@@ -464,7 +464,7 @@ export default function AdminProductsPage() {
                     <input
                       value={draft.nameEt}
                       onChange={(e) => setDraft((p) => ({ ...p, nameEt: e.target.value }))}
-                      className="mt-1 w-full rounded-xl border border-[#e5e7eb] bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
+                      className="admin-v2-input mt-1 w-full px-3 py-2.5 text-sm"
                     />
                   </label>
                   <label className="block">
@@ -473,7 +473,7 @@ export default function AdminProductsPage() {
                       value={draft.descriptionEt}
                       onChange={(e) => setDraft((p) => ({ ...p, descriptionEt: e.target.value }))}
                       rows={3}
-                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none focus:ring-1 focus:ring-[#c24d86]/20"
+                      className="admin-v2-input mt-1 w-full px-3 py-2.5 text-sm"
                     />
                   </label>
                   <label className="block">
@@ -481,14 +481,14 @@ export default function AdminProductsPage() {
                     <input
                       value={draft.categoryEt}
                       onChange={(e) => setDraft((p) => ({ ...p, categoryEt: e.target.value }))}
-                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none focus:ring-1 focus:ring-[#c24d86]/20"
+                      className="admin-v2-input mt-1 w-full px-3 py-2.5 text-sm"
                     />
                   </label>
                 </div>
               </fieldset>
 
               {/* English version */}
-              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+              <fieldset className="admin-v2-surface-soft p-5">
                 <legend className="px-2 text-sm font-semibold text-[#374151]">English version</legend>
                 <div className="mt-3 space-y-4">
                   <label className="block">
@@ -497,12 +497,12 @@ export default function AdminProductsPage() {
                       <input
                         value={draft.nameEn}
                         onChange={(e) => setDraft((p) => ({ ...p, nameEn: e.target.value }))}
-                        className="flex-1 rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                        className="admin-v2-input flex-1 px-3 py-2.5 text-sm"
                       />
                       <button
                         type="button"
                         onClick={() => void generateEnglishSuggestion(draft.nameEt, 'nameEn')}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#e5e0e3] bg-white px-2.5 py-2 text-xs font-medium text-[#6b7280] hover:bg-[#fdf8fb]"
+                        className="admin-v2-btn-secondary px-2.5 py-2 text-xs"
                       >
                         <Sparkles className="h-3.5 w-3.5" /> EN
                       </button>
@@ -515,12 +515,12 @@ export default function AdminProductsPage() {
                         value={draft.descriptionEn}
                         onChange={(e) => setDraft((p) => ({ ...p, descriptionEn: e.target.value }))}
                         rows={3}
-                        className="flex-1 rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                        className="admin-v2-input flex-1 px-3 py-2.5 text-sm"
                       />
                       <button
                         type="button"
                         onClick={() => void generateEnglishSuggestion(draft.descriptionEt, 'descriptionEn')}
-                        className="h-fit rounded-lg border border-[#e5e0e3] bg-white px-2.5 py-2 text-xs font-medium text-[#6b7280] hover:bg-[#fdf8fb]"
+                        className="admin-v2-btn-secondary h-fit px-2.5 py-2 text-xs"
                       >
                         <Sparkles className="h-3.5 w-3.5" /> EN
                       </button>
@@ -532,12 +532,12 @@ export default function AdminProductsPage() {
                       <input
                         value={draft.categoryEn}
                         onChange={(e) => setDraft((p) => ({ ...p, categoryEn: e.target.value }))}
-                        className="flex-1 rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                        className="admin-v2-input flex-1 px-3 py-2.5 text-sm"
                       />
                       <button
                         type="button"
                         onClick={() => void generateEnglishSuggestion(draft.categoryEt, 'categoryEn')}
-                        className="rounded-lg border border-[#e5e0e3] bg-white px-2.5 py-2 text-xs font-medium text-[#6b7280] hover:bg-[#fdf8fb]"
+                        className="admin-v2-btn-secondary px-2.5 py-2 text-xs"
                       >
                         <Sparkles className="h-3.5 w-3.5" /> EN
                       </button>
@@ -547,7 +547,7 @@ export default function AdminProductsPage() {
               </fieldset>
 
               {/* Commerce / inventory */}
-              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+              <fieldset className="admin-v2-surface-soft p-5">
                 <legend className="px-2 text-sm font-semibold text-[#374151]">Hind ja laoseis</legend>
                 <div className="mt-3 grid gap-4 sm:grid-cols-3">
                   <label className="block">
@@ -556,7 +556,7 @@ export default function AdminProductsPage() {
                       type="number"
                       value={draft.price}
                       onChange={(e) => setDraft((p) => ({ ...p, price: Number(e.target.value) }))}
-                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                      className="admin-v2-input mt-1 w-full px-3 py-2.5 text-sm"
                     />
                   </label>
                   <label className="block">
@@ -565,7 +565,7 @@ export default function AdminProductsPage() {
                       type="number"
                       value={draft.stock}
                       onChange={(e) => setDraft((p) => ({ ...p, stock: Number(e.target.value) }))}
-                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                      className="admin-v2-input mt-1 w-full px-3 py-2.5 text-sm"
                     />
                   </label>
                   <label className="block">
@@ -574,14 +574,14 @@ export default function AdminProductsPage() {
                       type="number"
                       value={draft.sortOrder}
                       onChange={(e) => setDraft((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
-                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                      className="admin-v2-input mt-1 w-full px-3 py-2.5 text-sm"
                     />
                   </label>
                 </div>
               </fieldset>
 
               {/* Media */}
-              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+              <fieldset className="admin-v2-surface-soft p-5">
                 <legend className="px-2 text-sm font-semibold text-[#374151]">Pilt</legend>
                 <div className="mt-3 space-y-3">
                   <label className="block">
@@ -589,11 +589,11 @@ export default function AdminProductsPage() {
                     <input
                       value={draft.imageUrl}
                       onChange={(e) => setDraft((p) => ({ ...p, imageUrl: e.target.value }))}
-                      className="mt-1 w-full rounded-xl border border-[#e5e0e3] bg-[#faf8f9] px-3 py-2.5 text-sm focus:border-[#c24d86] focus:outline-none"
+                      className="admin-v2-input mt-1 w-full px-3 py-2.5 text-sm"
                     />
                   </label>
                   {Array.isArray(draft.images) && draft.images.length > 0 && (
-                    <div className="rounded-xl border border-[#efe4eb] bg-[#faf8f9] p-3">
+                    <div className="admin-v2-surface-soft p-3">
                       <p className="text-xs font-medium text-[#6b7280]">Toote pildid (vali peapilt)</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {draft.images.map((url, index) => {
@@ -689,7 +689,7 @@ export default function AdminProductsPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="rounded-xl border border-[#e5e0e3] bg-white px-4 py-2 text-sm font-medium text-[#4b5563] hover:bg-[#fdf8fb]"
+                      className="admin-v2-btn-secondary px-4 py-2 text-sm"
                     >
                       Laadi pilt üles (mitu)
                     </button>
@@ -698,7 +698,7 @@ export default function AdminProductsPage() {
               </fieldset>
 
               {/* Visibility */}
-              <fieldset className="rounded-2xl border border-[#efe4eb] bg-white p-5">
+              <fieldset className="admin-v2-surface-soft p-5">
                 <legend className="px-2 text-sm font-semibold text-[#374151]">Nähtavus</legend>
                 <div className="mt-3 flex flex-wrap gap-6">
                   <label className="flex cursor-pointer items-center gap-2.5">
@@ -727,21 +727,21 @@ export default function AdminProductsPage() {
                   type="button"
                   onClick={() => void saveProduct()}
                   disabled={!draft.nameEt.trim() || isSaving}
-                  className="rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+                  className="admin-v2-btn-primary disabled:opacity-50"
                 >
                   {isSaving ? 'Salvestan...' : 'Salvesta toode'}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setDraft(emptyDraft); }}
-                  className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="admin-v2-btn-secondary"
                 >
                   Tühjenda
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsDrawerOpen(false)}
-                  className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
+                  className="admin-v2-btn-ghost"
                 >
                   Sulge
                 </button>
@@ -753,3 +753,5 @@ export default function AdminProductsPage() {
     </main>
   );
 }
+
+

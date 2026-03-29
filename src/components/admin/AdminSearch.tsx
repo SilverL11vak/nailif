@@ -102,7 +102,7 @@ export function AdminSearch() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="btn-secondary btn-secondary-sm flex items-center gap-2"
+        className="admin-v2-btn-secondary min-h-[40px] px-3 py-2 text-sm"
       >
         <Search size={14} />
         <span className="hidden sm:inline">Otsi...</span>
@@ -114,10 +114,10 @@ export function AdminSearch() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh]">
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#2a1f28]/35 pt-[13vh] backdrop-blur-[2px]">
+      <div className="admin-v2-surface w-full max-w-xl overflow-hidden shadow-[0_34px_60px_-34px_rgba(33,20,30,0.52)]">
         {/* Search Input */}
-        <div className="flex items-center gap-3 border-b border-[#e5e7eb] px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-[#ecdee7] px-5 py-3.5">
           <Search size={18} className="text-[#9ca3af]" />
           <input
             ref={inputRef}
@@ -125,20 +125,20 @@ export function AdminSearch() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Otsi teenuseid, tooteid, broneeringuid..."
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-[#9ca3af]"
+            className="flex-1 bg-transparent text-sm text-[#2f2530] outline-none placeholder:text-[#9c8d98]"
           />
           {query && (
-            <button onClick={() => setQuery('')} className="text-[#9ca3af] hover:text-[#6b7280]">
+            <button onClick={() => setQuery('')} className="rounded-full p-1 text-[#9ca3af] transition hover:bg-[#fff1f8] hover:text-[#6b7280]">
               <X size={16} />
             </button>
           )}
-          <kbd className="rounded border border-[#e5e7eb] bg-[#f3f4f6] px-1.5 py-0.5 text-[10px] font-medium text-[#6b7280]">
+          <kbd className="rounded border border-[#e8dce4] bg-[#faf4f8] px-1.5 py-0.5 text-[10px] font-medium text-[#6b7280]">
             ESC
           </kbd>
         </div>
 
         {/* Results */}
-        <div className="max-h-[60vh] overflow-y-auto p-2">
+        <div className="max-h-[60vh] overflow-y-auto p-3">
           {isLoading ? (
             <div className="flex items-center justify-center py-8 text-sm text-[#6b7280]">
               <Sparkles size={16} className="mr-2 animate-pulse" />
@@ -165,7 +165,7 @@ export function AdminSearch() {
                     <button
                       key={item.id}
                       onClick={() => handleResultClick(item.href)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f3f4f6]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#fff4fa]"
                     >
                       <Sparkles size={16} className="text-[#8b5cf6]" />
                       <span className="flex-1 text-sm text-[#111827]">{item.name}</span>
@@ -186,7 +186,7 @@ export function AdminSearch() {
                     <button
                       key={item.id}
                       onClick={() => handleResultClick(item.href)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f3f4f6]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#fff4fa]"
                     >
                       <Package size={16} className="text-[#10b981]" />
                       <span className="flex-1 text-sm text-[#111827]">{item.name}</span>
@@ -207,7 +207,7 @@ export function AdminSearch() {
                     <button
                       key={item.id}
                       onClick={() => handleResultClick(item.href)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f3f4f6]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#fff4fa]"
                     >
                       <Calendar size={16} className="text-[#f59e0b]" />
                       <span className="flex-1 text-sm text-[#111827]">{item.customerName}</span>
@@ -228,7 +228,7 @@ export function AdminSearch() {
                     <button
                       key={item.id}
                       onClick={() => handleResultClick(item.href)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f3f4f6]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#fff4fa]"
                     >
                       <ShoppingBag size={16} className="text-[#3b82f6]" />
                       <span className="flex-1 text-sm text-[#111827]">{item.customerName}</span>
@@ -249,7 +249,7 @@ export function AdminSearch() {
                     <button
                       key={item.id}
                       onClick={() => handleResultClick(item.href)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f3f4f6]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#fff4fa]"
                     >
                       <ImageIcon size={16} className="text-[#ec4899]" aria-hidden />
                       <span className="flex-1 text-sm text-[#111827] truncate">{item.caption || 'Pilt'}</span>
@@ -269,7 +269,7 @@ export function AdminSearch() {
                     <button
                       key={item.id}
                       onClick={() => handleResultClick(item.href)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#f3f4f6]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#fff4fa]"
                     >
                       <MessageCircle size={16} className="text-[#8b5cf6]" />
                       <span className="flex-1 text-sm text-[#111827] truncate">{item.clientName}</span>
@@ -283,7 +283,7 @@ export function AdminSearch() {
         </div>
 
         {/* Footer hint */}
-        <div className="flex items-center justify-between border-t border-[#e5e7eb] px-4 py-2 text-xs text-[#9ca3af]">
+        <div className="flex items-center justify-between border-t border-[#ecdee7] px-5 py-2.5 text-xs text-[#9ca3af]">
           <span>
             {totalResults} tulemus{totalResults !== 1 ? 't' : ''}
           </span>

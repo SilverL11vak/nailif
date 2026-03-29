@@ -108,18 +108,14 @@ export function FastBookingSheet({
         console.error('Fast checkout API error:', response.status, code, serverMsg);
 
         if (code === 'slot_unavailable' || code === 'slot_conflict') {
-          setError(language === 'en'
-            ? 'This time slot is no longer available. Please choose another.'
-            : 'See aeg pole enam saadaval. Palun vali teine.');
+          setError(t('_auto.components_booking_FastBookingSheet.p205'));
           setIsLoading(false);
           return;
         }
 
         if (code === 'pricing_mismatch') {
           calculateTotals();
-          setError(language === 'en'
-            ? 'Pricing has been updated — please try again.'
-            : 'Hind on uuendatud — palun proovi uuesti.');
+          setError(t('_auto.components_booking_FastBookingSheet.p206'));
           setIsLoading(false);
           return;
         }
@@ -211,7 +207,7 @@ export function FastBookingSheet({
             {/* Add to Calendar CTA */}
             <button 
               onClick={() => router.push('/success')}
-              className="mt-6 rounded-full bg-[linear-gradient(120deg,#d4669e_0%,#c24d86_52%,#a93d71_100%)] px-6 py-3 font-medium text-white shadow-[0_20px_30px_-20px_rgba(116,47,93,0.66)] transition-all hover:-translate-y-0.5 hover:shadow-[0_24px_34px_-20px_rgba(116,47,93,0.76)]"
+              className="btn-primary btn-primary-md mt-6"
             >
               {t('fastBook.addToCalendar')}
             </button>
@@ -320,7 +316,7 @@ export function FastBookingSheet({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    {language === 'en' ? 'Pay 10 € deposit' : 'Maksa 10 € ettemaks'}
+                    {t('_auto.components_booking_FastBookingSheet.p207')}
                   </>
                 )}
               </button>
@@ -392,5 +388,4 @@ export function FastBookingSheet({
 }
 
 export default FastBookingSheet;
-
 

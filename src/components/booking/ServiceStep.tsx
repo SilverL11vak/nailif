@@ -1,386 +1,407 @@
 'use client';
 
+import Image from 'next/image';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import type { Service, ServiceVariant } from '@/store/booking-types';
 import { useServices } from '@/hooks/use-services';
-import { useBookingContent } from '@/hooks/use-booking-content';
-import { useBookingAddOns } from '@/hooks/use-booking-addons';
 import { SkeletonBlock } from '@/components/loading/SkeletonBlock';
-import { trackEvent, touchBookingActivity } from '@/lib/analytics-client';
+import { touchBookingActivity, trackEvent } from '@/lib/analytics-client';
 import { trackEvent as trackFunnelEvent } from '@/lib/funnel-track';
-import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
-import { recommendProductsForService, type CareProductLite } from '@/lib/care-funnel';
 
-function toIsoDate(date: Date) { return date.toISOString().slice(0, 10); }
+function byOrderIndex(a: ServiceVariant, b: ServiceVariant) {
+  return (a.orderIndex ?? 0) - (b.orderIndex ?? 0);
+}
 
-const categoryTypeLabel = (category: string | undefined, en: boolean) => {
-  const c = (category ?? '').toLowerCase();
-  if (c === 'nail-art') return en ? 'Nail art' : 'Küünekunst';
-  if (c === 'manicure') return en ? 'Manicure' : 'Maniküür';
-  if (c === 'pedicure') return en ? 'Pedicure' : 'Pediküür';
-  if (c === 'extensions') return en ? 'Extensions' : 'Pikendused';
-  return category?.trim() || (en ? 'Service' : 'Teenus');
-};
+function normalizeCategoryKey(value?: string | null) {
+  if (!value) return '';
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
-type ServiceChoice = {
-  key: string;
-  service: Service;
-  variant: ServiceVariant | null;
-  title: string;
-  parentTitle: string | null;
-  duration: number;
-  price: number;
-  benefit: string;
-  categoryLabel: string;
-};
-
-const ServiceChoiceCard = memo(function ServiceChoiceCard({
-  choice,
-  isSelected,
-  onSelect,
-  en,
+const OptionButton = memo(function OptionButton({
+  label,
+  description,
+  price,
+  duration,
+  selected,
+  selectLabel,
+  selectedLabel,
+  onClick,
 }: {
-  choice: ServiceChoice;
-  isSelected: boolean;
-  onSelect: (service: Service, variant: ServiceVariant | null) => void;
-  en: boolean;
+  label: string;
+  description?: string;
+  price: number;
+  duration: number;
+  selected: boolean;
+  selectLabel: string;
+  selectedLabel: string;
+  onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(choice.service, choice.variant)}
-      className={`group relative w-full overflow-hidden rounded-[18px] border bg-white p-5 text-left transition-all duration-200 active:scale-[0.985] ${
-        isSelected
-          ? 'service-selected-confirm border-[#ddb7cb] bg-[#fff8fb] shadow-[0_14px_32px_-22px_rgba(159,69,111,0.28)]'
-          : 'border-[#ece6ea] shadow-[0_6px_20px_-18px_rgba(34,25,31,0.2)] hover:-translate-y-0.5 hover:border-[#dfc7d5] hover:shadow-[0_18px_34px_-22px_rgba(34,25,31,0.28)]'
+    <div
+      className={`rounded-2xl border px-4 py-3 transition-all duration-200 ${
+        selected
+          ? 'border-[#d7b0c7] bg-[#fff8fc] shadow-[0_12px_20px_-24px_rgba(116,47,93,0.25)]'
+          : 'border-[#ece6ea] bg-white hover:border-[#dcc9d4]'
       }`}
     >
-      {isSelected && (
-        <span className="absolute right-4 top-4 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#9f456f] text-white">
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        </span>
-      )}
-
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#9f8f98]">{choice.categoryLabel}</p>
-          <h3 className="mt-1.5 font-brand text-[24px] font-semibold leading-[1.08] tracking-[-0.012em] text-[#20171d]">
-            {choice.title}
-          </h3>
-          {choice.parentTitle ? <p className="mt-0.5 text-[12px] text-[#8e7d87]">{choice.parentTitle}</p> : null}
-          <p className="mt-2 text-[12px] text-[#887983]">{choice.duration} {en ? 'min' : 'min'}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#2b2128]">{label}</p>
+          {description ? <p className="mt-1 line-clamp-1 text-xs text-[#766a72]">{description}</p> : null}
+          <p className="mt-1.5 text-xs font-medium text-[#5f535b]">EUR {price} · {duration} min</p>
         </div>
-
-        <div className="shrink-0 text-right">
-          <p className={`text-[28px] font-bold leading-none tabular-nums ${isSelected ? 'text-[#9f456f]' : 'text-[#2a2228]'}`}>
-            {`€${choice.price}`}
-          </p>
-          <span
-            className={`mt-3 inline-flex rounded-full px-4 py-1.5 text-[12px] font-semibold transition-all ${
-              isSelected
-                ? 'bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-white shadow-[0_10px_22px_-14px_rgba(159,69,111,0.5)]'
-                : 'border border-[#dfd1d8] bg-white text-[#6c5e67]'
-            }`}
-          >
-            {isSelected ? (en ? '✓ Selected' : '✓ Valitud') : (en ? 'Select' : 'Vali')}
-          </span>
-        </div>
+        <button
+          type="button"
+          onClick={onClick}
+          className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+            selected
+              ? 'bg-[#8f3d62] text-white'
+              : 'border border-[#dac8d2] bg-white text-[#7b3e61] hover:border-[#cfaec0]'
+          }`}
+          aria-pressed={selected}
+        >
+          {selected ? selectedLabel : selectLabel}
+        </button>
       </div>
-
-      <div className="mt-3 h-px bg-[#f0e7ec]" />
-
-      <p className="mt-3 text-[13px] leading-relaxed text-[#74656f]">{choice.benefit}</p>
-    </button>
+    </div>
   );
 });
 
+function buildVariantHint(service: Service) {
+  const raw =
+    service.suitabilityNoteEt ||
+    service.suitabilityNote ||
+    service.resultDescriptionEt ||
+    service.resultDescription ||
+    service.descriptionEt ||
+    service.description ||
+    '';
+  const clean = raw.replace(/\s+/g, ' ').trim();
+  if (!clean) return '';
+  const firstSentence = clean.split(/[.!?]/)[0]?.trim() ?? clean;
+  if (firstSentence.length <= 82) return firstSentence;
+  return `${firstSentence.slice(0, 79).trimEnd()}...`;
+}
+
 export function ServiceStep() {
   const { t, language } = useTranslation();
-  const { services, loading } = useServices();
-  const { text } = useBookingContent();
+  const { services, categories, loading } = useServices();
   const selectedService = useBookingStore((s) => s.selectedService);
-  const { addOns } = useBookingAddOns(selectedService?.id ?? null);
   const selectedVariant = useBookingStore((s) => s.selectedVariant);
   const selectService = useBookingStore((s) => s.selectService);
   const setSelectedVariant = useBookingStore((s) => s.setSelectedVariant);
   const nextStep = useBookingStore((s) => s.nextStep);
-  const selectedStyle = useBookingStore((s) => s.selectedStyle);
-  const selectedProducts = useBookingStore((s) => s.selectedProducts);
-  const addProductToBooking = useBookingStore((s) => s.addProductToBooking);
-  const removeProductFromBooking = useBookingStore((s) => s.removeProductFromBooking);
   const continueButtonRef = useRef<HTMLDivElement>(null);
-  const servicesViewAtRef = useRef<number | null>(null);
-  const [products, setProducts] = useState<CareProductLite[]>([]);
-
   const en = language === 'en';
 
-  useEffect(() => {
-    if (loading || services.length === 0) return;
-    if (servicesViewAtRef.current == null) servicesViewAtRef.current = Date.now();
-    trackBehaviorEvent('booking_services_view', { numberOfServicesVisible: services.length });
-  }, [loading, services.length]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(null);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      try {
-        const response = await fetch(`/api/products?lang=${language}`, { cache: 'force-cache' });
-        if (!response.ok) return;
-        const data = (await response.json()) as { products?: CareProductLite[] };
-        if (mounted && Array.isArray(data.products)) setProducts(data.products);
-      } catch {
-        // best-effort recommendations
-      }
-    };
-    void run();
-    return () => {
-      mounted = false;
-    };
-  }, [language]);
+  const activeCategories = useMemo(() => {
+    if (categories.length > 0) return categories;
 
-  const prefetchSlots = () => {
-    const now = new Date(); const to = new Date(now); to.setDate(to.getDate() + 40);
-    void fetch(`/api/slots?from=${toIsoDate(now)}&to=${toIsoDate(to)}`).catch(() => null);
-  };
-
-  const handleChooseTime = useCallback((service: Service, variant?: ServiceVariant | null) => {
-    const hesitationTime = servicesViewAtRef.current != null ? Math.max(0, Math.round((Date.now() - servicesViewAtRef.current) / 1000)) : undefined;
-    const effectiveName = variant?.name ?? service.name;
-    const effectivePrice = variant?.price ?? service.price;
-    const effectiveDuration = variant?.duration ?? service.duration;
-    trackBehaviorEvent('booking_service_selected', { serviceId: service.id, servicePrice: effectivePrice, variantId: variant?.id, hesitationTime });
-    selectService(service);
-    setSelectedVariant(variant ?? null);
-    try {
-      localStorage.setItem(
-        'nailify_care_profile_v1',
-        JSON.stringify({
-          lastServiceId: service.id,
-          lastServiceName: effectiveName,
-          lastServiceCategory: service.category ?? null,
-          updatedAt: Date.now(),
-        })
-      );
-    } catch {
-      // ignore storage issues
-    }
-    touchBookingActivity();
-    trackEvent({ eventType: 'booking_service_selected', step: 1, serviceId: service.id, metadata: { serviceName: effectiveName, duration: effectiveDuration, price: effectivePrice, variantId: variant?.id } });
-    trackFunnelEvent({ event: 'service_selected', serviceId: service.id, metadata: { serviceName: effectiveName, duration: effectiveDuration, price: effectivePrice, source: 'booking_step_1' }, language });
-    prefetchSlots();
-    window.requestAnimationFrame(() => { continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
-  }, [language, selectService, setSelectedVariant]);
-
-  const getBenefitLine = useCallback((service: Service, duration: number) => {
-    const localized =
-      (en ? service.suitabilityNoteEn : service.suitabilityNoteEt) ??
-      service.suitabilityNote ??
-      (en ? service.resultDescriptionEn : service.resultDescriptionEt) ??
-      service.resultDescription;
-    if (localized?.trim()) return localized.trim();
-    if (service.isPopular) return en ? 'Most popular choice' : 'Kõige populaarsem valik';
-    if (duration <= 45) return en ? 'Quick service' : 'Kiire hooldus';
-    if (duration >= 90) return en ? 'Long-lasting result' : 'Kauakestev tulemus';
-    return en ? 'Great for first-time guests' : 'Sobib esmakordseks hoolduseks';
-  }, [en]);
-
-  const groupedChoices = useMemo(() => {
-    const grouped = new Map<string, { heading: string; choices: ServiceChoice[] }>();
+    const fromServices = new Map<string, { id: string; name: string }>();
     for (const service of services) {
-      const categoryKey = (service.category || 'service').toLowerCase();
-      if (!grouped.has(categoryKey)) {
-        grouped.set(categoryKey, { heading: categoryTypeLabel(service.category, en), choices: [] });
-      }
-      const group = grouped.get(categoryKey)!;
-      const variants = service.variants ?? [];
-      if (variants.length > 0) {
-        for (const variant of variants) {
-          group.choices.push({
-            key: variant.id,
-            service,
-            variant,
-            title: variant.name || variant.nameEt || service.name,
-            parentTitle: service.name,
-            duration: variant.duration,
-            price: variant.price,
-            benefit: getBenefitLine(service, variant.duration),
-            categoryLabel: categoryTypeLabel(service.category, en),
-          });
-        }
-      } else {
-        group.choices.push({
-          key: service.id,
-          service,
-          variant: null,
-          title: service.name,
-          parentTitle: null,
-          duration: service.duration,
-          price: service.price,
-          benefit: getBenefitLine(service, service.duration),
-          categoryLabel: categoryTypeLabel(service.category, en),
-        });
+      const id =
+        normalizeCategoryKey(service.categoryId) ||
+        normalizeCategoryKey(service.categoryNameEt) ||
+        normalizeCategoryKey(service.categoryName) ||
+        normalizeCategoryKey(service.category);
+      if (!id) continue;
+      const name = service.categoryName || service.category || (t('_auto.components_booking_ServiceStep.p228'));
+      if (!fromServices.has(id)) {
+        fromServices.set(id, { id, name });
       }
     }
-    return Array.from(grouped.values());
-  }, [en, getBenefitLine, services]);
+    return Array.from(fromServices.values());
+  }, [categories, en, services]);
 
-  const styleHint = en ? 'Style selected — we will match the right service.' : 'Stiil on valitud — leiame sobiva teenuse.';
-  const selectedProductIds = useMemo(() => selectedProducts.map((p) => p.productId), [selectedProducts]);
-  const serviceCareRecommendations = useMemo(
-    () => recommendProductsForService(products, selectedService, 3, selectedProductIds),
-    [products, selectedProductIds, selectedService]
+  useEffect(() => {
+    if (selectedService?.categoryId) {
+      setSelectedCategoryId((prev) => prev || selectedService.categoryId || '');
+      return;
+    }
+    if (!selectedCategoryId && activeCategories.length > 0) {
+      setSelectedCategoryId(activeCategories[0].id);
+    }
+  }, [activeCategories, selectedCategoryId, selectedService?.categoryId]);
+
+  const servicesInCategory = useMemo(() => {
+    const selectedKey = normalizeCategoryKey(selectedCategoryId);
+    const list = services.filter((service) => {
+      if (!selectedCategoryId) return true;
+      const serviceKeys = [
+        normalizeCategoryKey(service.categoryId),
+        normalizeCategoryKey(service.categoryNameEt),
+        normalizeCategoryKey(service.categoryName),
+        normalizeCategoryKey(service.category),
+      ].filter(Boolean);
+      return serviceKeys.includes(selectedKey);
+    });
+    return list.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [selectedCategoryId, services]);
+
+  const canContinue = useMemo(() => {
+    if (!selectedService) return false;
+    const variants = (selectedService.variants ?? []).filter((variant) => variant.isActive !== false);
+    if (variants.length === 0) return true;
+    return Boolean(selectedVariant?.id);
+  }, [selectedService, selectedVariant?.id]);
+
+  const handleSelectOption = useCallback(
+    (service: Service, variant: ServiceVariant | null) => {
+      selectService(service);
+      setSelectedVariant(variant);
+      touchBookingActivity();
+      const finalName = variant?.name || variant?.nameEt || service.name;
+      const finalPrice = variant?.price ?? service.price;
+      const finalDuration = variant?.duration ?? service.duration;
+      trackEvent({
+        eventType: 'booking_service_selected',
+        step: 1,
+        serviceId: service.id,
+        metadata: {
+          serviceName: finalName,
+          price: finalPrice,
+          duration: finalDuration,
+          variantId: variant?.id,
+        },
+      });
+      trackFunnelEvent({
+        event: 'service_selected',
+        serviceId: service.id,
+        language,
+        metadata: {
+          variantId: variant?.id,
+          serviceName: finalName,
+          price: finalPrice,
+          duration: finalDuration,
+          source: 'booking_step_1_hierarchy',
+        },
+      });
+
+      window.requestAnimationFrame(() => {
+        continueButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    },
+    [language, selectService, setSelectedVariant]
   );
 
   return (
-    <div className="animate-fade-in pb-2 motion-reduce:animate-none" style={{ animationDuration: '200ms' }}>
+    <div className="animate-fade-in pb-2 motion-reduce:animate-none" style={{ animationDuration: '180ms' }}>
       <div className="mb-6">
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a28999]">
-          {en ? 'Step 1 of 3 — Choose your service' : 'Samm 1 / 3 — Vali teenus'}
+          {t('_auto.components_booking_ServiceStep.p229')}
         </p>
-        <h2 className="font-brand text-[1.5rem] font-semibold tracking-tight text-[#1a1a1a] sm:text-[1.65rem]">
-          {t('service.choose')}
-        </h2>
-        {selectedStyle ? (
-          <p className="mt-2 flex items-center gap-2 text-[13px] text-[#9d5078]">
-            <span>{selectedStyle.emoji}</span>
-            <span>{styleHint}</span>
-          </p>
-        ) : (
-          <p className="mt-1 text-[13px] text-[#888]">{t('service.getStarted')}</p>
-        )}
+        <h2 className="font-brand text-[1.5rem] font-semibold tracking-tight text-[#1a1a1a] sm:text-[1.65rem]">{t('service.choose')}</h2>
+        <p className="mt-1 text-[13px] text-[#80737c]">
+          {t('_auto.components_booking_ServiceStep.p230')}
+        </p>
       </div>
 
-      <div className="space-y-6">
-        {loading && services.length === 0 &&
-          Array.from({ length: 4 }).map((_, i) => (
-            <div key={`skel-${i}`} className="rounded-[18px] border border-[#f0f0f0] p-5">
-              <SkeletonBlock className="mb-3 h-4 w-3/4 rounded" />
-              <SkeletonBlock className="h-10 w-full rounded-lg" />
-            </div>
-          ))}
-
-        {groupedChoices.map((group) => (
-          <section key={group.heading} className="space-y-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a28999]">{group.heading}</p>
-            <div className="grid gap-3.5">
-              {group.choices.map((choice) => {
-                const isSelected = selectedService?.id === choice.service.id && (choice.variant ? selectedVariant?.id === choice.variant.id : selectedVariant == null);
-                return (
-                  <ServiceChoiceCard
-                    key={choice.key}
-                    choice={choice}
-                    isSelected={isSelected}
-                    onSelect={handleChooseTime}
-                    en={en}
-                  />
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
-
-      {selectedService && serviceCareRecommendations.length > 0 && (
-        <section className="mt-6 rounded-[16px] border border-[#efe3e9] bg-[#fffafd] p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
-                {en ? 'Technician recommendation' : 'Tehniku soovitus'}
-              </p>
-              <p className="mt-0.5 text-[12px] text-[#6f5d6d]">
-                {en ? 'Recommended care products for this service' : 'Selle teenuse soovitatud hooldustooted'}
-              </p>
-            </div>
-            <span className="rounded-full border border-[#ead8e2] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#7c4363]">
-              {en ? 'Optional' : 'Valikuline'}
-            </span>
-          </div>
-          <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1">
-            {serviceCareRecommendations.map((product) => {
-              const added = selectedProductIds.includes(product.id);
-              return (
-                <label
-                  key={product.id}
-                  className={`min-w-[200px] snap-start rounded-[14px] border p-3 transition ${
-                    added ? 'border-[#ddb7cb] bg-white' : 'border-[#eee4ea] bg-white/90'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-[12px] font-semibold text-[#2f2530]">{product.name}</p>
-                      <p className="mt-1 text-[11px] text-[#7a6a72]">€{product.price}</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={added}
-                      onChange={(e) => {
-                        if (e.currentTarget.checked) {
-                          addProductToBooking({
-                            productId: product.id,
-                            name: product.name,
-                            unitPrice: product.price,
-                            imageUrl: product.imageUrl ?? null,
-                            deliveryMethod: 'pickup_visit',
-                          });
-                        } else {
-                          removeProductFromBooking(product.id);
-                        }
-                      }}
-                      className="h-4 w-4 accent-[#9f456f]"
-                    />
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-[11px] text-[#8a7a85]">{product.description ?? ''}</p>
-                </label>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {addOns.length > 0 && (
-        <div className="mt-6 rounded-[14px] border border-[#f0f0f0] bg-[#fafafa] px-4 py-3">
-          <p className="mb-2 text-center text-[11px] font-medium text-[#888]">
-            {text('service_addons_title', en ? 'Optional extras available after selection' : 'Valikulised lisad peale valikut')}
-          </p>
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {addOns.slice(0, 4).map((chip) => (
-              <span key={chip.id} className="rounded-full border border-[#eee] bg-white px-2.5 py-0.5 text-[10px] font-medium text-[#777]">{chip.name}</span>
-            ))}
-          </div>
+      <section className="rounded-2xl border border-[#eee5ea] bg-white p-4 sm:p-5">
+        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a28999]">{t('_auto.components_booking_ServiceStep.p231')}</p>
+        <div className="flex flex-wrap gap-2.5">
+          {activeCategories.map((category) => {
+            const selected = selectedCategoryId === category.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => {
+                  setSelectedCategoryId(category.id);
+                  setExpandedServiceId(null);
+                }}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  selected
+                    ? 'border-[#d4acc2] bg-[#fff5fb] text-[#7f3559]'
+                    : 'border-[#e8dfe5] bg-white text-[#5c5058] hover:border-[#dac8d2]'
+                }`}
+              >
+                {category.name}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </section>
+
+      <div className="mt-5 space-y-4">
+        {loading && servicesInCategory.length === 0
+          ? Array.from({ length: 3 }).map((_, index) => (
+              <div key={`sk-${index}`} className="rounded-2xl border border-[#efe7ec] p-5">
+                <SkeletonBlock className="mb-3 h-6 w-2/5 rounded" />
+                <SkeletonBlock className="h-4 w-3/5 rounded" />
+              </div>
+            ))
+          : null}
+
+        {!loading && servicesInCategory.length === 0 ? (
+          <div className="rounded-2xl border border-[#f0e6ec] bg-[#fffafd] px-4 py-5 text-sm text-[#726672]">
+            {t('_auto.components_booking_ServiceStep.p232')}
+          </div>
+        ) : null}
+
+        {servicesInCategory.map((service) => {
+          const hasOptions = (service.variants ?? []).some((variant) => variant.isActive !== false);
+          const isExpanded = expandedServiceId === service.id;
+          const isServiceSelected = selectedService?.id === service.id;
+          const description = service.description?.trim() ?? '';
+          const isDescriptionLong = description.length > 240;
+          const isDescriptionExpanded = Boolean(expandedDescriptions[service.id]);
+
+          return (
+            <article key={service.id} className="overflow-hidden rounded-2xl border border-[#ece4ea] bg-white shadow-[0_8px_20px_-18px_rgba(29,20,26,0.35)]">
+              <div className="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
+                <div className="relative aspect-[4/3] bg-[#f4edf1] md:aspect-auto md:h-full">
+                  {service.imageUrl ? (
+                    <Image
+                      src={service.imageUrl}
+                      alt={service.name}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 220px"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-[#8f828a]">
+                      {t('_auto.components_booking_ServiceStep.p233')}
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 sm:p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-brand text-[1.25rem] font-semibold tracking-tight text-[#221a20]">{service.name}</h3>
+                      {description ? (
+                        <div className="mt-1 max-w-2xl">
+                          <p
+                            className={`text-sm leading-relaxed text-[#736772] ${
+                              isDescriptionLong && !isDescriptionExpanded ? 'line-clamp-4' : ''
+                            }`}
+                          >
+                            {description}
+                          </p>
+                          {isDescriptionLong ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedDescriptions((prev) => ({
+                                  ...prev,
+                                  [service.id]: !prev[service.id],
+                                }))
+                              }
+                              className="mt-1.5 text-xs font-semibold text-[#8f3d62] underline underline-offset-2"
+                              aria-expanded={isDescriptionExpanded}
+                              aria-label={
+                                isDescriptionExpanded
+                                  ? t('_auto.components_booking_ServiceStep.p234')
+                                  : t('_auto.components_booking_ServiceStep.p235')
+                              }
+                            >
+                              {isDescriptionExpanded
+                                ? t('_auto.components_booking_ServiceStep.p236')
+                                : t('_auto.components_booking_ServiceStep.p237')}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-semibold text-[#2b2128]">EUR {service.price}</p>
+                      <p className="text-xs text-[#7f707a]">{service.duration} min</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (hasOptions) {
+                          setExpandedServiceId((prev) => (prev === service.id ? null : service.id));
+                          if (selectedService?.id !== service.id) {
+                            setSelectedVariant(null);
+                          }
+                          return;
+                        }
+                        handleSelectOption(service, null);
+                      }}
+                      className="btn-primary btn-small px-5 text-sm"
+                    >
+                      {hasOptions
+                        ? t('_auto.components_booking_ServiceStep.p238')
+                        : isServiceSelected
+                          ? t('_auto.components_booking_ServiceStep.p239')
+                          : t('_auto.components_booking_ServiceStep.p240')}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              {hasOptions && isExpanded ? (
+                <div className="border-t border-[#f0e7ec] bg-[#fffdfd] px-4 pb-4 pt-4 sm:px-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a08998]">
+                    {t('_auto.components_booking_ServiceStep.p241')}
+                  </p>
+                  <p className="mt-1 text-xs text-[#7b6d77]">
+                    {en ? `Options for ${service.name}` : `Variandid teenusele: ${service.name}`}
+                  </p>
+                  <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+                    {(service.variants ?? [])
+                      .filter((variant) => variant.isActive !== false)
+                      .sort(byOrderIndex)
+                      .map((variant) => (
+                        <OptionButton
+                          key={variant.id}
+                          label={variant.name || variant.nameEt || (t('_auto.components_booking_ServiceStep.p242'))}
+                          description={buildVariantHint(service)}
+                          price={variant.price}
+                          duration={variant.duration}
+                          selected={selectedService?.id === service.id && selectedVariant?.id === variant.id}
+                          selectLabel={t('_auto.components_booking_ServiceStep.p243')}
+                          selectedLabel={t('_auto.components_booking_ServiceStep.p244')}
+                          onClick={() => handleSelectOption(service, variant)}
+                        />
+                      ))}
+                  </div>
+                </div>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
+
+      {canContinue ? (
+        <div className="mt-6 rounded-2xl border border-[#efe4eb] bg-[#fff9fc] px-4 py-4">
+          <p className="text-sm text-[#6f5f69]">
+            {t('_auto.components_booking_ServiceStep.p245')}
+          </p>
+        </div>
+      ) : null}
 
       <div ref={continueButtonRef} />
 
-      {selectedService && (
+      {canContinue ? (
         <div className="mt-6 hidden lg:block">
           <button
             type="button"
             onClick={nextStep}
             className="w-full rounded-[14px] bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] py-3.5 text-[14px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(159,69,111,0.45)]"
           >
-            {en ? 'Continue to time selection' : 'Jätka aja valimisse'}
+            {t('_auto.components_booking_ServiceStep.p246')}
           </button>
         </div>
-      )}
-
-      <style jsx global>{`
-        @keyframes serviceSelectedConfirm {
-          0% { transform: scale(0.996); }
-          65% { transform: scale(1.006); }
-          100% { transform: scale(1); }
-        }
-        .service-selected-confirm {
-          animation: serviceSelectedConfirm 240ms ease-out both;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .service-selected-confirm { animation: none; }
-        }
-      `}</style>
+      ) : null}
     </div>
   );
 }

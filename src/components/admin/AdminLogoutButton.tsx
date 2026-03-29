@@ -22,7 +22,7 @@ export function AdminLogoutButton() {
     <button
       onClick={handleLogout}
       disabled={loading}
-      className="btn-secondary btn-secondary-md disabled:opacity-60"
+      className="admin-v2-btn-secondary disabled:opacity-60"
     >
       {loading ? 'Logi välja...' : 'Logi välja'}
     </button>

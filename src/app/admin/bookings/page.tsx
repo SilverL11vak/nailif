@@ -523,14 +523,14 @@ export default function AdminBookingsPage() {
               className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#9c4d72_0%,#c24d86_55%,#a93d71_100%)] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(194,77,134,0.45)]"
             >
               <Plus className="h-4 w-4" />
-              New booking
+              Uus broneering
             </button>
             <Link
               href="/admin/slots"
               className="inline-flex items-center gap-2 rounded-full border border-[#e5ddd8] bg-white px-4 py-2.5 text-sm font-medium text-[#5c4f55] shadow-sm hover:bg-[#faf8f6]"
             >
               <Settings2 className="h-4 w-4" />
-              Manage slots
+              Halda aegu
             </Link>
             <button
               type="button"
@@ -1055,7 +1055,7 @@ export default function AdminBookingsPage() {
           <aside className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-md flex-col border-l border-[#ebe6e3] bg-[#fffcfc] shadow-[-12px_0_40px_-16px_rgba(42,36,40,0.15)]">
             <div className="flex items-center justify-between border-b border-[#f0ebe8] px-5 py-4">
               <h2 className="font-brand text-lg font-semibold text-[#2a2228]">
-                {newSlotContext ? 'New booking' : 'Booking detail'}
+                {newSlotContext ? 'Uus broneering' : 'Broneeringu detailid'}
               </h2>
               <button type="button" onClick={closePanel} className="rounded-full p-2 text-[#7a6d72] hover:bg-[#f5f0ed]">
                 <X className="h-5 w-5" />

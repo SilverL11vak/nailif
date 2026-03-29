@@ -36,6 +36,11 @@ export interface Service {
   imageUrl?: string | null;
   isPopular?: boolean;
   category: string;
+  categoryId?: string;
+  categoryName?: string;
+  categoryNameEt?: string;
+  categoryNameEn?: string;
+  allowAddOns?: boolean;
   /** When present, customer must choose one variant before slot selection. */
   variants?: ServiceVariant[];
 }

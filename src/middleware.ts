@@ -3,8 +3,6 @@ import type { NextRequest } from 'next/server';
 import {
   DEFAULT_LOCALE,
   getLocaleFromPathname,
-  isLocale,
-  LOCALE_COOKIE,
   stripLocalePrefix,
   withLocale,
 } from '@/lib/i18n/locale-path';
@@ -20,15 +18,6 @@ function isPublicAsset(pathname: string) {
     pathname.includes('.') ||
     pathname.startsWith('/api')
   );
-}
-
-function safePreferredLocale(request: NextRequest) {
-  try {
-    const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
-    return isLocale(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
-  } catch {
-    return DEFAULT_LOCALE;
-  }
 }
 
 export function middleware(request: NextRequest) {
@@ -53,17 +42,10 @@ export function middleware(request: NextRequest) {
 
     const localeInPath = getLocaleFromPathname(pathname);
     if (localeInPath) {
-      const response = NextResponse.next();
-      response.cookies.set(LOCALE_COOKIE, localeInPath, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: 'lax',
-      });
-      return response;
+      return NextResponse.next();
     }
 
-    const locale = safePreferredLocale(request);
-    const localizedPath = withLocale(stripLocalePrefix(pathname), locale);
+    const localizedPath = withLocale(stripLocalePrefix(pathname), DEFAULT_LOCALE);
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = localizedPath;
     return NextResponse.redirect(redirectUrl);

@@ -128,7 +128,7 @@ export function ContactStep() {
     if (file.size > 3 * 1024 * 1024) {
       setErrors((prev) => ({
         ...prev,
-        [kind]: text('upload_size_error', language === 'en' ? 'Image is too large (max 3 MB).' : 'Pilt on liiga suur (max 3 MB).'),
+        [kind]: text('upload_size_error', t('_auto.components_booking_ContactStep.p153')),
       }));
       return;
     }
@@ -139,7 +139,7 @@ export function ContactStep() {
     } catch {
       setErrors((prev) => ({
         ...prev,
-        [kind]: text('upload_failed_error', language === 'en' ? 'Image upload failed.' : 'Pildi lisamine ebaonnestus.'),
+        [kind]: text('upload_failed_error', t('_auto.components_booking_ContactStep.p154')),
       }));
     } finally {
       if (kind === 'inspiration' && inspirationInputRef.current) inspirationInputRef.current.value = '';
@@ -185,9 +185,9 @@ export function ContactStep() {
   };
 
   const prepTips = [
-    text('preparation_tip_1', language === 'en' ? 'Free rescheduling' : 'Tasuta ümberbroneerimine'),
-    text('preparation_tip_2', language === 'en' ? 'Fast confirmation' : 'Kiire kinnitus'),
-    text('preparation_tip_3', language === 'en' ? 'Certified nail technician' : 'Sertifitseeritud küünetehnik'),
+    text('preparation_tip_1', t('_auto.components_booking_ContactStep.p155')),
+    text('preparation_tip_2', t('_auto.components_booking_ContactStep.p156')),
+    text('preparation_tip_3', t('_auto.components_booking_ContactStep.p157')),
   ];
 
   const uploadCard = (kind: UploadKind, title: string, imageValue: string, inputRef: React.RefObject<HTMLInputElement | null>) => (
@@ -211,19 +211,19 @@ export function ContactStep() {
             dragOver === kind ? 'border-[#d1b3c8] bg-[#fff4fb] text-[#6d5868]' : 'border-[#e5d7e1] bg-white text-[#6d5868] hover:border-[#d1b3c8]'
           }`}
         >
-          {text('upload_cta', language === 'en' ? 'Upload photo from device' : 'Lisa foto seadmest')}
+          {text('upload_cta', t('_auto.components_booking_ContactStep.p158'))}
         </button>
       ) : (
         <div className="mt-2 rounded-xl border border-[#e2d7cf] bg-white p-2">
           <div className="relative mb-2 h-28 w-full overflow-hidden rounded-lg">
-            <Image src={imageValue} alt={language === 'en' ? 'Reference preview' : 'Eelvaade'} fill className="object-cover" unoptimized />
+            <Image src={imageValue} alt={t('_auto.components_booking_ContactStep.p159')} fill className="object-cover" unoptimized />
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => inputRef.current?.click()} className="rounded-xl border border-[#ddd1c8] px-3 py-2 text-xs font-medium text-[#6f5d53]">
-              {text('upload_replace', language === 'en' ? 'Replace photo' : 'Asenda foto')}
+              {text('upload_replace', t('_auto.components_booking_ContactStep.p160'))}
             </button>
             <button type="button" onClick={() => setImageByKind(kind, '')} className="rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-600">
-              {text('upload_remove', language === 'en' ? 'Remove photo' : 'Eemalda foto')}
+              {text('upload_remove', t('_auto.components_booking_ContactStep.p161'))}
             </button>
           </div>
         </div>
@@ -265,9 +265,9 @@ export function ContactStep() {
       </div>
 
       <section className="mb-5 rounded-2xl border border-[#eadce5] bg-white p-4">
-        <h3 className="text-sm font-semibold text-[#4a3344]">{text('preparation_title', language === 'en' ? 'Before your appointment' : 'Enne visiiti')}</h3>
+        <h3 className="text-sm font-semibold text-[#4a3344]">{text('preparation_title', t('_auto.components_booking_ContactStep.p162'))}</h3>
         <p className="mt-1 text-xs text-[#7d6275]">
-          {text('preparation_helper', language === 'en' ? 'Clean nails and avoid strong oils on the same day.' : 'Puhasta küüned ja vali samal päeval kergem hooldus.')}
+          {text('preparation_helper', t('_auto.components_booking_ContactStep.p163'))}
         </p>
       </section>
 
@@ -307,14 +307,14 @@ export function ContactStep() {
               className={`rounded-2xl border-2 bg-white px-3 py-3 text-[16px] outline-none transition sm:text-sm ${
                 errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
               }`}
-              aria-label={language === 'en' ? 'Country code' : 'Riigikood'}
+              aria-label={t('_auto.components_booking_ContactStep.p164')}
             >
               {countryOptions.map((option) => (
                 <option key={option.code} value={option.code}>
                   {option.code} {option.label}
                 </option>
               ))}
-              <option value="+">{language === 'en' ? 'Custom +' : 'Muu +'}</option>
+              <option value="+">{t('_auto.components_booking_ContactStep.p165')}</option>
             </select>
             {countryCode === '+' && (
               <input
@@ -325,7 +325,7 @@ export function ContactStep() {
                   errors.phone && touched.phone ? 'border-red-300 focus:border-red-400' : 'border-[#e3dbd4] focus:border-[#c79c84]'
                 }`}
                 placeholder="+372"
-                aria-label={language === 'en' ? 'Custom country code' : 'Kohandatud riigikood'}
+                aria-label={t('_auto.components_booking_ContactStep.p166')}
               />
             )}
             <input
@@ -340,7 +340,7 @@ export function ContactStep() {
             />
           </div>
           <p className="mt-1 text-xs text-[#74675f]">
-            {text('phone_field_helper', language === 'en' ? 'Enter your phone with country code. You can change the prefix if needed.' : 'Sisesta number koos suunakoodiga. Vajadusel muuda riigikoodi.')}
+            {text('phone_field_helper', t('_auto.components_booking_ContactStep.p167'))}
           </p>
           {errors.phone && touched.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
         </label>
@@ -367,18 +367,16 @@ export function ContactStep() {
 
         <section className="rounded-2xl border border-[#e7dfd7] bg-[#fcfaf8] p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#8e7465]">
-            {text('contact_optional_nails_title', language === 'en' ? 'Optional info about your nails' : 'Kiire info sinu küünte kohta (valikuline)')}
+            {text('contact_optional_nails_title', t('_auto.components_booking_ContactStep.p168'))}
           </p>
-          <h3 className="text-sm font-semibold text-[#443630]">{text('upload_title', language === 'en' ? 'Inspiration or current nail photo' : 'Inspiratsioon või praeguse küüne foto')}</h3>
+          <h3 className="text-sm font-semibold text-[#443630]">{text('upload_title', t('_auto.components_booking_ContactStep.p169'))}</h3>
           <p className="mt-1 text-xs text-[#74675f]">
-            {text('upload_helper', language === 'en' ? 'Show us your inspiration. Upload your current nails for better consultation.' : 'Näita meile inspiratsiooni. Lisa praeguste küünte pilt paremaks konsultatsiooniks.')}
+            {text('upload_helper', t('_auto.components_booking_ContactStep.p170'))}
           </p>
           <p className="mt-2 text-xs font-medium text-[#7b6558]">
             {text(
               'upload_optional_helper',
-              language === 'en'
-                ? 'You can add a photo if you want us to prepare your appointment better.'
-                : 'Soovi korral saad lisada pildi, et saaksime visiidi paremini ette valmistada.'
+              t('_auto.components_booking_ContactStep.p171')
             )}
           </p>
 
@@ -388,36 +386,36 @@ export function ContactStep() {
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {uploadCard(
               'inspiration',
-              text('upload_inspiration_optional_label', language === 'en' ? 'Add inspiration photo (optional)' : 'Lisa inspiratsioonipilt (valikuline)'),
+              text('upload_inspiration_optional_label', t('_auto.components_booking_ContactStep.p172')),
               inspirationImage,
               inspirationInputRef
             )}
             {uploadCard(
               'current',
-              text('upload_current_optional_label', language === 'en' ? 'Add a photo of your current nails (optional)' : 'Lisa pilt oma praegustest küüntest (valikuline)'),
+              text('upload_current_optional_label', t('_auto.components_booking_ContactStep.p173')),
               currentNailImage,
               currentInputRef
             )}
           </div>
           <p className="mt-3 text-xs text-[#74675f]">
-            {text('upload_skip_reassurance', language === 'en' ? 'You can continue without uploading any photo.' : 'Võid jätkata ka ilma pildita.')}
+            {text('upload_skip_reassurance', t('_auto.components_booking_ContactStep.p174'))}
           </p>
 
           <label className="mt-3 block text-xs font-medium text-[#5e4f48]">
-            {text('upload_note_label', language === 'en' ? 'Add note (optional)' : 'Lisa märkus (valikuline)')}
+            {text('upload_note_label', t('_auto.components_booking_ContactStep.p175'))}
             <input
               type="text"
               name="inspirationNote"
               value={formData.inspirationNote}
               onChange={handleChange}
-              placeholder={language === 'en' ? 'Shape, length, tone...' : 'Kuju, pikkus, toon...'}
+              placeholder={t('_auto.components_booking_ContactStep.p176')}
               className="mt-1 w-full rounded-xl border border-[#e1d6cd] bg-white px-3 py-2 text-[16px] outline-none focus:border-[#c79c84] sm:text-sm"
             />
           </label>
         </section>
 
         <label className="block text-sm font-medium text-[#443630]">
-          {language === 'en' ? 'Client notes' : 'Kliendi markused'} ({t('contact.optional')})
+          {t('_auto.components_booking_ContactStep.p177')} ({t('contact.optional')})
           <textarea
             name="notes"
             value={formData.notes}
@@ -431,9 +429,9 @@ export function ContactStep() {
         id="booking-sticky-primary-action"
         type="button"
         onClick={handleSubmit}
-        className="cta-premium mt-5 w-full rounded-full bg-[linear-gradient(135deg,#a56b52_0%,#b88468_50%,#9a6a52_100%)] py-4 text-base font-semibold text-white shadow-[0_14px_32px_-14px_rgba(120,80,60,0.45)] transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-12px_rgba(120,80,60,0.4)] active:scale-[0.99]"
+        className="btn-primary btn-primary-xl mt-5 w-full"
       >
-        {language === 'en' ? 'Confirm details and continue' : 'Kinnita andmed ja liigu edasi'}
+        {t('_auto.components_booking_ContactStep.p178')}
       </button>
     </div>
   );

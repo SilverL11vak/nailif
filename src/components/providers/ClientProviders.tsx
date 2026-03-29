@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { I18nProvider } from '@/lib/i18n';
+import { getLocaleFromPathname, DEFAULT_LOCALE } from '@/lib/i18n/locale-path';
 import { MessengerBubble } from '@/components/chat/MessengerBubble';
 
 const Empty = () => null;
@@ -25,6 +26,7 @@ const HomepageMotion = dynamic(
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const routeLocale = getLocaleFromPathname(pathname) ?? DEFAULT_LOCALE;
   const isBookingPath = pathname.includes('/book');
   const isAdminPath = pathname.startsWith('/admin');
   const isSuccessPath = pathname.includes('/success');
@@ -32,7 +34,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
   const enableNailifyChatWidget = false;
 
   return (
-    <I18nProvider>
+    <I18nProvider initialLanguage={routeLocale}>
       {!disableExperienceLayers ? <HomepageMotion /> : null}
       {children}
       <MessengerBubble />

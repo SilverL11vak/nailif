@@ -4,6 +4,7 @@ import {
   deleteService,
   ensureCatalogTables,
   listAdminServices,
+  listServiceCategories,
   listServices,
   upsertService,
 } from '@/lib/catalog';
@@ -33,15 +34,14 @@ export async function GET(request: Request) {
     const admin = searchParams.get('admin') === '1';
     const locale = searchParams.get('lang') ?? getLocaleFromPathname(pathname) ?? 'et';
 
-    // Stabilize homepage performance by preventing repeated DB reads.
     if (!admin) {
       const cached = servicesCache.get(locale);
       if (cached && cached.expiresAt > Date.now()) {
+        const categories = await listServiceCategories(locale, true);
         return NextResponse.json(
-          { ok: true, services: cached.services },
+          { ok: true, services: cached.services, categories },
           {
             headers: {
-              // Short cache so admin service edits show on homepage within ~30s
               'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
             },
           }
@@ -56,7 +56,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
-    const services = admin ? await listAdminServices(locale) : await listServices(locale);
+
+    const [services, categories] = await Promise.all([
+      admin ? listAdminServices(locale) : listServices(locale),
+      listServiceCategories(locale, !admin),
+    ]);
 
     if (!admin) {
       servicesCache.set(locale, {
@@ -66,12 +70,11 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(
-      { ok: true, services },
+      { ok: true, services, categories },
       admin
         ? undefined
         : {
             headers: {
-              // Short cache so admin service edits show on homepage within ~30s
               'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
             },
           }
@@ -105,8 +108,10 @@ export async function POST(request: Request) {
       duration: number;
       price: number;
       category: string;
+      categoryId: string;
       imageUrl: string | null;
       isPopular: boolean;
+      allowAddOns: boolean;
       sortOrder: number;
       active: boolean;
     }>;
@@ -136,8 +141,10 @@ export async function POST(request: Request) {
       duration: Number(payload.duration ?? 45),
       price: Number(payload.price ?? 0),
       category: payload.category,
+      categoryId: payload.categoryId?.trim() || undefined,
       imageUrl: payload.imageUrl ?? null,
       isPopular: Boolean(payload.isPopular),
+      allowAddOns: payload.allowAddOns ?? true,
       sortOrder: Number(payload.sortOrder ?? 0),
       active: payload.active ?? true,
     });

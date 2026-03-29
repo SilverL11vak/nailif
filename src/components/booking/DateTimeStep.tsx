@@ -209,13 +209,13 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
   const formatMmSs = (ms: number) => { const total = Math.ceil(ms / 1000); const m = Math.floor(total / 60); const s = total % 60; return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
 
-  const lockLine = useMemo(() => { if (!selectedSlot || !lockRemainingMs || lockRemainingMs <= 0) return null; return en ? 'This time is reserved for you' : 'See aeg on sulle ajutiselt reserveeritud'; }, [selectedSlot, lockRemainingMs, en]);
+  const lockLine = useMemo(() => { if (!selectedSlot || !lockRemainingMs || lockRemainingMs <= 0) return null; return t('_auto.components_booking_DateTimeStep.p179'); }, [selectedSlot, lockRemainingMs, en]);
 
   const availabilityContext = useMemo(() => {
     const av = currentAvailableSlots; const count = av.length; if (count === 0) return null;
     const morning = av.filter((s) => { const h = Number(s.time.split(':')[0] ?? 0); return Number.isFinite(h) && h >= 9 && h < 12; }).length;
-    if (morning > 0 && count <= 3) return en ? 'A few morning times remain' : 'Paar hommikust aega saadaval';
-    if (count <= 6) return en ? 'Limited availability' : 'Piiratud saadavus';
+    if (morning > 0 && count <= 3) return t('_auto.components_booking_DateTimeStep.p180');
+    if (count <= 6) return t('_auto.components_booking_DateTimeStep.p181');
     return null;
   }, [currentAvailableSlots, en]);
 
@@ -225,18 +225,18 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
     trackBehaviorEvent('slot_lock_expired', { slotId: selectedSlot.id });
     trackFunnelEvent({ event: 'slot_abandoned', serviceId: selectedService?.id, slotId: selectedSlot.id, metadata: { reason: 'reservation_expired', date: selectedSlot.date, time: selectedSlot.time }, language });
     try { localStorage.removeItem(BOOKING_SLOT_LOCK_KEY); } catch { /* ignore */ }
-    setReservationToast(en ? 'Reservation expired. Please select again.' : 'Broneering aegus. Palun vali uuesti.');
+    setReservationToast(t('_auto.components_booking_DateTimeStep.p182'));
     try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('booking_shake_slots', '1'); } catch { /* ignore */ }
     selectSlot(null);
-    const t = window.setTimeout(() => setReservationToast(null), 4800);
-    return () => window.clearTimeout(t);
+    const timerId = window.setTimeout(() => setReservationToast(null), 4800);
+    return () => window.clearTimeout(timerId);
   }, [lockRemainingMs, selectedSlot, en, selectSlot, selectedService?.id, language]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const active = Boolean(selectedSlot && lockRemainingMs != null && lockRemainingMs > 0);
     if (!active) return;
-    const onBu = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = en ? 'Your reserved time may be released.' : 'Sinu broneeritud aeg võib vabaneda.'; return e.returnValue; };
+    const onBu = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = t('_auto.components_booking_DateTimeStep.p183'); return e.returnValue; };
     window.addEventListener('beforeunload', onBu);
     return () => window.removeEventListener('beforeunload', onBu);
   }, [selectedSlot, lockRemainingMs, en]);
@@ -262,7 +262,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
   const selectedTimeLine = selectedSlot
     ? `${new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', { weekday: 'short', day: 'numeric', month: 'short' })} · ${selectedSlot.time}`
-    : en ? 'Pick a time' : 'Vali aeg';
+    : t('_auto.components_booking_DateTimeStep.p184');
 
   const showEmptyDay = !isLoading && currentAvailableSlots.length === 0 && Boolean(nextAvailableSlot);
   const emptyNoSlotsAtAll = !isLoading && availableWeekDates.length === 0;
@@ -297,13 +297,13 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
       <div className="mb-3 flex items-center justify-between gap-3 rounded-[14px] border border-[#f0f0f0] bg-[#fafafa] px-4 py-2.5">
         <span className="text-[14px] font-semibold capitalize text-[#1a1a1a]">{monthLabel}</span>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setWeekOffset((p) => Math.max(0, p - 1))} disabled={weekOffset === 0} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#666] transition hover:bg-[#f0f0f0] disabled:opacity-30" aria-label={en ? 'Previous week' : 'Eelmine nädal'}>
+          <button type="button" onClick={() => setWeekOffset((p) => Math.max(0, p - 1))} disabled={weekOffset === 0} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#666] transition hover:bg-[#f0f0f0] disabled:opacity-30" aria-label={t('_auto.components_booking_DateTimeStep.p185')}>
             <ChevronLeft className="h-4 w-4" />
           </button>
           {weekOffset > 0 && (
-            <button type="button" onClick={() => setWeekOffset(0)} className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#9f456f] hover:bg-[#fff5f9]">{en ? 'Today' : 'Täna'}</button>
+            <button type="button" onClick={() => setWeekOffset(0)} className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#9f456f] hover:bg-[#fff5f9]">{t('_auto.components_booking_DateTimeStep.p186')}</button>
           )}
-          <button type="button" onClick={() => setWeekOffset((p) => Math.min(maxWeekOffset, p + 1))} disabled={weekOffset >= maxWeekOffset} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#666] transition hover:bg-[#f0f0f0] disabled:opacity-30" aria-label={en ? 'Next week' : 'Järgmine nädal'}>
+          <button type="button" onClick={() => setWeekOffset((p) => Math.min(maxWeekOffset, p + 1))} disabled={weekOffset >= maxWeekOffset} className="flex h-7 w-7 items-center justify-center rounded-lg text-[#666] transition hover:bg-[#f0f0f0] disabled:opacity-30" aria-label={t('_auto.components_booking_DateTimeStep.p187')}>
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -322,7 +322,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               isSelected ? 'bg-[#FFF5F9] shadow-[0_2px_12px_-6px_rgba(159,69,111,0.18)]' : dens === 'none' ? 'opacity-40' : 'hover:bg-[#fafafa]'
             }`}>
               <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSelected ? 'text-[#b04b80]' : 'text-[#999]'}`}>
-                {badgeToday ? (en ? 'Today' : 'Täna') : badgeTomorrow ? (en ? 'Tmrw' : 'Homme') : weekday}
+                {badgeToday ? (t('_auto.components_booking_DateTimeStep.p188')) : badgeTomorrow ? (t('_auto.components_booking_DateTimeStep.p189')) : weekday}
               </span>
               <span className={`mt-0.5 text-[18px] font-bold tabular-nums ${isSelected ? 'text-[#1a1a1a]' : 'text-[#444]'}`}>{date.getDate()}</span>
               <div className="mt-1 flex h-[3px] w-full max-w-[1.25rem] overflow-hidden rounded-full bg-[#eee]">
@@ -351,18 +351,18 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
             <p className="font-brand text-lg font-semibold text-[#1a1a1a]">{text('availability_no_slots', t('datetime.noSlots'))}</p>
             {nextAvailableSlot && (
               <>
-                <p className="mt-3 text-sm text-[#777]">{en ? 'Next available' : 'Järgmine vaba aeg'}: <span className="font-semibold text-[#9f456f]">{daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`)) === 1 ? en ? `tomorrow at ${nextAvailableSlot.time}` : `homme kell ${nextAvailableSlot.time}` : `${nextAvailableSlot.date} ${nextAvailableSlot.time}`}</span></p>
-                <button type="button" onClick={jumpToNextAvailable} className="mt-6 rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.98]">{en ? 'View next available' : 'Vaata järgmist'}</button>
+                <p className="mt-3 text-sm text-[#777]">{t('_auto.components_booking_DateTimeStep.p190')}: <span className="font-semibold text-[#9f456f]">{daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`)) === 1 ? en ? `tomorrow at ${nextAvailableSlot.time}` : `homme kell ${nextAvailableSlot.time}` : `${nextAvailableSlot.date} ${nextAvailableSlot.time}`}</span></p>
+                <button type="button" onClick={jumpToNextAvailable} className="mt-6 rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.98]">{t('_auto.components_booking_DateTimeStep.p191')}</button>
               </>
             )}
           </div>
         ) : showEmptyDay ? (
           <div className="rounded-[16px] border border-[#f0f0f0] bg-[#fafafa] px-6 py-10 text-center">
-            <p className="font-brand text-lg font-semibold text-[#1a1a1a]">{en ? 'Fully booked for this day' : 'See päev on broneeritud'}</p>
+            <p className="font-brand text-lg font-semibold text-[#1a1a1a]">{t('_auto.components_booking_DateTimeStep.p192')}</p>
             {nextAvailableSlot && (
-              <p className="mt-2 text-sm text-[#777]">{en ? 'Next available' : 'Järgmine vaba aeg'}{' '}<span className="font-semibold text-[#9f456f]">{daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`)) === 1 ? en ? `tomorrow at ${nextAvailableSlot.time}` : `homme kell ${nextAvailableSlot.time}` : `${nextAvailableSlot.date} ${nextAvailableSlot.time}`}</span></p>
+              <p className="mt-2 text-sm text-[#777]">{t('_auto.components_booking_DateTimeStep.p193')}{' '}<span className="font-semibold text-[#9f456f]">{daysBetween(new Date(), new Date(`${nextAvailableSlot.date}T12:00:00`)) === 1 ? en ? `tomorrow at ${nextAvailableSlot.time}` : `homme kell ${nextAvailableSlot.time}` : `${nextAvailableSlot.date} ${nextAvailableSlot.time}`}</span></p>
             )}
-            <button type="button" onClick={jumpToNextAvailable} className="mt-6 inline-flex items-center justify-center rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.98]">{en ? 'View next day' : 'Vaata järgmist päeva'} →</button>
+            <button type="button" onClick={jumpToNextAvailable} className="mt-6 inline-flex items-center justify-center rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.98]">{t('_auto.components_booking_DateTimeStep.p194')} →</button>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-5">
@@ -401,14 +401,14 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
 
       {/* ─── Micro confirmation card ─── */}
       {selectedSlot && !isLoading && (
-        <div className={`mt-4 rounded-[16px] border border-[#f0f0f0] bg-[#fafafa] px-4 py-3 transition-opacity duration-200 ${summaryAnimate ? 'dt-summary-animate' : ''}`}>
+        <div className={`mt-4 hidden rounded-[16px] border border-[#f0f0f0] bg-[#fafafa] px-4 py-3 transition-opacity duration-200 lg:block ${summaryAnimate ? 'dt-summary-animate' : ''}`}>
           <div className="flex items-center gap-2.5">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#9f456f]">
               <Check className="h-3 w-3 text-white" strokeWidth={3} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-[#1a1a1a]">
-                {en ? 'Your selection' : 'Sinu valik'}: {selectedTimeLine}
+                {t('_auto.components_booking_DateTimeStep.p195')}: {selectedTimeLine}
               </p>
               <p className="text-[12px] text-[#888]">{selectedService?.name} · {selectedService?.duration} min · {`€${price}`}</p>
             </div>
@@ -432,7 +432,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               : 'cursor-not-allowed bg-[#f0f0f0] text-[#bbb]'
           }`}
         >
-          {en ? 'Continue' : 'Kinnita valik'}
+          {t('_auto.components_booking_DateTimeStep.p196')}
         </button>
       </div>
 
@@ -457,7 +457,7 @@ export function DateTimeStep({ step3AnchorRef }: DateTimeStepProps) {
               selectedSlot ? 'bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] active:scale-[0.98]' : 'cursor-not-allowed bg-[#f0f0f0] text-[#bbb] opacity-60'
             }`}
           >
-            {en ? 'Continue' : 'Kinnita valik'}
+            {t('_auto.components_booking_DateTimeStep.p197')}
           </button>
         </div>
       </div>

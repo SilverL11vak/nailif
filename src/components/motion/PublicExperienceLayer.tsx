@@ -23,7 +23,7 @@ function asBool(value: string, fallback = true) {
 export function PublicExperienceLayer() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { language } = useTranslation();
+  const { t } = useTranslation();
   const { text } = useBookingContent();
   const [showRouteLoader, setShowRouteLoader] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
@@ -46,11 +46,11 @@ export function PublicExperienceLayer() {
   const bookingTransitionsEnabled = asBool(text('loader_enable_booking_transitions', '1'), true);
   const loaderHeadline = text(
     'loader_headline',
-    language === 'en' ? 'Preparing your experience...' : 'Laeme sinu kogemust...'
+    t('_auto.components_motion_PublicExperienceLayer.p265')
   );
   const loaderHelper = text(
     'loader_helper',
-    language === 'en' ? 'Just a moment, almost ready.' : 'Hetk, kohe oleme valmis.'
+    t('_auto.components_motion_PublicExperienceLayer.p266')
   );
   const loaderTheme = text('loader_theme', 'blush');
 

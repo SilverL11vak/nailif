@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { Globe } from 'lucide-react';
 import type { Language } from '@/lib/i18n';
@@ -10,19 +10,31 @@ import type { Language } from '@/lib/i18n';
 interface ShopNavBarCopy {
   backToHome: string;
   nav: { home: string; services: string; gallery: string; shop: string; contact: string; book: string };
+  languageMenuLabel: string;
+  languageEt: string;
+  languageEn: string;
+  favoritesAria: string;
 }
 
 interface ShopNavBarProps {
   language: Language;
   setLanguage: (lang: Language) => void;
-  localizePath: (path: string) => string;
+  localizePath: (path: string, lang?: Language) => string;
   copy: ShopNavBarCopy;
   favoritesCount?: number;
 }
 
 export function ShopNavBar({ language, setLanguage, localizePath, copy, favoritesCount = 0 }: ShopNavBarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+
+  const handleLanguageChange = (newLanguage: Language) => {
+    setLanguage(newLanguage);
+    router.push(localizePath(pathname, newLanguage));
+    setLangMenuOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-50 border-b border-[#f1e1ea] bg-white/92 backdrop-blur-xl shadow-[0_18px_38px_-30px_rgba(97,48,85,0.12)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,8 +66,8 @@ export function ShopNavBar({ language, setLanguage, localizePath, copy, favorite
             <div className="relative">
               <button
                 onClick={() => setLangMenuOpen((o) => !o)}
-                className="type-navbar-icon-btn"
-                aria-label="Language"
+                className="icon-circle-btn"
+                aria-label={copy.languageMenuLabel}
               >
                 <Globe size={18} strokeWidth={1.8} />
               </button>
@@ -64,16 +76,16 @@ export function ShopNavBar({ language, setLanguage, localizePath, copy, favorite
                   <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} aria-hidden />
                   <div className="absolute right-0 top-12 z-50 w-36 rounded-xl border border-[#ecdce6] bg-white p-1.5 shadow-lg">
                     <button
-                      onClick={() => { setLanguage('et'); setLangMenuOpen(false); }}
+                      onClick={() => handleLanguageChange('et')}
                       className={`w-full rounded-lg px-3 py-2 text-left text-sm ${language === 'et' ? 'bg-[#fff2f9] font-medium text-[#6a3b57]' : 'text-[#5f4f5f] hover:bg-[#fff7fc]'}`}
                     >
-                      Eesti
+                      {copy.languageEt}
                     </button>
                     <button
-                      onClick={() => { setLanguage('en'); setLangMenuOpen(false); }}
+                      onClick={() => handleLanguageChange('en')}
                       className={`mt-0.5 w-full rounded-lg px-3 py-2 text-left text-sm ${language === 'en' ? 'bg-[#fff2f9] font-medium text-[#6a3b57]' : 'text-[#5f4f5f] hover:bg-[#fff7fc]'}`}
                     >
-                      English
+                      {copy.languageEn}
                     </button>
                   </div>
                 </>
@@ -81,8 +93,8 @@ export function ShopNavBar({ language, setLanguage, localizePath, copy, favorite
             </div>
             <Link
               href={localizePath('/favorites')}
-              className="type-navbar-icon-btn relative"
-              aria-label={language === 'en' ? 'Favourites' : 'Lemmikud'}
+              className="icon-circle-btn relative"
+              aria-label={copy.favoritesAria}
             >
               <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
               {favoritesCount > 0 && (
@@ -93,7 +105,7 @@ export function ShopNavBar({ language, setLanguage, localizePath, copy, favorite
             </Link>
             <button
               onClick={() => router.push(localizePath('/book'))}
-              className="hidden rounded-full bg-[#c24d86] px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_14px_-4px_rgba(194,77,134,0.5)] hover:bg-[#a93d71] transition-colors md:inline-flex"
+              className="btn-primary btn-primary-md hidden md:inline-flex"
             >
               {copy.nav.book}
             </button>

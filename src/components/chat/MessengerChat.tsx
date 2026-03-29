@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
+import { useTranslation } from '@/lib/i18n';
 
 declare global {
   interface Window {
@@ -24,6 +25,7 @@ declare global {
 }
 
 export function MessengerChat() {
+  const { t } = useTranslation();
   const pageId = process.env.NEXT_PUBLIC_FACEBOOK_PAGE_ID;
   const appId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
   const [scriptReady, setScriptReady] = useState(false);
@@ -58,8 +60,8 @@ export function MessengerChat() {
         data-attribution="biz_inbox"
         data-page_id={pageId}
         data-theme_color="#c24d86"
-        data-logged_in_greeting="Hi! How can we help with your booking?"
-        data-logged_out_greeting="Hi! How can we help with your booking?"
+        data-logged_in_greeting={t('chat.messengerGreeting')}
+        data-logged_out_greeting={t('chat.messengerGreeting')}
       />
       <Script
         id="facebook-jssdk"
@@ -73,9 +75,9 @@ export function MessengerChat() {
           href={`https://m.me/${pageId}`}
           target="_blank"
           rel="noreferrer"
-          className="fixed bottom-[120px] right-4 z-[70] rounded-full bg-[#c24d86] px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_28px_-18px_rgba(141,60,108,0.6)] transition-colors hover:bg-[#a93d71] md:bottom-6"
+          className="btn-primary btn-primary-md fixed bottom-[120px] right-4 z-[70] md:bottom-6"
         >
-          Chat in Messenger
+          {t('chat.openMessengerCta')}
         </a>
       )}
     </>

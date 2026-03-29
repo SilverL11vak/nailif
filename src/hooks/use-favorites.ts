@@ -19,6 +19,32 @@ const FAVORITES_KEY = 'nailify_favorites_v1';
 const FAVORITES_EVENT = 'nailify:favorites-changed';
 const SYNC_DEBOUNCE_MS = 500;
 
+function uniqueStringIds(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const next: string[] = [];
+  for (const id of ids) {
+    const trimmed = id.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    next.push(trimmed);
+  }
+  return next;
+}
+
+function arraysEqual(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function sanitizeFavorites(ids: string[], validProductIds: Set<string> | null): string[] {
+  const normalized = uniqueStringIds(ids);
+  if (!validProductIds) return normalized;
+  return normalized.filter((id) => validProductIds.has(id));
+}
+
 // Get session ID (client-side only)
 function getOrCreateSessionId(): string | null {
   if (typeof document === 'undefined') return null;
@@ -60,18 +86,6 @@ function syncToServer(favorites: string[], sessionId: string | null) {
   });
 }
 
-// Load favorites from server
-async function loadFromServer(): Promise<string[] | null> {
-  try {
-    const response = await fetch('/api/session', { method: 'GET' });
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.favorites || null;
-  } catch {
-    return null;
-  }
-}
-
 function readFavorites(): string[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -109,44 +123,64 @@ const syncToServerDebounced = debounce(syncToServer, SYNC_DEBOUNCE_MS);
 export function useFavorites() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [validProductIds, setValidProductIds] = useState<Set<string> | null>(null);
   const sessionIdRef = useRef<string | null>(null);
 
-  // Initialize: get session ID and load data
+  // Initialize: get session ID and load local data
   useEffect(() => {
     sessionIdRef.current = getOrCreateSessionId();
-    
-    // First, try localStorage
-    const localFavorites = readFavorites();
-    
-    if (localFavorites.length > 0) {
-      setFavorites(localFavorites);
-      setIsLoaded(true);
-      
-      // Sync to server in background (merge)
-      if (sessionIdRef.current) {
-        syncToServer(localFavorites, sessionIdRef.current);
-      }
-    } else {
-      // No local data, try server
-      loadFromServer().then((serverFavorites) => {
-        if (serverFavorites && serverFavorites.length > 0) {
-          setFavorites(serverFavorites);
-          writeFavorites(serverFavorites, sessionIdRef.current);
-        }
-        setIsLoaded(true);
-      }).catch(() => {
-        setIsLoaded(true);
-      });
+
+    const localFavorites = sanitizeFavorites(readFavorites(), null);
+    setFavorites(localFavorites);
+    setIsLoaded(true);
+
+    if (sessionIdRef.current) {
+      syncToServer(localFavorites, sessionIdRef.current);
     }
-    // Run once on mount
   }, []);
+
+  // Load valid product IDs once and auto-prune stale favorites.
+  useEffect(() => {
+    let mounted = true;
+    const loadProductIds = async () => {
+      try {
+        const response = await fetch('/api/products?lang=et');
+        if (!response.ok) return;
+        const data = (await response.json()) as { products?: Array<{ id: string }> };
+        if (!mounted || !Array.isArray(data.products)) return;
+        const ids = new Set(
+          data.products
+            .map((product) => (typeof product.id === 'string' ? product.id.trim() : ''))
+            .filter(Boolean)
+        );
+        setValidProductIds(ids);
+      } catch {
+        // keep null => no extra filtering
+      }
+    };
+    void loadProductIds();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded || !validProductIds) return;
+    setFavorites((previous) => {
+      const next = sanitizeFavorites(previous, validProductIds);
+      if (!arraysEqual(previous, next)) {
+        writeFavorites(next, sessionIdRef.current);
+      }
+      return next;
+    });
+  }, [isLoaded, validProductIds]);
 
   // Listen for cross-tab sync
   useEffect(() => {
     if (!isLoaded) return;
     
     const sync = () => {
-      const newFavorites = readFavorites();
+      const newFavorites = sanitizeFavorites(readFavorites(), validProductIds);
       setFavorites(newFavorites);
     };
     window.addEventListener('storage', sync);
@@ -155,22 +189,28 @@ export function useFavorites() {
       window.removeEventListener('storage', sync);
       window.removeEventListener(FAVORITES_EVENT, sync);
     };
-  }, [isLoaded]);
+  }, [isLoaded, validProductIds]);
 
   const favoriteSet = useMemo(() => new Set(favorites), [favorites]);
 
   const isFavorite = useCallback((productId: string) => favoriteSet.has(productId), [favoriteSet]);
 
   const toggleFavorite = useCallback((productId: string) => {
+    const normalizedProductId = productId.trim();
+    if (!normalizedProductId) return;
+    if (validProductIds && !validProductIds.has(normalizedProductId)) {
+      return;
+    }
     setFavorites((previous) => {
-      const next = previous.includes(productId)
-        ? previous.filter((id) => id !== productId)
-        : [...previous, productId];
+      const nextRaw = previous.includes(normalizedProductId)
+        ? previous.filter((id) => id !== normalizedProductId)
+        : [...previous, normalizedProductId];
+      const next = sanitizeFavorites(nextRaw, validProductIds);
       writeFavorites(next, sessionIdRef.current);
-      trackEvent('product_favourite_toggle', { productId, newState: next.includes(productId) });
+      trackEvent('product_favourite_toggle', { productId: normalizedProductId, newState: next.includes(normalizedProductId) });
       return next;
     });
-  }, []);
+  }, [validProductIds]);
 
   return {
     favorites,
@@ -180,4 +220,3 @@ export function useFavorites() {
     isLoaded,
   };
 }
-

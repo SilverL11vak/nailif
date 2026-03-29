@@ -18,18 +18,24 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string {
     if (current && typeof current === 'object' && key in current) {
       current = (current as Record<string, unknown>)[key];
     } else {
-      return path; // Return key if not found
+      return '';
     }
   }
   
-  return typeof current === 'string' ? current : path;
+  return typeof current === 'string' ? current : '';
 }
 
 export function getTranslation(language: Language, key: string): string {
   const current = getNestedValue(translations[language] as unknown as Record<string, unknown>, key);
-  if (current !== key) return current;
-  const fallback = getNestedValue(translations.et as unknown as Record<string, unknown>, key);
-  return fallback || key;
+  if (current) return current;
+
+  if (typeof window !== 'undefined') {
+    // Strict i18n mode: never fallback to another locale.
+    // Missing keys are logged for admin/content follow-up.
+    console.error(`[i18n] Missing translation key "${key}" for locale "${language}"`);
+  }
+
+  return '';
 }
 
 export const languages: { code: Language; name: string; nativeName: string }[] = [

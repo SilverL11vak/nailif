@@ -456,25 +456,43 @@ export interface BookingAddOnRecord {
 }
 
 export async function listBookingAddOns(locale: LocaleCode, serviceId?: string | null): Promise<AddOn[]> {
-  if (!serviceId) return [];
+  const normalizedServiceId = serviceId ?? null;
 
-  const rows = await sql<{
-    id: string;
-    service_id: string | null;
-    name_et: string;
-    name_en: string;
-    description_et: string;
-    description_en: string;
-    duration: number;
-    price: number;
-    active: boolean;
-  }[]>`
-    SELECT id, service_id, name_et, name_en, description_et, description_en, duration, price, active
-    FROM booking_addons
-    WHERE active = TRUE
-      AND service_id = ${serviceId}
-    ORDER BY sort_order ASC, created_at ASC
-  `;
+  const rows = normalizedServiceId
+    ? await sql<{
+        id: string;
+        service_id: string | null;
+        name_et: string;
+        name_en: string;
+        description_et: string;
+        description_en: string;
+        duration: number;
+        price: number;
+        active: boolean;
+      }[]>`
+        SELECT id, service_id, name_et, name_en, description_et, description_en, duration, price, active
+        FROM booking_addons
+        WHERE active = TRUE
+          AND service_id = ${normalizedServiceId}
+        ORDER BY sort_order ASC, created_at ASC
+      `
+    : await sql<{
+        id: string;
+        service_id: string | null;
+        name_et: string;
+        name_en: string;
+        description_et: string;
+        description_en: string;
+        duration: number;
+        price: number;
+        active: boolean;
+      }[]>`
+        SELECT id, service_id, name_et, name_en, description_et, description_en, duration, price, active
+        FROM booking_addons
+        WHERE active = TRUE
+          AND service_id IS NULL
+        ORDER BY sort_order ASC, created_at ASC
+      `;
 
   return rows.map((row) => ({
     id: row.id,

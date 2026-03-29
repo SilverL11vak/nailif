@@ -12,7 +12,7 @@ interface TimeSlotProps {
 }
 
 export const TimeSlot = memo(function TimeSlot({ slot, isSelected, onSelect, compact = false }: TimeSlotProps) {
-  const { language } = useTranslation();
+  const { t } = useTranslation();
 
   const handleClick = () => {
     if (slot.available) onSelect(slot);
@@ -20,13 +20,13 @@ export const TimeSlot = memo(function TimeSlot({ slot, isSelected, onSelect, com
 
   const getSlotBadge = () => {
     if (slot.isSos) {
-      return { label: language === 'en' ? '⚡ Urgent' : '⚡ Kiire', className: 'text-[#9a5b80]' };
+      return { label: t('_auto.components_booking_TimeSlot.p259'), className: 'text-[#9a5b80]' };
     }
     if (slot.isPopular) {
-      return { label: language === 'en' ? '★ Popular' : '★ Populaarne', className: 'text-[#6f7f59]' };
+      return { label: t('_auto.components_booking_TimeSlot.p260'), className: 'text-[#6f7f59]' };
     }
     if (slot.count && slot.count <= 2) {
-      return { label: language === 'en' ? '~2 left' : '~2 jäänud', className: 'text-[#b17a98]' };
+      return { label: t('_auto.components_booking_TimeSlot.p261'), className: 'text-[#b17a98]' };
     }
     return null;
   };
@@ -62,7 +62,7 @@ export const TimeSlot = memo(function TimeSlot({ slot, isSelected, onSelect, com
             <span className={`block text-base font-semibold leading-none ${slot.isSos ? 'text-[#b05387]' : 'text-[#5f4358]'}`}>{slot.time}</span>
             {!compact && (
               <span className={`mt-1 block text-[11px] font-medium ${slot.isSos ? 'text-[#8a5675]' : 'text-[#8d6d5e]'}`}>
-                {slot.isSos ? (language === 'en' ? 'Urgent selected' : 'Kiire aeg valitud') : language === 'en' ? 'Selected time' : 'Valitud aeg'}
+                {slot.isSos ? (t('_auto.components_booking_TimeSlot.p262')) : t('_auto.components_booking_TimeSlot.p263')}
               </span>
             )}
           </div>
@@ -93,7 +93,7 @@ export const TimeSlot = memo(function TimeSlot({ slot, isSelected, onSelect, com
         <div>
           <span className="block text-base font-semibold leading-none text-[#4d3347]">{slot.time}</span>
           <span className={`mt-1 block text-[11px] font-medium ${slotBadge?.className ?? 'text-[#8d6d5e]'}`}>
-            {slotBadge?.label ?? (language === 'en' ? 'Tap to select' : 'Valimiseks klõpsa')}
+            {slotBadge?.label ?? (t('_auto.components_booking_TimeSlot.p264'))}
           </span>
         </div>
         {slot.sosSurcharge ? (

@@ -23,15 +23,15 @@ export async function AdminAnalyticsSummaryStrip() {
 
   if (!data?.ok) {
     return (
-      <section className="mb-8 rounded-2xl border border-[#ebe6e3] bg-white px-5 py-4 shadow-[0_4px_20px_-8px_rgba(42,36,40,0.07)]">
+      <section className="admin-v2-surface mb-8 px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">Funnel intelligence</p>
+            <p className="admin-v2-overline">Funnel intelligence</p>
             <p className="mt-1 text-sm font-medium text-[#5c4f55]">No analytics data yet.</p>
           </div>
           <Link
             href="/admin/analytics"
-            className="inline-flex items-center justify-center rounded-full border border-[#e5ddd8] bg-white px-4 py-2 text-sm font-semibold text-[#5c4f55] shadow-sm hover:bg-[#faf8f6]"
+            className="admin-v2-btn-secondary"
           >
             Open analytics
           </Link>
@@ -47,16 +47,16 @@ export async function AdminAnalyticsSummaryStrip() {
   const topServiceLabel = topService ? topService.serviceName ?? topService.serviceId : '—';
 
   return (
-    <section className="mb-8 overflow-hidden rounded-2xl border border-[#ebe6e3] bg-[linear-gradient(180deg,#ffffff_0%,#fff7fb_100%)] shadow-[0_6px_28px_-16px_rgba(42,36,40,0.14)]">
+    <section className="admin-v2-surface mb-8 overflow-hidden">
       <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b18aa2]">Operational intelligence</p>
+          <p className="admin-v2-overline">Operational intelligence</p>
           <p className="mt-2 font-brand text-2xl font-semibold tracking-tight text-[#2a2228]">Today’s funnel snapshot</p>
           <p className="mt-1 text-sm text-[#7a6e74]">Read-only insights from live booking events.</p>
         </div>
         <Link
           href="/admin/analytics"
-          className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#9c4d72_0%,#c24d86_55%,#a93d71_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_26px_-10px_rgba(194,77,134,0.5)]"
+          className="admin-v2-btn-primary"
         >
           View full analytics
         </Link>
@@ -70,8 +70,8 @@ export async function AdminAnalyticsSummaryStrip() {
           { label: 'Most wanted slot', value: mostWantedSlot, hint: data.slotDemand[0] ? `${data.slotDemand[0].clicks} clicks` : '—' },
           { label: 'Biggest drop-off', value: biggestDrop, hint: 'focus step' },
         ].map((item) => (
-          <div key={item.label} className="rounded-2xl border border-[#f1e6ec] bg-white px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a8989e]">{item.label}</p>
+          <div key={item.label} className="admin-v2-card px-4 py-4">
+            <p className="admin-v2-overline">{item.label}</p>
             <p className="mt-2 line-clamp-2 text-lg font-semibold text-[#2a2228]">{item.value}</p>
             <p className="mt-1 text-[12px] text-[#9a8a94]">{item.hint}</p>
           </div>

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
+import { ShopNavBar } from '@/components/shop/ShopNavBar';
 
 interface ProductItem {
   id: string;
@@ -16,33 +17,39 @@ interface ProductItem {
 }
 
 export default function FavoritesPage() {
-  const { language, localizePath } = useTranslation();
-  const { favorites, isFavorite, toggleFavorite } = useFavorites();
+  const { language, setLanguage, localizePath, t } = useTranslation();
+  const { favorites, favoritesCount, isFavorite, toggleFavorite } = useFavorites();
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const copy =
-    language === 'en'
-      ? {
-          eyebrow: 'Wishlist',
-          title: 'Your beauty favourites',
-          subtitle: 'Save products you want to revisit before your next appointment.',
-          emptyTitle: 'You have no favourites yet',
-          emptyText: 'Tap the heart on products you want to review later.',
-          browse: 'Browse products',
-          viewDetails: 'View details',
-          sectionTitle: 'Saved products',
-        }
-      : {
-          eyebrow: 'Lemmikud',
-          title: 'Sinu ilulemmikud',
-          subtitle: 'Salvesta tooted, mida soovid enne järgmist hooldust uuesti vaadata.',
-          emptyTitle: 'Sul pole veel lemmiktooteid',
-          emptyText: 'Lisa südamega tooted, mis tahad hiljem üle vaadata.',
-          browse: 'Sirvi tooteid',
-          viewDetails: 'Vaata detaile',
-          sectionTitle: 'Salvestatud tooted',
-        };
+  const copy = {
+    eyebrow: t('favoritesPage.eyebrow'),
+    title: t('favoritesPage.title'),
+    subtitle: t('favoritesPage.subtitle'),
+    emptyTitle: t('favoritesPage.emptyTitle'),
+    emptyText: t('favoritesPage.emptyText'),
+    browse: t('favoritesPage.browse'),
+    viewDetails: t('favoritesPage.viewDetails'),
+    sectionTitle: t('favoritesPage.sectionTitle'),
+    loading: t('favoritesPage.loading'),
+    removeFavoriteAria: t('favoritesPage.removeFavoriteAria'),
+  };
+
+  const navCopy = {
+    backToHome: t('shopNav.backToHome'),
+    nav: {
+      home: t('shopNav.home'),
+      services: t('shopNav.services'),
+      gallery: t('shopNav.gallery'),
+      shop: t('shopNav.shop'),
+      contact: t('shopNav.contact'),
+      book: t('shopNav.book'),
+    },
+    languageMenuLabel: t('shopNav.languageMenuLabel'),
+    languageEt: t('shopNav.languageEt'),
+    languageEn: t('shopNav.languageEn'),
+    favoritesAria: t('shopNav.favoritesAria'),
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -71,8 +78,16 @@ export default function FavoritesPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#fff8fc] px-4 py-10 sm:px-6 lg:px-10">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-[#fff8fc]">
+      <ShopNavBar
+        language={language}
+        setLanguage={setLanguage}
+        localizePath={localizePath}
+        copy={navCopy}
+        favoritesCount={favoritesCount}
+      />
+      <main className="px-4 py-10 sm:px-6 lg:px-10">
+        <div className="mx-auto max-w-7xl">
         <section className="rounded-[30px] border border-[#eedce7] bg-white/92 p-6 shadow-[0_24px_42px_-30px_rgba(90,55,82,0.35)] sm:p-8">
           <p className="text-[11px] uppercase tracking-[0.24em] text-[#b57b9d]">{copy.eyebrow}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#2f2530] sm:text-[2.3rem]">{copy.title}</h1>
@@ -81,14 +96,14 @@ export default function FavoritesPage() {
 
         <section className="mt-6">
           {isLoading ? (
-            <p className="text-sm text-[#7f6c7c]">{language === 'en' ? 'Loading favourites...' : 'Laen lemmikuid...'}</p>
+            <p className="text-sm text-[#7f6c7c]">{copy.loading}</p>
           ) : favoritesList.length === 0 ? (
             <article className="rounded-[26px] border border-dashed border-[#e6cfde] bg-white/88 p-8 text-center">
               <h2 className="text-xl font-semibold text-[#3a2d38]">{copy.emptyTitle}</h2>
               <p className="mt-2 text-sm text-[#7f6c7c]">{copy.emptyText}</p>
               <Link
                 href={localizePath('/shop')}
-                className="mt-6 inline-flex rounded-full bg-[linear-gradient(120deg,#d4669e_0%,#c24d86_52%,#a93d71_100%)] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_20px_34px_-24px_rgba(139,51,100,0.75)]"
+                className="btn-primary btn-primary-md mt-6 inline-flex"
               >
                 {copy.browse}
               </Link>
@@ -118,10 +133,10 @@ export default function FavoritesPage() {
                       <button
                         type="button"
                         onClick={() => toggleFavorite(product.id)}
-                        className={`absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border bg-white/95 ${
+                        className={`icon-circle-btn absolute right-3 top-3 h-8 w-8 min-h-[32px] min-w-[32px] bg-white/95 ${
                           isFavorite(product.id) ? 'border-[#c24d86] text-[#c24d86]' : 'border-[#e8d4e0] text-[#8f7086]'
                         }`}
-                        aria-label={language === 'en' ? 'Toggle favourite' : 'Muuda lemmikut'}
+                        aria-label={copy.removeFavoriteAria}
                       >
                         <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
                       </button>
@@ -133,7 +148,7 @@ export default function FavoritesPage() {
                         <span className="text-lg font-semibold text-[#b04b80]">EUR {product.price}</span>
                         <Link
                           href={localizePath(`/shop/${product.id}`)}
-                          className="rounded-full border border-[#e4c7d8] px-3 py-1.5 text-xs font-semibold text-[#6a4c64] transition hover:bg-[#fff3fa]"
+                          className="btn-secondary btn-small px-3 text-xs"
                         >
                           {copy.viewDetails}
                         </Link>
@@ -145,8 +160,8 @@ export default function FavoritesPage() {
             </div>
           )}
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }
-

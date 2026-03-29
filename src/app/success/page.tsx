@@ -36,7 +36,7 @@ function SuccessPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { language } = useTranslation();
+  const { language, t } = useTranslation();
   const { text } = useBookingContent();
   const [bookingRef, setBookingRef] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
@@ -333,7 +333,7 @@ function SuccessPageContent() {
     const end = new Date(start); end.setMinutes(end.getMinutes() + (effectiveDuration || effectiveService.duration || 60));
     const g = (v: Date) => v.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const title = encodeURIComponent(`Nailify — ${effectiveService.name}`);
-    const details = encodeURIComponent(en ? 'Appointment with Sandra at Nailify Mustamäe.' : 'Aeg Sandraga Nailify Mustamäe stuudios.');
+    const details = encodeURIComponent(t('_auto.app_success_page.p317'));
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${g(start)}/${g(end)}&details=${details}&location=${encodeURIComponent('Mustamäe tee 55, Tallinn')}`;
   }, [effectiveService, effectiveSlot, effectiveDuration, en]);
 
@@ -449,7 +449,7 @@ function SuccessPageContent() {
                   </div>
                   {productsTotal > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-[#6d6268]">{en ? 'Products' : 'Tooted'}</span>
+                      <span className="text-[#6d6268]">{t('_auto.app_success_page.p318')}</span>
                       <span className="font-semibold tabular-nums text-[#2f282c]">{`€${productsTotal}`}</span>
                     </div>
                   )}
@@ -458,7 +458,7 @@ function SuccessPageContent() {
                     <span className="font-semibold tabular-nums text-[#9f456f]">{`€${checkoutPricing?.depositAmount ?? depositPaidForCard}`}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#6d6268]">{en ? 'Paid at checkout' : 'Makstud'}</span>
+                    <span className="text-[#6d6268]">{t('_auto.app_success_page.p319')}</span>
                     <span className="font-semibold tabular-nums text-[#2f282c]">{`€${payNowTotal}`}</span>
                   </div>
                 </div>
@@ -471,7 +471,7 @@ function SuccessPageContent() {
 
                 {confirmedBooking?.products?.length ? (
                   <div className="mt-3 border-t border-[#f2eaed] pt-2.5">
-                    <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#b8a8b0]">{en ? 'Products' : 'Tooted'}</p>
+                    <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-[#b8a8b0]">{t('_auto.app_success_page.p320')}</p>
                     {confirmedBooking.products.map((p) => (
                       <div key={p.productId} className="py-0.5 text-[12px]">
                         <div className="flex items-center justify-between gap-3">
@@ -549,7 +549,7 @@ function SuccessPageContent() {
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">{copy.inspirationTitle}</p>
               <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 success-inspiration-strip">
                 {galleryUrls.map((url, i) => (
-                  <button key={`${url}-${i}`} type="button" onClick={handleInspirationTap} className="group relative h-[102px] w-[150px] shrink-0 snap-start overflow-hidden rounded-xl border border-[#f0e8ec] bg-[#f5f0ed] shadow-[0_10px_24px_-18px_rgba(159,69,111,0.32)] transition-shadow hover:shadow-[0_14px_30px_-16px_rgba(159,69,111,0.30)]" aria-label={en ? 'Open related service' : 'Ava seotud teenus'}>
+                  <button key={`${url}-${i}`} type="button" onClick={handleInspirationTap} className="group relative h-[102px] w-[150px] shrink-0 snap-start overflow-hidden rounded-xl border border-[#f0e8ec] bg-[#f5f0ed] shadow-[0_10px_24px_-18px_rgba(159,69,111,0.32)] transition-shadow hover:shadow-[0_14px_30px_-16px_rgba(159,69,111,0.30)]" aria-label={t('_auto.app_success_page.p321')}>
                     <Image src={url} alt="" fill unoptimized className="object-cover transition-transform duration-300 group-hover:scale-[1.04]" sizes="130px" />
                   </button>
                 ))}
@@ -562,7 +562,7 @@ function SuccessPageContent() {
               <section className="success-stagger-7 mt-6 w-full rounded-[18px] border border-[#efefef] bg-white p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#aaa]">{copy.retentionTitle}</p>
                 <p className="mt-2 text-[14px] leading-relaxed text-[#555]">{copy.retentionBody}</p>
-                <p className="mt-1 text-[12px] text-[#999]">{en ? 'Most clients book their next time today.' : 'Enamus kliente broneerib järgmise aja juba täna.'}</p>
+                <p className="mt-1 text-[12px] text-[#999]">{t('_auto.app_success_page.p322')}</p>
                 <button type="button" onClick={handleNextBooking} className="mt-4 h-[48px] w-full rounded-[14px] bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-[14px] font-semibold text-white shadow-[0_10px_28px_-12px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.98]">{copy.retentionCta}</button>
                 <button type="button" onClick={() => setShowRepeatOffer(false)} className="mt-2 w-full text-center text-[11px] font-medium text-[#aaa] hover:text-[#888]">{copy.retentionDismiss}</button>
               </section>

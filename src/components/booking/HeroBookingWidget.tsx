@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -137,9 +137,9 @@ export function HeroBookingWidget() {
   const urgencyMicro = useMemo(() => {
     if (!nextSlot) {
       if (slotsLoading && !showSlowFallback) {
-        return language === 'en' ? 'Checking next available time...' : 'Kontrollime j\u00E4rgmist vaba aega...';
+        return t('_auto.components_booking_HeroBookingWidget.p208');
       }
-      return language === 'en' ? 'See all available times' : 'Vaata k\u00F5iki vabu aegu';
+      return t('_auto.components_booking_HeroBookingWidget.p209');
     }
     const todayDate = getTodayInTallinn();
     const currentTime = getCurrentTimeInTallinn();
@@ -148,13 +148,13 @@ export function HeroBookingWidget() {
     if (isToday) {
       // Check if this specific time has passed
       if (nextSlot.time <= currentTime) {
-        return language === 'en' ? 'Only a few times left today' : 'T\u00E4na veel 2 aega';
+        return t('_auto.components_booking_HeroBookingWidget.p210');
       }
-      if (h >= 9 && h < 12) return language === 'en' ? 'Morning times are filling' : 'Hommikused ajad t\u00E4ituvad';
-      if (h >= 17) return language === 'en' ? 'Evening times filling fast' : '\u00D5htused ajad t\u00E4ituvad';
-      return language === 'en' ? 'Today still has limited openings' : 'T\u00E4na veel 2 aega';
+      if (h >= 9 && h < 12) return t('_auto.components_booking_HeroBookingWidget.p211');
+      if (h >= 17) return t('_auto.components_booking_HeroBookingWidget.p212');
+      return t('_auto.components_booking_HeroBookingWidget.p213');
     }
-    return language === 'en' ? 'Limited openings ahead' : 'Avamisi on piiratud';
+    return t('_auto.components_booking_HeroBookingWidget.p214');
   }, [nextSlot, language, slotsLoading, showSlowFallback]);
 
   const bookingHeadlineParts = useMemo(() => {
@@ -162,13 +162,9 @@ export function HeroBookingWidget() {
       return {
         label:
           slotsLoading && !showSlowFallback
-            ? language === 'en'
-              ? 'Checking next available time...'
-              : 'Kontrollime j\u00E4rgmist vaba aega...'
-            : language === 'en'
-              ? 'See available times'
-              : 'Vaata vabu aegu',
-        time: slotsLoading && !showSlowFallback ? '...' : language === 'en' ? 'Choose your time' : 'Vali oma aeg',
+            ? t('_auto.components_booking_HeroBookingWidget.p215')
+            : t('_auto.components_booking_HeroBookingWidget.p216'),
+        time: slotsLoading && !showSlowFallback ? '...' : t('_auto.components_booking_HeroBookingWidget.p217'),
       };
     }
 
@@ -177,14 +173,14 @@ export function HeroBookingWidget() {
 
     if (nextSlot.date === todayDate) {
       return {
-        label: language === 'en' ? 'Next available time today' : 'J\u00E4rgmine vaba aeg t\u00E4na',
+        label: t('_auto.components_booking_HeroBookingWidget.p218'),
         time: nextSlot.time,
       };
     }
 
     if (nextSlot.date === tomorrowDate) {
       return {
-        label: language === 'en' ? 'Next available time tomorrow' : 'J\u00E4rgmine vaba aeg homme',
+        label: t('_auto.components_booking_HeroBookingWidget.p219'),
         time: nextSlot.time,
       };
     }
@@ -223,7 +219,7 @@ export function HeroBookingWidget() {
   }, [bookingHeadlineParts.time, displayTime, reduceMotion]);
 
   const reserveLabel = () => {
-    if (!nextSlot) return language === 'en' ? 'Choose your time' : 'Vali oma aeg';
+    if (!nextSlot) return t('_auto.components_booking_HeroBookingWidget.p220');
     const time = nextSlot.time;
     return language === 'en' ? `Reserve ${time} time` : `Broneeri kell ${time}`;
   };
@@ -281,10 +277,10 @@ export function HeroBookingWidget() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#8f7f89]">
-            {language === 'en' ? 'Next Available' : 'J\u00E4rgmine aeg'}
+            {t('_auto.components_booking_HeroBookingWidget.p221')}
           </p>
           <p className="mt-1 text-[16px] font-medium text-[#7a6a74]">
-            {slotsLoading || isCardBooting ? (language === 'en' ? 'Checking availability...' : 'Kontrollime saadavust...') : bookingHeadlineParts.label}
+            {slotsLoading || isCardBooting ? (t('_auto.components_booking_HeroBookingWidget.p222')) : bookingHeadlineParts.label}
           </p>
           {slotsLoading || isCardBooting ? (
             <div className="mt-2 space-y-2">
@@ -311,11 +307,11 @@ export function HeroBookingWidget() {
           )}
           {nextSlot ? (
             <p className="mt-1 text-[12px] text-[#8a7a85]">
-              {language === 'en' ? 'This time is currently available' : 'See aeg on hetkel saadaval'}
+              {t('_auto.components_booking_HeroBookingWidget.p223')}
             </p>
           ) : null}
         </div>
-        <span className="self-start rounded-full border border-[#f0dfe9] bg-white/90 px-3 py-1 text-[11px] font-medium text-[#7f6275] sm:self-center">
+        <span className="pill-tag self-start sm:self-center">
           {t('widget.identityStudio')}
         </span>
       </div>
@@ -336,7 +332,7 @@ export function HeroBookingWidget() {
           {nextSlot
             ? (secondsLeft > 0
                 ? (language === 'en' ? `Held for you ${Math.ceil(secondsLeft / 60)} min` : `Hoitud sulle ${Math.ceil(secondsLeft / 60)} min`)
-                : (language === 'en' ? 'Time released. Choose a new slot.' : 'Aeg vabastati. Vali uus aeg.'))
+                : (t('_auto.components_booking_HeroBookingWidget.p224')))
             : urgencyMicro}
         </span>
         {nextSlot && (
@@ -351,14 +347,12 @@ export function HeroBookingWidget() {
 
       {showSlowFallback && !nextSlot && (
         <p className="mt-2 text-[12px] text-[#7f6275]">
-          {language === 'en'
-            ? 'Check all available times on the booking page.'
-            : 'Kontrolli k\u00F5iki saadaolevaid aegu broneerimislehel.'}
+          {t('_auto.components_booking_HeroBookingWidget.p225')}
         </p>
       )}
 
       <p className="mt-3 text-[12px] font-medium text-[#8a7a88]">
-        {language === 'en' ? 'Structured gel polish from \u20AC30' : 'Modelleeritud geellakk alates \u20AC30'}
+        {t('_auto.components_booking_HeroBookingWidget.p226')}
       </p>
 
       <div className="relative mt-5">
@@ -367,12 +361,12 @@ export function HeroBookingWidget() {
           type="button"
           onClick={handleReserve}
           disabled={isReserving}
-          className={`group/cta hero-booking-cta-pulse relative h-[52px] w-full rounded-full bg-gradient-to-r from-[#C15A8A] to-[#9F3D6B] px-8 text-[15px] font-medium text-white shadow-[0_10px_24px_rgba(159,61,107,0.25)] transition-all duration-300 [transition-timing-function:cubic-bezier(0.22,0.68,0,1)] hover:shadow-[0_12px_30px_rgba(159,61,107,0.35)] active:scale-[0.97] ${
+          className={`btn-primary btn-primary-lg group/cta hero-booking-cta-pulse relative w-full ${
             ctaPulse ? 'ring-4 ring-[#c24d86]/25' : ''
           } ${isReserving ? 'opacity-90' : ''}`}
         >
           <span className="inline-flex items-center justify-center gap-2">
-            {isReserving ? (language === 'en' ? 'Holding your slot...' : 'Hoiame sinu aega...') : reserveLabel()}
+            {isReserving ? (t('_auto.components_booking_HeroBookingWidget.p227')) : reserveLabel()}
             {nextSlot && (
               <ArrowRight className="h-4 w-4 transition-transform duration-[170ms] group-hover/cta:translate-x-[2px]" strokeWidth={2.2} />
             )}
@@ -462,4 +456,3 @@ export function HeroBookingWidget() {
 }
 
 export default HeroBookingWidget;
-

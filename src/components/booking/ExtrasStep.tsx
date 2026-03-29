@@ -1,13 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { useBookingStore } from '@/store/booking-store';
 import { useTranslation } from '@/lib/i18n';
 import { useBookingAddOns } from '@/hooks/use-booking-addons';
 
 export function ExtrasStep() {
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const selectedService = useBookingStore((state) => state.selectedService);
-  useBookingAddOns(selectedService?.id ?? null);
+  useBookingAddOns(selectedService?.allowAddOns === false ? null : selectedService?.id ?? null);
 
   const selectedAddOns = useBookingStore((state) => state.selectedAddOns);
   const toggleAddOn = useBookingStore((state) => state.toggleAddOn);
@@ -16,6 +17,7 @@ export function ExtrasStep() {
   const totalDuration = useBookingStore((state) => state.totalDuration);
   const selectedCount = selectedAddOns.filter((a) => a.selected).length;
   const selectedExtrasTotal = selectedAddOns.filter((a) => a.selected).reduce((sum, a) => sum + a.price, 0);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({});
   const mostPopularId =
     selectedAddOns.length > 0 ? selectedAddOns.reduce((max, a) => (a.price > max.price ? a : max), selectedAddOns[0]).id : null;
 
@@ -23,15 +25,13 @@ export function ExtrasStep() {
     <div className="animate-fade-in">
       <div className="mb-8 text-center md:mb-10">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9d8493]">
-          {language === 'en' ? 'Step 3 of 3' : 'Samm 3 / 3'}
+          {t('_auto.components_booking_ExtrasStep.p198')}
         </p>
         <h2 className="mt-2 font-brand text-[1.65rem] font-semibold tracking-tight text-[#2f2622] md:text-[1.85rem]">
-          {language === 'en' ? 'Make your visit special' : 'Muuda külastus eriliseks'}
+          {t('_auto.components_booking_ExtrasStep.p199')}
         </h2>
         <p className="mt-2 text-[15px] text-[#6f655f]">
-          {language === 'en'
-            ? 'Most clients add at least one add-on for a better result.'
-            : 'Enamik kliendid lisavad vähemalt ühe lisa parema tulemuse jaoks.'}
+          {t('_auto.components_booking_ExtrasStep.p200')}
         </p>
       </div>
 
@@ -58,14 +58,22 @@ export function ExtrasStep() {
         </div>
       </div>
 
-      <div className="mb-6 space-y-3">
+      <div className="mb-6 grid gap-3 md:grid-cols-2 md:gap-4">
+        {selectedService?.allowAddOns === false ? (
+          <div className="md:col-span-2 rounded-2xl border border-[#efe6ec] bg-[#fffafd] p-5 text-sm text-[#6f5f69]">
+            {t('_auto.components_booking_ExtrasStep.p201')}
+          </div>
+        ) : null}
         {selectedAddOns.map((addOn) => {
           const isSelected = addOn.selected;
+          const description = addOn.description?.trim() ?? '';
+          const isLongDescription = description.length > 120;
+          const isDescriptionExpanded = Boolean(expandedDescriptions[addOn.id]);
           return (
             <button
               key={addOn.id}
               onClick={() => toggleAddOn(addOn)}
-              className={`relative w-full rounded-2xl border p-5 text-left transition-all duration-200 ${
+              className={`relative w-full rounded-2xl border p-5 md:p-6 text-left transition-all duration-200 ${
                 isSelected
                   ? 'border-[#d7b0c7] bg-[#fff8fc] shadow-[0_12px_20px_-24px_rgba(116,47,93,0.25)] hover:-translate-y-[1px] active:scale-[0.99]'
                   : 'border-[#efe6ec] bg-white hover:border-[#d7b0c7] hover:shadow-[0_14px_22px_-26px_rgba(194,77,134,0.22)] active:scale-[0.99]'
@@ -85,17 +93,38 @@ export function ExtrasStep() {
                   >
                     ✓
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="font-medium text-[#4a3344]">{addOn.name}</h3>
-                    <p className="mt-0.5 line-clamp-1 text-sm text-[#75657a]">{addOn.description}</p>
+                    {description ? (
+                      <div className="mt-0.5">
+                        <p className={`text-sm text-[#75657a] ${isLongDescription && !isDescriptionExpanded ? 'line-clamp-2' : ''}`}>
+                          {description}
+                        </p>
+                        {isLongDescription ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setExpandedDescriptions((prev) => ({ ...prev, [addOn.id]: !prev[addOn.id] }));
+                            }}
+                            className="mt-1 text-xs font-semibold text-[#8f3d62] underline underline-offset-2"
+                            aria-expanded={isDescriptionExpanded}
+                          >
+                            {isDescriptionExpanded
+                              ? t('_auto.components_booking_ExtrasStep.p202')
+                              : t('_auto.components_booking_ExtrasStep.p203')}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {addOn.duration > 0 && (
-                        <span className="rounded-full border border-[#eadce5] bg-white px-2.5 py-1 text-xs text-[#7d6275]">
+                        <span className="pill-meta min-h-[30px] px-2.5 text-xs text-[#7d6275]">
                           {addOn.duration} {t('common.minutes')}
                         </span>
                       )}
-                      <span className="rounded-full border border-[#eadce5] bg-white px-2.5 py-1 text-xs text-[#7d6275]">
-                        {language === 'en' ? 'Optional upgrade' : 'Valikuline lisandus'}
+                      <span className="pill-meta min-h-[30px] px-2.5 text-xs text-[#7d6275]">
+                        {t('_auto.components_booking_ExtrasStep.p204')}
                       </span>
                     </div>
                   </div>
@@ -113,7 +142,7 @@ export function ExtrasStep() {
       <div className="flex gap-3">
         <button
           onClick={nextStep}
-          className="cta-premium flex-1 rounded-2xl border border-[#eadce5] py-4 font-semibold text-[#634f5f] transition-colors duration-200 hover:bg-[#fff7fc]"
+          className="btn-secondary flex-1"
         >
           {t('extras.skip')}
         </button>
@@ -121,7 +150,7 @@ export function ExtrasStep() {
           id="booking-sticky-primary-action"
           type="button"
           onClick={nextStep}
-          className="cta-premium flex-[2] rounded-full bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] py-4 text-base font-semibold text-white shadow-[0_14px_32px_-14px_rgba(159,69,111,0.45)] transition-all duration-[180ms] hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-12px_rgba(159,69,111,0.45)] active:scale-[0.99]"
+          className="btn-primary btn-primary-lg flex-[2]"
         >
           {selectedCount > 0 ? `${t('extras.continue')} (+€${selectedExtrasTotal})` : t('extras.continue')}
         </button>

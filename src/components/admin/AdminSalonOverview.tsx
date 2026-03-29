@@ -228,7 +228,7 @@ export function AdminSalonOverview({
     <div className="space-y-6 lg:space-y-8">
       {/* Free slot alert */}
       {stats.freeSlotsToday > 0 && (
-        <section className="rounded-2xl border border-[#e8ddd8] bg-[linear-gradient(135deg,#fff8fa_0%,#fffefc_100%)] p-5 shadow-[0_8px_32px_-12px_rgba(194,77,134,0.15)] sm:p-6">
+        <section className="admin-v2-surface p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#fce8f0] text-[#b85c8a]">
@@ -263,10 +263,10 @@ export function AdminSalonOverview({
       <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
         {/* Upcoming + revenue */}
         <div className="space-y-6 lg:col-span-7">
-          <section className="rounded-2xl border border-[#ebe6e3] bg-white p-5 shadow-[0_4px_24px_-8px_rgba(42,36,40,0.08)] sm:p-6">
+          <section className="admin-v2-surface p-5 sm:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a8989e]">Schedule</p>
+                <p className="admin-v2-overline">Schedule</p>
                 <h2 className="mt-1 font-brand text-xl font-semibold text-[#2a2228]">Upcoming bookings</h2>
               </div>
               <Link
@@ -331,10 +331,10 @@ export function AdminSalonOverview({
             )}
           </section>
 
-          <section className="rounded-2xl border border-[#ebe6e3] bg-white p-5 shadow-[0_4px_24px_-8px_rgba(42,36,40,0.08)] sm:p-6">
+          <section className="admin-v2-surface p-5 sm:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a8989e]">Shop revenue</p>
+                <p className="admin-v2-overline">Shop revenue</p>
                 <h2 className="mt-1 font-brand text-xl font-semibold text-[#2a2228]">Revenue snapshot</h2>
                 <p className="mt-0.5 text-xs text-[#9a8a94]">Paid product orders (Stripe)</p>
               </div>
@@ -393,12 +393,12 @@ export function AdminSalonOverview({
 
         {/* Orders + activity */}
         <div className="space-y-6 lg:col-span-5">
-          <section className="rounded-2xl border border-[#ebe6e3] bg-white p-5 shadow-[0_4px_24px_-8px_rgba(42,36,40,0.08)] sm:p-6">
+          <section className="admin-v2-surface p-5 sm:p-6">
             <h2 className="font-brand text-lg font-semibold text-[#2a2228]">Orders & inventory</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <Link
                 href="/admin/orders"
-                className="rounded-xl border border-[#f0ebe8] bg-[#faf8f6] p-4 transition hover:border-[#e5d8d4] hover:bg-[#fff8f6]"
+                className="admin-v2-card p-4"
               >
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a8989e]">New orders</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums text-[#2a2228]">{loaded ? newOrdersPending : '—'}</p>
@@ -406,7 +406,7 @@ export function AdminSalonOverview({
               </Link>
               <Link
                 href="/admin/products"
-                className="rounded-xl border border-[#f0ebe8] bg-[#faf8f6] p-4 transition hover:border-[#e5d8d4] hover:bg-[#fff8f6]"
+                className="admin-v2-card p-4"
               >
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#a8989e]">Low stock</p>
                 <p className="mt-1 text-2xl font-semibold tabular-nums text-[#b85c6a]">{loaded ? lowStock.length : '—'}</p>
@@ -442,7 +442,7 @@ export function AdminSalonOverview({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[#ebe6e3] bg-white p-5 shadow-[0_4px_24px_-8px_rgba(42,36,40,0.08)] sm:p-6">
+          <section className="admin-v2-surface p-5 sm:p-6">
             <h2 className="font-brand text-lg font-semibold text-[#2a2228]">Activity</h2>
             <p className="mt-0.5 text-xs text-[#9a8a94]">Recent bookings & orders</p>
             <ul className="mt-4 space-y-0 divide-y divide-[#f5f0ed]">
@@ -477,12 +477,13 @@ export function AdminSalonOverview({
             { href: '/admin/customers', label: 'Customers', desc: 'CRM profiles', icon: Users },
             { href: '/admin/analytics', label: 'Analytics', desc: 'Funnel & demand', icon: BarChart3 },
             { href: '/admin/gallery', label: 'Gallery', desc: 'Portfolio images', icon: ImageIcon },
+            { href: '/admin/team', label: 'Team', desc: 'Homepage specialists', icon: Users },
             { href: '/admin/feedback', label: 'Feedback', desc: 'Client messages', icon: MessageSquare },
           ].map(({ href, label, desc, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className="group flex items-center gap-4 rounded-2xl border border-[#ebe6e3] bg-white p-5 shadow-[0_4px_20px_-10px_rgba(42,36,40,0.06)] transition hover:border-[#e5ccd6] hover:shadow-md"
+              className="admin-v2-card group flex items-center gap-4 p-5"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#f8f0f3] text-[#b85c8a] transition group-hover:bg-[#fce8f0]">
                 <Icon className="h-6 w-6" strokeWidth={1.6} />

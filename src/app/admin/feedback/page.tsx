@@ -5,15 +5,16 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import type { FeedbackItem } from '@/lib/feedback';
+type LocalizedText = { et: string; en: string };
 
 interface FeedbackDraft {
   id: string;
   clientName: string;
   clientAvatarUrl: string;
   rating: number;
-  feedbackText: string;
+  feedbackText: LocalizedText;
   serviceId: string;
-  sourceLabel: string;
+  sourceLabel: LocalizedText;
   sortOrder: number;
   isVisible: boolean;
 }
@@ -23,9 +24,9 @@ const emptyDraft: FeedbackDraft = {
   clientName: '',
   clientAvatarUrl: '',
   rating: 5,
-  feedbackText: '',
+  feedbackText: { et: '', en: '' },
   serviceId: '',
-  sourceLabel: '',
+  sourceLabel: { et: '', en: '' },
   sortOrder: 0,
   isVisible: true,
 };
@@ -38,7 +39,7 @@ function toDraft(item: FeedbackItem): FeedbackDraft {
     rating: item.rating,
     feedbackText: item.feedbackText,
     serviceId: item.serviceId ?? '',
-    sourceLabel: item.sourceLabel ?? '',
+    sourceLabel: item.sourceLabel,
     sortOrder: item.sortOrder,
     isVisible: item.isVisible,
   };
@@ -98,7 +99,7 @@ export default function AdminFeedbackPage() {
           rating: draft.rating,
           feedbackText: draft.feedbackText,
           serviceId: draft.serviceId || null,
-          sourceLabel: draft.sourceLabel || null,
+          sourceLabel: draft.sourceLabel,
           sortOrder: draft.sortOrder,
           isVisible: draft.isVisible,
         }),
@@ -264,8 +265,8 @@ export default function AdminFeedbackPage() {
                           </div>
                           <div>
                             <div className="font-medium text-slate-800">{item.clientName}</div>
-                            {item.sourceLabel && (
-                              <div className="text-xs text-slate-500">{item.sourceLabel}</div>
+                            {(item.sourceLabel?.et || item.sourceLabel?.en) && (
+                              <div className="text-xs text-slate-500">{item.sourceLabel.et || item.sourceLabel.en}</div>
                             )}
                           </div>
                         </div>
@@ -275,8 +276,8 @@ export default function AdminFeedbackPage() {
                       </td>
                       <td className="px-5 py-3 max-w-[220px]">
                         <span className="line-clamp-2 text-slate-500">
-                          &ldquo;{item.feedbackText.slice(0, 80)}
-                          {item.feedbackText.length > 80 ? '…' : ''}&rdquo;
+                          &ldquo;{(item.feedbackText.et || item.feedbackText.en).slice(0, 80)}
+                          {(item.feedbackText.et || item.feedbackText.en).length > 80 ? '…' : ''}&rdquo;
                         </span>
                       </td>
                       <td className="px-5 py-3 text-slate-500">{item.sortOrder}</td>
@@ -460,20 +461,39 @@ export default function AdminFeedbackPage() {
                   <label className="block">
                     <span className="block text-sm font-medium text-slate-700">Tsitaat / tagasiside</span>
                     <textarea
-                      value={draft.feedbackText}
-                      onChange={(e) => setDraft((p) => ({ ...p, feedbackText: e.target.value }))}
+                      value={draft.feedbackText.et}
+                      onChange={(e) => setDraft((p) => ({ ...p, feedbackText: { ...p.feedbackText, et: e.target.value } }))}
                       className="mt-1 min-h-24 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
-                      placeholder="Klienti tsitaat..."
+                      placeholder="Klienti tsitaat ET..."
+                      rows={4}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-slate-700">Quote EN</span>
+                    <textarea
+                      value={draft.feedbackText.en}
+                      onChange={(e) => setDraft((p) => ({ ...p, feedbackText: { ...p.feedbackText, en: e.target.value } }))}
+                      className="mt-1 min-h-24 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
+                      placeholder="Client quote EN..."
                       rows={4}
                     />
                   </label>
                   <label className="block">
                     <span className="block text-sm font-medium text-slate-700">Allikas (valikuline)</span>
                     <input
-                      value={draft.sourceLabel}
-                      onChange={(e) => setDraft((p) => ({ ...p, sourceLabel: e.target.value }))}
+                      value={draft.sourceLabel.et}
+                      onChange={(e) => setDraft((p) => ({ ...p, sourceLabel: { ...p.sourceLabel, et: e.target.value } }))}
                       className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
-                      placeholder="Facebook, Google"
+                      placeholder="Allikas ET"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-sm font-medium text-slate-700">Source EN (optional)</span>
+                    <input
+                      value={draft.sourceLabel.en}
+                      onChange={(e) => setDraft((p) => ({ ...p, sourceLabel: { ...p.sourceLabel, en: e.target.value } }))}
+                      className="mt-1 w-full rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
+                      placeholder="Source EN"
                     />
                   </label>
                   <label className="block">

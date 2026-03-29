@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TimeSlot } from '@/store/booking-types';
@@ -401,7 +401,7 @@ export default function AdminSlotsPage() {
       }
     } catch (e) {
       console.error(e);
-      setError('Päeva malli rakendamine ebaonnestus.');
+      setError('Päeva malli rakendamine ebaõnnestus.');
     } finally {
       setIsSaving(false);
     }
@@ -421,7 +421,7 @@ export default function AdminSlotsPage() {
       await loadSlots();
     } catch (err) {
       console.error(err);
-      setError('Kõigi aegade blokeerimine ebaonnestus.');
+      setError('Kõigi aegade blokeerimine ebaõnnestus.');
     } finally {
       setIsSaving(false);
     }
@@ -547,7 +547,7 @@ export default function AdminSlotsPage() {
         showToast('Toiming tühistatud');
       } catch (err) {
         console.error(err);
-        setError('Tühistamine ebaonnestus.');
+        setError('Tühistamine ebaõnnestus.');
       } finally {
         setIsSaving(false);
       }
@@ -656,12 +656,12 @@ export default function AdminSlotsPage() {
   }, [selectedTime, slotState, clearSelection, setSlotStatus]);
 
   return (
-    <main className="min-h-screen bg-[#fafafa]">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <main>
+      <div className="admin-v2-section-gap">
         <AdminPageHeader
           overline="Broneerimine"
           title="Vabad ajad"
-          subtitle="Vali päev, halli aegu. Täida või tühjenda tööaja järgi, lisa ajad või blokeeri kõik."
+          subtitle="Vali päev, halda aegu. Täida või tühjenda tööaja järgi, lisa ajad või blokeeri kõik."
           backHref="/admin"
           backLabel="Halduspaneel"
           secondaryLinks={[{ label: 'Broneeringud', href: '/admin/bookings' }]}
@@ -674,12 +674,12 @@ export default function AdminSlotsPage() {
         )}
 
         {/* Zone 1: Day / calendar navigation */}
-        <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+        <section className="admin-v2-surface p-5">
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={goPrevWeek}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+              className="admin-v2-btn-secondary h-10 w-10 shrink-0 rounded-xl p-0"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -716,7 +716,7 @@ export default function AdminSlotsPage() {
             <button
               type="button"
               onClick={goNextWeek}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e5e7eb] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+              className="admin-v2-btn-secondary h-10 w-10 shrink-0 rounded-xl p-0"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -725,7 +725,7 @@ export default function AdminSlotsPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* Zone 2: Main slot workspace */}
-          <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+          <section className="admin-v2-surface p-6">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-slate-800">
                 {selectedDayLabel}
@@ -735,15 +735,15 @@ export default function AdminSlotsPage() {
                   type="button"
                   onClick={() => void applyPresetDay(true)}
                   disabled={isSaving}
-                  className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                  className="admin-v2-btn-secondary px-3 py-2 text-sm disabled:opacity-50"
                 >
-                  Täida tööpäev
+                  Täida päev
                 </button>
                 <button
                   type="button"
                   onClick={() => void applyPresetDay(false)}
                   disabled={isSaving}
-                  className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                  className="admin-v2-btn-ghost px-3 py-2 text-sm disabled:opacity-50"
                 >
                   Tühjenda
                 </button>
@@ -751,7 +751,7 @@ export default function AdminSlotsPage() {
                   type="button"
                   onClick={() => setBulkModalOpen(true)}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                  className="admin-v2-btn-secondary px-3 py-2 text-sm disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                   Lisa ajad
@@ -774,16 +774,16 @@ export default function AdminSlotsPage() {
                     const isBooked = state === 'booked';
                     const canToggle = !isBooked && (state === 'free' || state === 'blocked');
                     const isInteractive = !isBooked;
-                    const baseCard = 'flex min-h-[80px] flex-col justify-between rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ';
+                    const baseCard = 'flex min-h-[86px] flex-col justify-between rounded-2xl border px-3.5 py-3 text-left transition-all duration-200 ';
                     const stateStyles = isBooked
-                      ? 'cursor-not-allowed border-slate-100 bg-slate-50/95 text-slate-500'
+                      ? 'cursor-not-allowed border-[#ece5eb] bg-[#f8f5f7]/95 text-slate-500'
                       : state === 'sos'
-                        ? 'cursor-pointer border-amber-100 bg-amber-50/40 hover:shadow hover:border-amber-200/80'
+                        ? 'cursor-pointer border-amber-200/70 bg-amber-50/60 hover:shadow-md hover:border-amber-300'
                         : state === 'free'
-                          ? 'cursor-pointer border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-slate-200'
-                          : 'cursor-pointer border-slate-100 bg-slate-50/90 text-slate-500 hover:bg-slate-100/90';
+                          ? 'cursor-pointer border-[#efe3ea] bg-white shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-[#ddc7d4]'
+                          : 'cursor-pointer border-[#ece5eb] bg-[#f7f4f6] text-slate-500 hover:bg-[#f2edf1]';
                     const selectedStyles = isSelected
-                      ? 'ring-2 ring-slate-500 ring-offset-2 shadow-md bg-slate-50/80 border-slate-200'
+                      ? 'ring-2 ring-[#ad5b84]/40 ring-offset-2 shadow-md bg-[#fff8fb] border-[#ddc7d4]'
                       : '';
                     return (
                       <div
@@ -806,7 +806,7 @@ export default function AdminSlotsPage() {
                               type="button"
                               onClick={(e) => { e.stopPropagation(); void setSlotStatus(time, state === 'blocked'); }}
                               disabled={isSaving}
-                              className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-200/80 hover:text-slate-600 disabled:opacity-50"
+                              className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-[#f2eaf0] hover:text-[#5f4b58] disabled:opacity-50"
                               title={state === 'blocked' ? 'Tee vabaks' : 'Blokeeri'}
                             >
                               {state === 'blocked' ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
@@ -824,7 +824,7 @@ export default function AdminSlotsPage() {
                   })}
                 </div>
                 {/* Legend: near grid */}
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 border-t border-slate-100 pt-4">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-[#efe3ea] pt-4">
                   <span className="inline-flex items-center gap-1.5 text-xs text-slate-500" title="Vaba aeg">
                     <span className="h-2 w-2 rounded-full bg-emerald-400" /> Vaba
                   </span>
@@ -842,12 +842,12 @@ export default function AdminSlotsPage() {
             )}
           </section>
 
-          {/* Zone 3: Context panel — contextual inspector */}
+          {/* Zone 3: Context panel - contextual inspector */}
           <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
             {selectedTime && selectedTimes.size <= 1 ? (
               /* Slot selected: inspector mode */
               <>
-                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <div className="admin-v2-surface-soft p-4">
                   <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">Valitud aeg</p>
                   <div className="space-y-3">
                     <div>
@@ -870,7 +870,7 @@ export default function AdminSlotsPage() {
                             type="button"
                             onClick={() => void setSlotStatus(selectedTime, true)}
                             disabled={isSaving}
-                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+                            className="admin-v2-btn-secondary border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
                           >
                             Vaba
                           </button>
@@ -878,7 +878,7 @@ export default function AdminSlotsPage() {
                             type="button"
                             onClick={() => void setSlotStatus(selectedTime, false)}
                             disabled={isSaving}
-                            className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
+                            className="admin-v2-btn-ghost border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200 disabled:opacity-50"
                           >
                             Blokeeri
                           </button>
@@ -903,7 +903,7 @@ export default function AdminSlotsPage() {
                                   min={0}
                                   value={sosSurcharge}
                                   onChange={(e) => setSosSurcharge(e.target.value)}
-                                  className="mt-0.5 w-20 rounded-lg border border-[#e5e7eb] px-2 py-1 text-sm"
+                                  className="admin-v2-input mt-0.5 w-20 px-2 py-1 text-sm"
                                 />
                               </label>
                               <label className="mt-2 block">
@@ -911,7 +911,7 @@ export default function AdminSlotsPage() {
                                 <select
                                   value={sosLabel}
                                   onChange={(e) => setSosLabel(e.target.value)}
-                                  className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] px-2 py-1 text-sm"
+                                  className="admin-v2-select mt-0.5 w-full px-2 py-1 text-sm"
                                 >
                                   {sosLabels.map((l) => <option key={l} value={l}>{l}</option>)}
                                 </select>
@@ -920,7 +920,7 @@ export default function AdminSlotsPage() {
                                 type="button"
                                 onClick={() => void saveSos()}
                                 disabled={isSaving}
-                                className="mt-2 w-full rounded-lg bg-slate-800 py-1.5 text-sm font-medium text-white transition hover:bg-slate-900 disabled:opacity-50"
+                                className="admin-v2-btn-primary mt-2 w-full py-1.5 text-sm disabled:opacity-50"
                               >
                                 {isSaving ? 'Salvestan...' : 'Salvesta SOS'}
                               </button>
@@ -932,7 +932,7 @@ export default function AdminSlotsPage() {
                             type="button"
                             onClick={handleDeleteSlot}
                             disabled={isSaving}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50/80 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                            className="admin-v2-btn-danger w-full py-2 text-sm disabled:opacity-50"
                           >
                             <Trash2 className="h-4 w-4" />
                             Blokeeri aeg
@@ -946,7 +946,7 @@ export default function AdminSlotsPage() {
             ) : (
               /* No slot or multi: day summary + working hours + block day */
               <>
-                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <div className="admin-v2-surface-soft p-4">
                   <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">Päeva kokkuvõte</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                     <div className="flex flex-col items-center rounded-xl bg-slate-50/80 py-2.5">
@@ -975,13 +975,13 @@ export default function AdminSlotsPage() {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <div className="admin-v2-surface-soft p-4">
                   <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-slate-400">
                     <Settings2 className="h-3.5 w-3.5" />
-                    Fill Your Calendar
+                    Päeva täitmine
                   </p>
                   <p className="mb-3 text-xs text-slate-500">
-                    Generate slots intelligently based on service duration and demand patterns.
+                    Loo tööpäeva ajad automaatselt valitud vahemiku põhjal.
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="block">
@@ -989,7 +989,7 @@ export default function AdminSlotsPage() {
                       <select
                         value={workStart}
                         onChange={(e) => setWorkStart(e.target.value)}
-                        className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-sm text-slate-800"
+                        className="admin-v2-select mt-0.5 w-full px-2.5 py-1.5 text-sm"
                       >
                         {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>
@@ -999,7 +999,7 @@ export default function AdminSlotsPage() {
                       <select
                         value={workEnd}
                         onChange={(e) => setWorkEnd(e.target.value)}
-                        className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] bg-white px-2.5 py-1.5 text-sm text-slate-800"
+                        className="admin-v2-select mt-0.5 w-full px-2.5 py-1.5 text-sm"
                       >
                         {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>
@@ -1008,12 +1008,12 @@ export default function AdminSlotsPage() {
                   <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-slate-50/80 px-3 py-2">
                     <span className="text-xs text-slate-500">
                       <span className="font-medium text-slate-600">{workStart}</span>
-                      <span className="mx-1">–</span>
+                      <span className="mx-1">-</span>
                       <span className="font-medium text-slate-600">{workEnd}</span>
                     </span>
                     <span className="text-sm font-semibold tabular-nums text-slate-700">{workingHoursTimes.length}</span>
                   </div>
-                  <div className="mt-2 flex gap-0.5 overflow-hidden rounded-md bg-slate-100/80 p-1.5" title={`${workStart} – ${workEnd}`}>
+                  <div className="mt-2 flex gap-0.5 overflow-hidden rounded-md bg-slate-100/80 p-1.5" title={`${workStart} - ${workEnd}`}>
                     {workingHoursTimes.slice(0, 20).map((t, i) => (
                       <span key={t} className="h-1.5 flex-1 min-w-0 rounded-sm bg-emerald-400/70" style={{ opacity: 0.4 + (i / 20) * 0.6 }} />
                     ))}
@@ -1024,7 +1024,7 @@ export default function AdminSlotsPage() {
                     type="button"
                     onClick={() => void applyPresetDay(true)}
                     disabled={isSaving}
-                    className="mt-3 w-full rounded-xl bg-slate-800 py-2.5 text-sm font-medium text-white transition hover:bg-slate-900 disabled:opacity-50"
+                    className="admin-v2-btn-primary mt-3 w-full py-2.5 text-sm disabled:opacity-50"
                   >
                     {isSaving ? 'Genereerin...' : 'Täida kalender'}
                   </button>
@@ -1033,7 +1033,7 @@ export default function AdminSlotsPage() {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <div className="admin-v2-surface-soft p-4">
                   {!unblockAllConfirm ? (
                     <button
                       type="button"
@@ -1107,7 +1107,7 @@ export default function AdminSlotsPage() {
 
         {/* Floating bulk action bar */}
         {selectedTimes.size > 1 && (
-          <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 shadow-lg">
+          <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-2xl border border-[#eadbe4] bg-white/95 px-4 py-3 shadow-[0_20px_35px_-22px_rgba(73,50,66,0.6)] backdrop-blur">
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-slate-700">{selectedTimes.size} aega valitud</span>
               <div className="h-4 w-px bg-slate-200" />
@@ -1115,7 +1115,7 @@ export default function AdminSlotsPage() {
                 type="button"
                 onClick={() => void bulkApply('unblock', Array.from(selectedTimes))}
                 disabled={isSaving}
-                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
+                className="admin-v2-btn-secondary border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
               >
                 Vabasta
               </button>
@@ -1123,7 +1123,7 @@ export default function AdminSlotsPage() {
                 type="button"
                 onClick={() => void bulkApply('block', Array.from(selectedTimes))}
                 disabled={isSaving}
-                className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
+                className="admin-v2-btn-ghost border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-200 disabled:opacity-50"
               >
                 Blokeeri
               </button>
@@ -1131,7 +1131,7 @@ export default function AdminSlotsPage() {
                 type="button"
                 onClick={() => void bulkApply('sos', Array.from(selectedTimes))}
                 disabled={isSaving}
-                className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition hover:bg-amber-100 disabled:opacity-50"
+                className="admin-v2-btn-secondary border-amber-200 bg-amber-50 px-3 py-1.5 text-sm text-amber-800 hover:bg-amber-100 disabled:opacity-50"
               >
                 <Zap className="h-4 w-4" />
                 SOS
@@ -1150,16 +1150,16 @@ export default function AdminSlotsPage() {
 
         {/* Toast + undo */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-[#e5e7eb] bg-white px-4 py-3 shadow-lg">
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-[#eadbe4] bg-white/95 px-4 py-3 shadow-[0_20px_35px_-22px_rgba(73,50,66,0.6)] backdrop-blur">
             <span className="text-sm text-slate-700">{toastMessage}</span>
             {toastUndoAction && (
               <button
                 type="button"
                 onClick={() => void performUndo(toastUndoAction!)}
                 disabled={isSaving}
-                className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+                className="admin-v2-btn-ghost shrink-0 px-2.5 py-1 text-xs disabled:opacity-50"
               >
-                Undo
+                Võta tagasi
               </button>
             )}
           </div>
@@ -1170,7 +1170,7 @@ export default function AdminSlotsPage() {
       {bulkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/20" onClick={() => setBulkModalOpen(false)} aria-hidden />
-          <div className="relative w-full max-w-sm rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-xl">
+          <div className="admin-v2-surface relative w-full max-w-sm p-5">
             <h3 className="text-lg font-semibold text-slate-800">Lisa ajad</h3>
             <p className="mt-1 text-sm text-slate-500">Vali vahemik. Lisatakse 30 minuti intervalliga.</p>
             <div className="mt-4 space-y-3">
@@ -1179,7 +1179,7 @@ export default function AdminSlotsPage() {
                 <select
                   value={bulkStart}
                   onChange={(e) => setBulkStart(e.target.value)}
-                  className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm"
+                  className="admin-v2-select mt-0.5 w-full px-3 py-2 text-sm"
                 >
                   {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -1189,7 +1189,7 @@ export default function AdminSlotsPage() {
                 <select
                   value={bulkEnd}
                   onChange={(e) => setBulkEnd(e.target.value)}
-                  className="mt-0.5 w-full rounded-lg border border-[#e5e7eb] px-3 py-2 text-sm"
+                  className="admin-v2-select mt-0.5 w-full px-3 py-2 text-sm"
                 >
                   {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -1199,7 +1199,7 @@ export default function AdminSlotsPage() {
               <button
                 type="button"
                 onClick={() => setBulkModalOpen(false)}
-                className="flex-1 rounded-lg border border-[#e5e7eb] py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="admin-v2-btn-secondary flex-1 py-2 text-sm"
               >
                 Tühista
               </button>
@@ -1207,7 +1207,7 @@ export default function AdminSlotsPage() {
                 type="button"
                 onClick={() => void bulkAddSlots()}
                 disabled={isSaving}
-                className="flex-1 rounded-lg bg-slate-800 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+                className="admin-v2-btn-primary flex-1 py-2 text-sm disabled:opacity-50"
               >
                 {isSaving ? '...' : 'Lisa'}
               </button>
@@ -1218,3 +1218,10 @@ export default function AdminSlotsPage() {
     </main>
   );
 }
+
+
+
+
+
+
+

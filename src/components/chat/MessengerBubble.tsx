@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useTranslation } from '@/lib/i18n';
 
 function sanitizePageId(raw: string) {
   return (raw || '').trim();
 }
 
 export function MessengerBubble() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const isAdmin = pathname.startsWith('/admin');
   const isHome = pathname === '/' || pathname === '/en' || pathname === '/et';
@@ -60,16 +62,16 @@ export function MessengerBubble() {
   return (
     <div className={containerClasses}>
       <div className="flex max-w-[calc(100vw-2rem)] items-center justify-end gap-2">
-        <div className="hidden rounded-full border border-[#e8d3df] bg-white/94 px-3 py-1.5 text-xs font-medium text-[#7a4563] shadow-[0_14px_28px_-20px_rgba(122,69,99,0.44)] md:block">
-          Soovid abi? Kirjuta mulle
+        <div className="pill-meta hidden min-h-[40px] px-3 py-1.5 text-xs md:inline-flex">
+          {t('chat.bubbleHelper')}
         </div>
 
         <a
           href={messengerUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Suhtle küünetehnikuga"
-          className="group relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#e8d3df] bg-white/95 text-[#7a4563] shadow-[0_18px_30px_-20px_rgba(122,69,99,0.5)] transition duration-200 hover:scale-[1.04] hover:shadow-[0_22px_34px_-18px_rgba(122,69,99,0.55)]"
+          aria-label={t('chat.bubbleAria')}
+          className="icon-circle-btn group relative h-12 w-12 min-h-[48px] min-w-[48px] shrink-0 text-[#7a4563]"
         >
           <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[10px] font-semibold leading-none text-white shadow-[0_8px_16px_-10px_rgba(239,68,68,0.7)]">
             1

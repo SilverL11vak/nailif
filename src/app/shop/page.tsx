@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCart } from '@/hooks/use-cart';
@@ -39,7 +39,8 @@ function normalize(value?: string | null) {
 
 export default function ShopPage() {
   const router = useRouter();
-  const { language, setLanguage, localizePath } = useTranslation();
+  const pathname = usePathname();
+  const { language, setLanguage, localizePath, t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPaying, setIsPaying] = useState(false);
@@ -61,51 +62,37 @@ export default function ShopPage() {
   const bookedServiceCategory = useBookingStore((s) => s.selectedService?.category ?? null);
   const bookedServiceName = useBookingStore((s) => s.selectedService?.name ?? null);
 
-  const copy = useMemo(
-    () =>
-      language === 'en'
-        ? {
-            eyebrow: 'Nailify Shop',
-            title: 'Premium care products',
-            subtitle: 'Curated aftercare for salon-level results at home.',
-            loading: 'Loading products...',
-            addToCart: 'Add to care',
-            cart: 'Cart',
-            yourItems: 'Your items',
-            empty: 'Your cart is empty.',
-            email: 'Email (optional)',
-            total: 'Total',
-            checkout: 'Checkout with Stripe',
-            redirecting: 'Redirecting...',
-            checkoutError: 'Checkout failed. Please configure Stripe keys and try again.',
-            fallbackBrand: 'Nailify',
-            viewDetails: 'See details',
-            favorites: 'Favourites',
-            backToHome: 'Back to home',
-            nav: { home: 'Home', services: 'Services', gallery: 'Gallery', shop: 'Shop', contact: 'Contact', book: 'Book now' },
-          }
-        : {
-            eyebrow: 'Nailify pood',
-            title: 'Premium hooldustooted',
-            subtitle: 'Hoolikalt valitud järelhooldus salongitulemuse hoidmiseks kodus.',
-            loading: 'Laen tooteid...',
-            addToCart: 'Lisa hooldusesse',
-            cart: 'Ostukorv',
-            yourItems: 'Sinu tooted',
-            empty: 'Ostukorv on tühi.',
-            email: 'E-post (valikuline)',
-            total: 'Kokku',
-            checkout: 'Maksa Stripega',
-            redirecting: 'Suunan maksmisse...',
-            checkoutError: 'Maksmine ebaonnestus. Kontrolli Stripe seadeid ja proovi uuesti.',
-            fallbackBrand: 'Nailify',
-            viewDetails: 'Vaata lähemalt',
-            favorites: 'Lemmikud',
-            backToHome: 'Tagasi avalehele',
-            nav: { home: 'Avaleht', services: 'Teenused', gallery: 'Galerii', shop: 'Pood', contact: 'Kontakt', book: 'Broneeri' },
-          },
-    [language],
-  );
+  const copy = {
+    eyebrow: t('shopPage.eyebrow'),
+    title: t('shopPage.title'),
+    subtitle: t('shopPage.subtitle'),
+    loading: t('shopPage.loading'),
+    addToCart: t('shopPage.addToCart'),
+    cart: t('shopPage.cart'),
+    yourItems: t('shopPage.yourItems'),
+    empty: t('shopPage.empty'),
+    email: t('shopPage.email'),
+    total: t('shopPage.total'),
+    checkout: t('shopPage.checkout'),
+    redirecting: t('shopPage.redirecting'),
+    checkoutError: t('shopPage.checkoutError'),
+    fallbackBrand: t('shopPage.fallbackBrand'),
+    viewDetails: t('shopPage.viewDetails'),
+    favorites: t('shopPage.favorites'),
+    backToHome: t('shopPage.backToHome'),
+    nav: {
+      home: t('shopNav.home'),
+      services: t('shopNav.services'),
+      gallery: t('shopNav.gallery'),
+      shop: t('shopNav.shop'),
+      contact: t('shopNav.contact'),
+      book: t('shopNav.book'),
+    },
+    languageMenuLabel: t('shopNav.languageMenuLabel'),
+    languageEt: t('shopNav.languageEt'),
+    languageEn: t('shopNav.languageEn'),
+  };
+
 
   useEffect(() => {
     let mounted = true;
@@ -329,15 +316,11 @@ export default function ShopPage() {
 
   const deliveryEmotion = useMemo(
     () =>
-      language === 'en'
-        ? 'Arrives in 2 business days — ready before your next appointment.'
-        : 'Saabub 2 tööpäevaga — valmis enne järgmist hooldust.',
+      t('_auto.app_shop_page.p269'),
     [language]
   );
 
-  const giftLine = language === 'en'
-    ? 'We will add a complimentary nail care oil to your order.'
-    : 'Lisame tasuta küünehooldusõli sinu tellimusele.';
+  const giftLine = t('_auto.app_shop_page.p270');
 
   const getUpsellSuggestion = (added: Product | CareProductLite): Product | null => {
     const addedText = `${normalize(added.name)} ${normalize(added.category)} ${normalize(added.description)}`;
@@ -407,8 +390,8 @@ export default function ShopPage() {
               <div className="relative">
                 <button
                   onClick={() => setLangMenuOpen((o) => !o)}
-                  className="type-navbar-icon-btn"
-                  aria-label="Language"
+                  className="icon-circle-btn"
+                  aria-label={copy.languageMenuLabel}
                 >
                   <Globe size={18} strokeWidth={1.8} />
                 </button>
@@ -417,16 +400,24 @@ export default function ShopPage() {
                     <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} aria-hidden />
                     <div className="absolute right-0 top-12 z-50 w-36 rounded-xl border border-[#ecdce6] bg-white p-1.5 shadow-lg">
                       <button
-                        onClick={() => { setLanguage('et'); setLangMenuOpen(false); }}
+                        onClick={() => {
+                          setLanguage('et');
+                          router.push(localizePath(pathname, 'et'));
+                          setLangMenuOpen(false);
+                        }}
                         className={`w-full rounded-lg px-3 py-2 text-left text-sm ${language === 'et' ? 'bg-[#fff2f9] font-medium text-[#6a3b57]' : 'text-[#5f4f5f] hover:bg-[#fff7fc]'}`}
                       >
-                        Eesti
+                        {copy.languageEt}
                       </button>
                       <button
-                        onClick={() => { setLanguage('en'); setLangMenuOpen(false); }}
+                        onClick={() => {
+                          setLanguage('en');
+                          router.push(localizePath(pathname, 'en'));
+                          setLangMenuOpen(false);
+                        }}
                         className={`mt-0.5 w-full rounded-lg px-3 py-2 text-left text-sm ${language === 'en' ? 'bg-[#fff2f9] font-medium text-[#6a3b57]' : 'text-[#5f4f5f] hover:bg-[#fff7fc]'}`}
                       >
-                        English
+                        {copy.languageEn}
                       </button>
                     </div>
                   </>
@@ -434,7 +425,7 @@ export default function ShopPage() {
               </div>
               <Link
                 href={localizePath('/favorites')}
-                className="type-navbar-icon-btn relative"
+                className="icon-circle-btn relative"
                 aria-label={copy.favorites}
               >
                 <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
@@ -462,30 +453,28 @@ export default function ShopPage() {
               <div>
                 <Link
                   href={localizePath('/')}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#e8dce4] bg-white px-4 py-2.5 text-sm font-medium text-[#4b5563] shadow-sm transition-colors hover:border-[#dfbfd1] hover:bg-[#fdf8fb]"
+                  className="btn-secondary btn-secondary-sm"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   {copy.backToHome}
                 </Link>
 
                 <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8a6b7e]">
-                  {language === 'en' ? 'Studio retail' : 'Stuudio retail'}
+                  {t('_auto.app_shop_page.p272')}
                 </p>
                 <h1 className="mt-2 font-brand text-[2rem] font-semibold leading-[1.08] tracking-[-0.02em] text-[#1f171d] sm:text-[2.4rem]">
-                  {language === 'en' ? 'Professional nail care products' : 'Professionaalsed küünehooldustooted'}
+                  {t('_auto.app_shop_page.p273')}
                 </h1>
                 <p className="mt-3 max-w-[58ch] text-[14px] leading-relaxed text-[#5f4c59] sm:text-[15px]">
-                  {language === 'en'
-                    ? 'Curated by our studio specialist Sandra for stronger, longer-lasting results between appointments.'
-                    : 'Sandra poolt kureeritud tooted tugevamaks ja kauem püsivaks tulemuseks hoolduste vahel.'}
+                  {t('_auto.app_shop_page.p274')}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {[
-                    language === 'en' ? 'Salon approved' : 'Salongi valik',
-                    language === 'en' ? 'Dermatologically safe' : 'Dermatoloogiliselt ohutu',
-                    language === 'en' ? 'Used in studio' : 'Kasutusel salongis',
+                    t('_auto.app_shop_page.p275'),
+                    t('_auto.app_shop_page.p276'),
+                    t('_auto.app_shop_page.p277'),
                   ].map((label) => (
-                    <span key={label} className="inline-flex items-center gap-2 rounded-full border border-[#ead8e2] bg-white px-3 py-1.5 text-[11px] font-medium text-[#5d4a56]">
+                    <span key={label} className="pill-meta min-h-[34px] px-3 text-[11px]">
                       <span className="text-[#c24d86]">✓</span>
                       {label}
                     </span>
@@ -496,10 +485,10 @@ export default function ShopPage() {
               <div className="rounded-[20px] border border-[#eadce5] bg-white p-4 shadow-[0_16px_34px_-24px_rgba(60,40,55,0.28)]">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8a6b7e]">
-                    {language === 'en' ? 'Featured' : 'Esile toodud'}
+                    {t('_auto.app_shop_page.p278')}
                   </p>
-                  <span className="rounded-full border border-[#e9d6e1] bg-[#fff6fb] px-2.5 py-1 text-[10px] font-semibold text-[#7d3f61]">
-                    {language === 'en' ? 'Expert pick' : 'Eksperdi valik'}
+                  <span className="pill-tag min-h-[28px] px-2.5 text-[10px]">
+                    {t('_auto.app_shop_page.p279')}
                   </span>
                 </div>
                 {featuredProduct ? (
@@ -527,12 +516,12 @@ export default function ShopPage() {
                     </div>
                     <h2 className="mt-3 text-[16px] font-semibold text-[#2f2530]">{featuredProduct.name}</h2>
                     <p className="mt-1 text-[13px] text-[#6f5d6d]">
-                      {language === 'en' ? 'Trusted finish + daily protection.' : 'Usaldusväärne viimistlus ja igapäevane kaitse.'}
+                      {t('_auto.app_shop_page.p280')}
                     </p>
                     <div className="mt-3 flex items-center justify-between">
                       <span className="text-[20px] font-semibold tracking-[-0.02em] text-[#2f2530]">€{featuredProduct.price}</span>
-                      <span className="inline-flex rounded-full border border-[#e3d2dc] px-3 py-1 text-[11px] font-semibold text-[#6a3b57]">
-                        {language === 'en' ? 'View product' : 'Vaata toodet'}
+                      <span className="pill-tag min-h-[28px] px-3 text-[11px]">
+                        {t('_auto.app_shop_page.p281')}
                       </span>
                     </div>
                   </button>
@@ -548,23 +537,23 @@ export default function ShopPage() {
               {[
                 {
                   id: 'care' as const,
-                  title: language === 'en' ? 'Aftercare' : 'Järelhooldus',
-                  desc: language === 'en' ? 'Gentle daily support' : 'Õrn igapäevane tugi',
+                  title: t('_auto.app_shop_page.p282'),
+                  desc: t('_auto.app_shop_page.p283'),
                 },
                 {
                   id: 'strength' as const,
-                  title: language === 'en' ? 'Strength' : 'Tugevdus',
-                  desc: language === 'en' ? 'Repair and reinforce' : 'Taasta ja tugevda',
+                  title: t('_auto.app_shop_page.p284'),
+                  desc: t('_auto.app_shop_page.p285'),
                 },
                 {
                   id: 'lasting' as const,
-                  title: language === 'en' ? 'Long wear' : 'Püsivus',
-                  desc: language === 'en' ? 'Protect your result' : 'Kaitse tulemust pikemalt',
+                  title: t('_auto.app_shop_page.p286'),
+                  desc: t('_auto.app_shop_page.p287'),
                 },
                 {
                   id: 'design' as const,
-                  title: language === 'en' ? 'Design care' : 'Disaini hooldus',
-                  desc: language === 'en' ? 'Color and finish care' : 'Värvi ja viimistluse tugi',
+                  title: t('_auto.app_shop_page.p288'),
+                  desc: t('_auto.app_shop_page.p289'),
                 },
               ].map((journey) => {
                 const active = activeJourney === journey.id;
@@ -580,11 +569,11 @@ export default function ShopPage() {
                     }`}
                   >
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9c8a96]">
-                      {language === 'en' ? 'Care journey' : 'Hooldusetapp'}
+                      {t('_auto.app_shop_page.p290')}
                     </p>
                     <p className="mt-1 text-[16px] font-semibold text-[#2f2530]">{journey.title}</p>
                     <p className="mt-1 text-[12px] text-[#6f5d6d]">{journey.desc}</p>
-                    <p className="mt-3 text-[11px] font-semibold text-[#7a4563]">{language === 'en' ? 'View products' : 'Vaata tooteid'}</p>
+                    <p className="mt-3 text-[11px] font-semibold text-[#7a4563]">{t('_auto.app_shop_page.p291')}</p>
                   </button>
                 );
               })}
@@ -595,7 +584,7 @@ export default function ShopPage() {
             <section className="pb-7">
               <div className="rounded-[18px] border border-[#ece2e8] bg-white p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9d7a90]">
-                  {language === 'en' ? 'Your care continues here' : 'Sinu küünte hooldus jätkub siit'}
+                  {t('_auto.app_shop_page.p292')}
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {quickReorderProducts.map((product) => (
@@ -608,7 +597,7 @@ export default function ShopPage() {
                       <p className="line-clamp-2 text-[12px] font-semibold text-[#2f2530]">{product.name}</p>
                       <p className="mt-1 text-[11px] text-[#7a6a72]">€{product.price}</p>
                       <p className="mt-2 text-[10px] font-semibold text-[#7a4563]">
-                        {language === 'en' ? 'Quick reorder' : 'Lisa uuesti'}
+                        {t('_auto.app_shop_page.p293')}
                       </p>
                     </button>
                   ))}
@@ -621,9 +610,7 @@ export default function ShopPage() {
             <section className="pb-7">
               <div className="rounded-[18px] border border-[#ece2e8] bg-white p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9d7a90]">
-                  {language === 'en'
-                    ? 'Recommended for your latest booking'
-                    : 'Sobivad tooted sinu viimasele hooldusele'}
+                  {t('_auto.app_shop_page.p294')}
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {bookingMatchedProducts.map((product) => (
@@ -636,7 +623,7 @@ export default function ShopPage() {
                       <p className="line-clamp-2 text-[12px] font-semibold text-[#2f2530]">{product.name}</p>
                       <p className="mt-1 text-[11px] text-[#7a6a72]">€{product.price}</p>
                       <p className="mt-2 text-[10px] font-semibold text-[#7a4563]">
-                        {language === 'en' ? 'Add with my care journey' : 'Lisa hooldusteekonnale'}
+                        {t('_auto.app_shop_page.p295')}
                       </p>
                     </button>
                   ))}
@@ -653,12 +640,12 @@ export default function ShopPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9d7a90]">
-                          {language === 'en' ? 'Expert bundle' : 'Eksperdi komplekt'}
+                          {t('_auto.app_shop_page.p296')}
                         </p>
                         <h3 className="mt-1 font-brand text-[22px] font-semibold leading-[1.1] text-[#2f2530]">{bundle.title}</h3>
                         <p className="mt-1 text-[12px] text-[#6f5d6d]">{bundle.desc}</p>
                       </div>
-                      <span className="rounded-full border border-[#dfc9d5] bg-white px-2.5 py-1 text-[10px] font-semibold text-[#7a4563]">
+                      <span className="pill-tag min-h-[28px] px-2.5 text-[10px]">
                         {language === 'en' ? `Save €${bundle.save}` : `Säästad €${bundle.save}`}
                       </span>
                     </div>
@@ -668,9 +655,9 @@ export default function ShopPage() {
                       <button
                         type="button"
                         onClick={() => addBundleToCart(bundle.items)}
-                        className="rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_55%,#8f3362_100%)] px-4 py-2 text-[12px] font-semibold text-white"
+                        className="btn-primary btn-small px-4 text-[12px]"
                       >
-                        {language === 'en' ? 'Add bundle' : 'Lisa komplekt'}
+                        {t('_auto.app_shop_page.p297')}
                       </button>
                     </div>
                   </div>
@@ -687,14 +674,14 @@ export default function ShopPage() {
                 <div className="flex flex-col items-center justify-center py-14 text-center">
                   <Package className="h-12 w-12 text-[#d4b8c8]" />
                   <p className="mt-3 text-[#6b7280]">
-                    {language === 'en' ? 'No products in this care journey yet.' : 'Selles hooldusteekonnas tooteid hetkel pole.'}
+                    {t('_auto.app_shop_page.p298')}
                   </p>
                   <button
                     type="button"
                     onClick={() => setActiveJourney('all')}
-                    className="mt-3 rounded-xl border border-[#e4d3dd] bg-white px-4 py-2 text-sm font-medium text-[#6a3b57]"
+                    className="btn-secondary btn-secondary-sm mt-3"
                   >
-                    {language === 'en' ? 'Show all products' : 'Näita kõiki tooteid'}
+                    {t('_auto.app_shop_page.p299')}
                   </button>
                 </div>
               ) : (
@@ -721,8 +708,8 @@ export default function ShopPage() {
                           </div>
                         )}
                         {product.isPopular && (
-                          <span className="absolute left-2 top-2 rounded-full border border-[#ecd5e1] bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-[#7c4363]">
-                            {language === 'en' ? 'Expert pick' : 'Eksperdi valik'}
+                          <span className="pill-tag absolute left-2 top-2 min-h-[26px] px-2 text-[10px]">
+                            {t('_auto.app_shop_page.p300')}
                           </span>
                         )}
                       </div>
@@ -730,10 +717,10 @@ export default function ShopPage() {
                       <p className="mt-1 line-clamp-2 text-[12px] text-[#6f5d6d]">{product.description}</p>
                       <p className="mt-1 text-[10px] font-medium text-[#8a6b7e]">
                         {product.isPopular
-                          ? (language === 'en' ? 'Most chosen after gel manicure' : 'Enim valitud pärast geellakki')
+                          ? (t('_auto.app_shop_page.p301'))
                           : normalize(product.category).includes('repair')
-                            ? (language === 'en' ? 'Recommended this week' : 'Soovitatud sel nädalal')
-                            : (language === 'en' ? 'Used in today’s appointments' : 'Kasutusel tänastes hooldustes')}
+                            ? (t('_auto.app_shop_page.p302'))
+                            : (t('_auto.app_shop_page.p303'))}
                       </p>
                       <div className="mt-2 flex items-center justify-between">
                         <span className="text-[18px] font-semibold tracking-[-0.02em] text-[#2f2530]">€{product.price}</span>
@@ -741,19 +728,19 @@ export default function ShopPage() {
                       <button
                         type="button"
                         onClick={() => handleAddToCart(product)}
-                        className="mt-3 w-full rounded-[12px] bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_55%,#8f3362_100%)] py-2.5 text-[12px] font-semibold text-white shadow-[0_12px_26px_-18px_rgba(194,77,134,0.62)] transition-all duration-200 active:scale-[0.99]"
+                        className="btn-primary btn-small mt-3 w-full text-[12px]"
                       >
                         {copy.addToCart}
                       </button>
                       <button
                         type="button"
                         onClick={() => router.push(localizePath(`/shop/${product.id}`))}
-                        className="mt-2 w-full rounded-[12px] border border-[#e8d9e2] bg-white py-2 text-[12px] font-semibold text-[#6a3b57] transition-colors hover:bg-[#fff6fb]"
+                        className="btn-secondary btn-small mt-2 w-full text-[12px]"
                       >
                         {copy.viewDetails}
                       </button>
                       <p className="mt-2 text-[10px] text-[#94828f]">
-                        ✓ {language === 'en' ? 'Studio recommended · Dermatologically safe' : 'Stuudio soovitus · Dermatoloogiliselt ohutu'}
+                        ✓ {t('_auto.app_shop_page.p304')}
                       </p>
                     </article>
                   ))}
@@ -781,20 +768,20 @@ export default function ShopPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#e5d8df] text-[#6b7280] hover:bg-white"
+                            className="icon-circle-btn h-9 w-9 min-h-[36px] min-w-[36px] text-[#6b7280]"
                           >
                             −
                           </button>
                           <span className="w-7 text-center text-sm font-semibold text-[#374151]">{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#e5d8df] text-[#6b7280] hover:bg-white"
+                            className="icon-circle-btn h-9 w-9 min-h-[36px] min-w-[36px] text-[#6b7280]"
                           >
                             +
                           </button>
                         </div>
                         <span className="text-xs font-medium text-[#8a6b7e]">
-                          {language === 'en' ? 'Qty' : 'Kogus'} × {product.price}
+                          {t('_auto.app_shop_page.p305')} × {product.price}
                         </span>
                       </div>
                     </div>
@@ -831,7 +818,7 @@ export default function ShopPage() {
               <button
                 onClick={handleCheckout}
                 disabled={cart.length === 0 || isPaying}
-                className="mt-4 w-full rounded-2xl bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_55%,#8f3362_100%)] py-3.5 font-semibold text-white shadow-[0_14px_30px_-16px_rgba(194,77,134,0.62)] transition-all duration-200 hover:brightness-[1.03] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-primary btn-primary-lg mt-4 w-full disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPaying ? copy.redirecting : copy.checkout}
               </button>
@@ -839,18 +826,18 @@ export default function ShopPage() {
               {featuredProduct && (
                 <div className="mt-5 rounded-2xl border border-[#ecdfe7] bg-[#fef9fc] p-3.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9d7a90]">
-                    {language === 'en' ? 'Recommended add-on' : 'Soovitatud lisa'}
+                    {t('_auto.app_shop_page.p306')}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#2f2530]">{featuredProduct.name}</p>
                   <p className="mt-0.5 text-xs text-[#7a6a72]">
-                    {language === 'en' ? 'Chosen by Sandra for better longevity.' : 'Sandra valik parema püsivuse jaoks.'}
+                    {t('_auto.app_shop_page.p307')}
                   </p>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-sm font-semibold text-[#2f2530]">€{featuredProduct.price}</span>
                     <button
                       type="button"
                       onClick={() => handleAddToCart(featuredProduct)}
-                      className="rounded-full border border-[#dfcdd7] px-3 py-1 text-[11px] font-semibold text-[#6a3b57] hover:bg-white"
+                      className="btn-secondary btn-small px-3 text-[11px]"
                     >
                       {copy.addToCart}
                     </button>
@@ -868,7 +855,7 @@ export default function ShopPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
-                  {language === 'en' ? 'Studio recommendation' : 'Stuudio soovitus'}
+                  {t('_auto.app_shop_page.p308')}
                 </p>
                 <p className="mt-1 text-[12px] text-[#5f4c59]">
                   {language === 'en'
@@ -881,7 +868,7 @@ export default function ShopPage() {
                 onClick={() => setUpsellSuggestion(null)}
                 className="text-[11px] font-medium text-[#8a6b7e]"
               >
-                {language === 'en' ? 'Dismiss' : 'Sulge'}
+                {t('_auto.app_shop_page.p309')}
               </button>
             </div>
             <div className="mt-2 flex items-center justify-between rounded-xl border border-[#efe3e9] bg-[#fffafd] px-3 py-2">
@@ -894,9 +881,9 @@ export default function ShopPage() {
                 handleAddToCart(upsellSuggestion.product);
                 setUpsellSuggestion(null);
               }}
-              className="mt-2 w-full rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] py-2 text-[12px] font-semibold text-white"
+              className="btn-primary btn-small mt-2 w-full text-[12px]"
             >
-              {language === 'en' ? 'Add together' : 'Lisa koos'}
+              {t('_auto.app_shop_page.p310')}
             </button>
           </div>
         </div>
@@ -909,19 +896,15 @@ export default function ShopPage() {
             setAdvisorOpen(false);
             if (bundles.length > 0) setActiveJourney('lasting');
           }}
-          className="fixed bottom-[162px] right-4 z-[62] hidden rounded-full border border-[#e6d5df] bg-white/95 px-4 py-2 text-[12px] font-medium text-[#6a3b57] shadow-[0_16px_28px_-22px_rgba(60,40,55,0.35)] backdrop-blur-md lg:inline-flex"
+          className="pill-meta fixed bottom-[162px] right-4 z-[62] hidden min-h-[40px] px-4 text-[12px] lg:inline-flex"
         >
-          {language === 'en'
-            ? 'Need longer gel wear? See studio picks'
-            : 'Soovid geellaki püsivust pikendada? Vaata soovitusi'}
+          {t('_auto.app_shop_page.p311')}
         </button>
       )}
 
       {showExitRecovery && (
         <div className="fixed left-1/2 top-[86px] z-[75] -translate-x-1/2 rounded-[14px] border border-[#eadce4] bg-white px-4 py-2 text-[12px] font-medium text-[#6a3b57] shadow-[0_16px_28px_-20px_rgba(60,40,55,0.32)]">
-          {language === 'en'
-            ? 'We saved your care products for later.'
-            : 'Jätsime sinu hooldustooted alles.'}
+          {t('_auto.app_shop_page.p312')}
         </div>
       )}
 
@@ -933,16 +916,16 @@ export default function ShopPage() {
               type="button"
               onClick={openMobileCart}
               className="flex w-full items-center justify-between rounded-[14px] border border-[#ecdfe7] bg-white/95 px-4 py-2.5 text-left"
-              aria-label={language === 'en' ? 'Open cart' : 'Ava ostukorv'}
+              aria-label={t('_auto.app_shop_page.p313')}
             >
               <div>
                 <p className="text-[12px] font-semibold text-[#2f2530]">
-                  {cart.length} {language === 'en' ? 'products added' : 'toodet lisatud'}
+                  {cart.length} {t('_auto.app_shop_page.p314')}
                 </p>
                 <p className="text-[11px] text-[#8a6b7e]">{copy.total} €{cartTotal}</p>
               </div>
-              <span className="rounded-full border border-[#dfcdd7] px-3 py-1 text-[11px] font-semibold text-[#6a3b57]">
-                {language === 'en' ? 'View cart' : 'Vaata ostukorvi'}
+              <span className="pill-tag min-h-[28px] px-3 text-[11px]">
+                {t('_auto.app_shop_page.p315')}
               </span>
             </button>
           </div>
@@ -966,7 +949,7 @@ export default function ShopPage() {
               <button
                 type="button"
                 onClick={closeMobileCart}
-                className="type-navbar-icon-btn"
+                className="icon-circle-btn"
                 aria-label="Close cart"
               >
                 ✕
@@ -988,20 +971,20 @@ export default function ShopPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e5d8df] text-[#6b7280] hover:bg-white"
+                          className="icon-circle-btn h-10 w-10 min-h-[40px] min-w-[40px] text-[#6b7280]"
                         >
                           −
                         </button>
                         <span className="w-7 text-center text-sm font-semibold text-[#374151]">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#e5d8df] text-[#6b7280] hover:bg-white"
+                          className="icon-circle-btn h-10 w-10 min-h-[40px] min-w-[40px] text-[#6b7280]"
                         >
                           +
                         </button>
                       </div>
                       <span className="text-xs font-medium text-[#8a6b7e]">
-                        {language === 'en' ? 'Qty' : 'Kogus'} × {product.price}
+                        {t('_auto.app_shop_page.p316')} × {product.price}
                       </span>
                     </div>
                   </div>
@@ -1038,7 +1021,7 @@ export default function ShopPage() {
             <button
               onClick={handleCheckout}
               disabled={cart.length === 0 || isPaying}
-              className="mt-4 w-full rounded-2xl bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_55%,#8f3362_100%)] py-3.5 font-semibold text-white shadow-[0_14px_30px_-16px_rgba(194,77,134,0.62)] transition-all duration-200 hover:brightness-[1.03] active:scale-[0.99] disabled:opacity-50"
+              className="btn-primary btn-primary-lg mt-4 w-full disabled:opacity-50"
             >
               {isPaying ? copy.redirecting : copy.checkout}
             </button>

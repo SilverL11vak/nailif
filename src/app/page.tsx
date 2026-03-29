@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { PremiumImage as Image } from '@/components/ui/PremiumImage';
 import { HeroBookingWidget } from '@/components/booking/HeroBookingWidget';
@@ -95,6 +95,9 @@ interface TeamMemberItem {
   createdAt?: string;
 }
 
+type LocalizedTextLike = string | { et?: string; en?: string } | null | undefined;
+type LocalizedListLike = string[] | { et?: string[]; en?: string[] } | null | undefined;
+
 const GALLERY_DESKTOP_BREAKPOINT = 1024;
 const GALLERY_TABLET_BREAKPOINT = 768;
 
@@ -107,6 +110,26 @@ function getHomepageGalleryInitialCount(width: number): number {
 /** Next.js Image often paints an empty/gray box for data: URLs; native img displays base64 JPEGs reliably */
 function isDataImageUrl(src: string | null | undefined): boolean {
   return typeof src === 'string' && /^\s*data:image\//i.test(src.trim());
+}
+
+function readLocalizedText(value: LocalizedTextLike, language: Language): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const et = typeof value.et === 'string' ? value.et : '';
+    const en = typeof value.en === 'string' ? value.en : '';
+    return language === 'en' ? en || et : et || en;
+  }
+  return '';
+}
+
+function readLocalizedList(value: LocalizedListLike, language: Language): string[] {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string');
+  if (value && typeof value === 'object') {
+    const et = Array.isArray(value.et) ? value.et.filter((item): item is string => typeof item === 'string') : [];
+    const en = Array.isArray(value.en) ? value.en.filter((item): item is string => typeof item === 'string') : [];
+    return language === 'en' ? (en.length > 0 ? en : et) : (et.length > 0 ? et : en);
+  }
+  return [];
 }
 
 export default function Home() {
@@ -320,13 +343,19 @@ export default function Home() {
             clientName: string;
             clientAvatarUrl: string | null;
             rating: number;
-            feedbackText: string;
-            sourceLabel: string | null;
+            feedbackText: LocalizedTextLike;
+            sourceLabel: LocalizedTextLike;
             serviceId?: string | null;
           }>;
         };
         if (mounted && Array.isArray(data.feedback)) {
-          setFeedbackItems(data.feedback);
+          setFeedbackItems(
+            data.feedback.map((item) => ({
+              ...item,
+              feedbackText: readLocalizedText(item.feedbackText, language),
+              sourceLabel: readLocalizedText(item.sourceLabel, language) || null,
+            }))
+          );
         }
       } catch {
         if (mounted) setFeedbackItems([]);
@@ -336,7 +365,7 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     let mounted = true;
@@ -344,9 +373,24 @@ export default function Home() {
       try {
         const response = await fetch('/api/gallery');
         if (!response.ok) return;
-        const data = (await response.json()) as { images?: GalleryImageItem[] };
+        const data = (await response.json()) as {
+          images?: Array<
+            Omit<GalleryImageItem, 'title' | 'tag' | 'description'> & {
+              title: LocalizedTextLike;
+              tag: LocalizedTextLike;
+              description: LocalizedTextLike;
+            }
+          >;
+        };
         if (mounted && Array.isArray(data.images)) {
-          setGalleryItems(data.images);
+          setGalleryItems(
+            data.images.map((item) => ({
+              ...item,
+              title: readLocalizedText(item.title, language),
+              tag: readLocalizedText(item.tag, language),
+              description: readLocalizedText(item.description, language),
+            }))
+          );
         }
       } catch {
         if (mounted) setGalleryItems([]);
@@ -356,7 +400,7 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     let mounted = true;
@@ -364,9 +408,68 @@ export default function Home() {
       try {
         const response = await fetch('/api/team');
         if (!response.ok) return;
-        const data = (await response.json()) as { members?: TeamMemberItem[] };
+        const data = (await response.json()) as {
+          members?: Array<
+            Omit<
+              TeamMemberItem,
+              | 'fullName'
+              | 'roleTitle'
+              | 'shortIntro'
+              | 'badge1Text'
+              | 'badge2Text'
+              | 'badge3Text'
+              | 'feature1Title'
+              | 'feature1Text'
+              | 'feature2Title'
+              | 'feature2Text'
+              | 'feature3Title'
+              | 'feature3Text'
+              | 'signatureLabel'
+              | 'signatureTags'
+              | 'primaryCtaText'
+              | 'availabilityHelperText'
+            > & {
+              fullName: LocalizedTextLike;
+              roleTitle: LocalizedTextLike;
+              shortIntro: LocalizedTextLike;
+              badge1Text: LocalizedTextLike;
+              badge2Text: LocalizedTextLike;
+              badge3Text: LocalizedTextLike;
+              feature1Title: LocalizedTextLike;
+              feature1Text: LocalizedTextLike;
+              feature2Title: LocalizedTextLike;
+              feature2Text: LocalizedTextLike;
+              feature3Title: LocalizedTextLike;
+              feature3Text: LocalizedTextLike;
+              signatureLabel: LocalizedTextLike;
+              signatureTags: LocalizedListLike;
+              primaryCtaText: LocalizedTextLike;
+              availabilityHelperText: LocalizedTextLike;
+            }
+          >;
+        };
         if (mounted && Array.isArray(data.members)) {
-          setTeamMembers(data.members);
+          setTeamMembers(
+            data.members.map((item) => ({
+              ...item,
+              fullName: readLocalizedText(item.fullName, language),
+              roleTitle: readLocalizedText(item.roleTitle, language),
+              shortIntro: readLocalizedText(item.shortIntro, language),
+              badge1Text: readLocalizedText(item.badge1Text, language),
+              badge2Text: readLocalizedText(item.badge2Text, language),
+              badge3Text: readLocalizedText(item.badge3Text, language),
+              feature1Title: readLocalizedText(item.feature1Title, language),
+              feature1Text: readLocalizedText(item.feature1Text, language),
+              feature2Title: readLocalizedText(item.feature2Title, language),
+              feature2Text: readLocalizedText(item.feature2Text, language),
+              feature3Title: readLocalizedText(item.feature3Title, language),
+              feature3Text: readLocalizedText(item.feature3Text, language),
+              signatureLabel: readLocalizedText(item.signatureLabel, language),
+              signatureTags: readLocalizedList(item.signatureTags, language),
+              primaryCtaText: readLocalizedText(item.primaryCtaText, language),
+              availabilityHelperText: readLocalizedText(item.availabilityHelperText, language),
+            }))
+          );
         }
       } catch {
         if (mounted) setTeamMembers([]);
@@ -376,7 +479,7 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     if (teamMembers.length === 0) {
@@ -831,11 +934,6 @@ export default function Home() {
     else if (deltaX < -swipeThreshold) nextGallery();
     touchStartX.current = null;
   };
-
-  const getI18nTextOrFallback = (key: string, fallback: string) => {
-    const localized = t(key);
-    return localized === key ? fallback : localized;
-  };
   /** DB/admin may accidentally store a literal i18n path ā€” never show it as user-facing copy */
   const isServiceFieldKeyLeak = (value: string | undefined | null) => {
     const s = (value ?? '').trim();
@@ -843,12 +941,42 @@ export default function Home() {
     if (s.startsWith('homepage.serviceDecision.fallback.')) return true;
     return /^homepage\.[a-z0-9]+\.[a-zA-Z0-9._-]+$/i.test(s) && s.includes('serviceDecision');
   };
+  const knownServiceFallbackIds = useMemo(
+    () =>
+      new Set([
+        'gel-manicure',
+        'acrylic-extensions',
+        'luxury-spa-manicure',
+        'gel-pedicure',
+        'nail-art',
+      ]),
+    []
+  );
+  const normalizeServiceFallbackId = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   // Avoid leaking translation keys when service-specific fallback is missing (use generic fallback)
   const getServiceFallback = (serviceId: string, kind: 'result' | 'suitability' | 'longevity', genericFallback: string) => {
-    const key = `homepage.serviceDecision.fallback.${serviceId}.${kind}`;
-    const localized = t(key);
-    if (localized === key || isServiceFieldKeyLeak(localized)) return genericFallback;
-    return localized;
+    const normalizedId = normalizeServiceFallbackId(serviceId);
+    const candidateIds = [serviceId, normalizedId].filter((id, index, arr) => id && arr.indexOf(id) === index);
+
+    for (const candidateId of candidateIds) {
+      if (!knownServiceFallbackIds.has(candidateId)) {
+        continue;
+      }
+      const key = `homepage.serviceDecision.fallback.${candidateId}.${kind}`;
+      const localized = t(key);
+      if (!localized || localized === key || isServiceFieldKeyLeak(localized)) {
+        continue;
+      }
+      return localized;
+    }
+
+    return genericFallback;
   };
   const getServiceResultLine = (service: ServiceCard) => {
     const raw = service.resultDescription?.trim();
@@ -856,7 +984,7 @@ export default function Home() {
     return getServiceFallback(
       service.id,
       'result',
-      language === 'en' ? 'Professional finish tailored to your nails.' : 'Professionaalne viimistlus sinu küüntele.'
+      t('_auto.page.p001')
     );
   };
   const getServiceDescriptionExtra = (service: ServiceCard) => {
@@ -931,12 +1059,9 @@ export default function Home() {
       : [];
   const activeTeamMember = orderedTeamMembers[activeTeamIndex] ?? null;
   const galleryCards = orderedGalleryItems.map((item, index) => {
-    const fallbackTitle = getI18nTextOrFallback(
-      'homepage.gallery.inspirationLook',
-      language === 'en' ? 'Inspiration look' : 'Inspiratsioonistiil'
-    );
+    const fallbackTitle = t('homepage.gallery.inspirationLook');
     const title = item.title?.trim() || fallbackTitle;
-    const tag = item.tag?.trim() || (item.isFeatured ? getI18nTextOrFallback('homepage.gallery.featuredLabel', language === 'en' ? 'Featured' : 'Esile tostetud') : getI18nTextOrFallback('homepage.gallery.inspirationLook', language === 'en' ? 'Inspiration look' : 'Inspiratsioonistiil'));
+    const tag = item.tag?.trim() || (item.isFeatured ? t('homepage.gallery.featuredLabel') : t('homepage.gallery.inspirationLook'));
     const description = item.description?.trim() || '';
 
     return {
@@ -979,20 +1104,7 @@ export default function Home() {
       orderedGalleryItems[index]?.description ||
       orderedGalleryItems[index]?.title ||
       activeTeamMember?.fullName ||
-      getI18nTextOrFallback(
-        `homepage.team.workCaptions.${index + 1}`,
-        language === 'en'
-          ? index === 0
-            ? 'Gel manicure result'
-            : index === 1
-              ? 'Luxury spa result'
-              : 'Minimal nude design'
-          : index === 0
-            ? 'Geelmanikuuri tulemus'
-            : index === 1
-              ? 'Luxury spa tulemus'
-              : 'Minimal nude disain'
-      ),
+      t(`homepage.team.workCaptions.${index + 1}`),
   }));
   const teamBadgeChips = [
     activeTeamMember?.badge1Text?.trim() ?? '',
@@ -1074,8 +1186,9 @@ export default function Home() {
 
   const navLinkClass =
     'type-navbar-link group relative py-1 text-[#584a58] transition-colors duration-200 hover:text-[#2f2530]';
-  const utilityIconClass =
-    'icon-btn relative';
+  const headerContainerClass = 'mx-auto max-w-6xl px-6';
+  const utilityIconClass = 'icon-circle-btn nav-icon-btn relative';
+  const navIconSvgClass = 'h-[18px] w-[18px] stroke-[1.8]';
 
   /* Premium layout: max 1280px, normalized section spacing */
   const sectionClass = 'py-16 md:py-20 lg:py-28';
@@ -1096,12 +1209,12 @@ export default function Home() {
             : 'bg-white/80 backdrop-blur-lg border-b border-[#f0e8ec]/60'
         }`}
       >
-        <div className={contentMax}>
+        <div className={headerContainerClass}>
           <div className={`flex items-center justify-between transition-all duration-300 ${
-            isScrolled ? 'h-14' : 'h-14 lg:h-[4.5rem]'
+            isScrolled ? 'h-16' : 'h-16 lg:h-[4.75rem]'
           }`}>
             {/* Logo ā€” breathing room on mobile */}
-            <div className="flex min-w-0 flex-shrink items-end gap-2 pr-2 sm:pr-0">
+            <div className="flex min-w-0 flex-shrink items-center gap-2 pr-2 sm:pr-0">
               <span
                 className={`font-brand type-navbar-logo leading-none transition-all duration-300 ${isScrolled ? 'lg:text-[34px]' : 'lg:text-[38px]'}`}
                 style={{ color: colors.primary, letterSpacing: '-0.015em' }}
@@ -1111,7 +1224,7 @@ export default function Home() {
             </div>
 
             {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-8">
+            <nav className="hidden lg:flex items-center gap-9">
               <button onClick={() => scrollToSection('services')} className={navLinkClass}><span>{t('nav.services')}</span><span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 bg-[#c996b4] transition-transform duration-140 group-hover:scale-x-100" /></button>
               <button onClick={() => scrollToSection('gallery')} className={navLinkClass}><span>{t('nav.gallery')}</span><span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 bg-[#c996b4] transition-transform duration-140 group-hover:scale-x-100" /></button>
               <button onClick={() => scrollToSection('products')} className={navLinkClass}><span>{t('homepage.nav.products')}</span><span className="absolute bottom-0 left-0 h-0.5 w-full origin-left scale-x-0 bg-[#c996b4] transition-transform duration-140 group-hover:scale-x-100" /></button>
@@ -1119,14 +1232,14 @@ export default function Home() {
             </nav>
 
             {/* Right Side ā€” mobile: icons + menu only (booking via sticky CTA) */}
-            <div className="flex flex-shrink-0 items-center gap-3 sm:gap-3 lg:gap-4">
+            <div className="flex flex-shrink-0 items-center gap-4">
               <div className="relative hidden lg:block">
                 <button
                   onClick={() => setIsLangMenuOpen((prev) => !prev)}
-                  className="icon-btn"
+                  className={utilityIconClass}
                   aria-label="Open language menu"
                 >
-                  <Globe />
+                  <Globe className={navIconSvgClass} />
                 </button>
                 {isLangMenuOpen && (
                   <div className="absolute right-0 top-12 w-36 overflow-hidden rounded-2xl border border-[#ecdce6] bg-white p-1.5 shadow-[0_22px_34px_-24px_rgba(57,33,52,0.5)]">
@@ -1147,14 +1260,14 @@ export default function Home() {
               </div>
 
               {/* Icon cluster ā€” spacing from logo; badges inset so they donā€™t crowd the edge */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={goToFavorites}
                   className={utilityIconClass}
-                  aria-label={language === 'en' ? 'Open favourites' : 'Ava lemmikud'}
-                  title={language === 'en' ? 'Favourites' : 'Lemmikud'}
+                  aria-label={t('_auto.page.p005')}
+                  title={t('_auto.page.p006')}
                 >
-                  <FavoriteHeartIcon active={favoritesCount > 0} size={18} />
+                  <FavoriteHeartIcon active={favoritesCount > 0} size={17} />
                   {favoritesCount > 0 && (
                     <span className="absolute right-0 top-0.5 inline-flex min-h-[16px] min-w-[16px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[8px] font-semibold leading-none text-white">
                       {favoritesCount > 9 ? '9+' : favoritesCount}
@@ -1164,10 +1277,10 @@ export default function Home() {
                 <button
                   onClick={goToShop}
                   className={utilityIconClass}
-                  aria-label={language === 'en' ? 'Open shop' : 'Ava pood'}
-                  title={language === 'en' ? 'Shop' : 'Pood'}
+                  aria-label={t('_auto.page.p007')}
+                  title={t('_auto.page.p008')}
                 >
-                  <ShoppingBag />
+                  <ShoppingBag className={navIconSvgClass} />
                   {cartCount > 0 && (
                     <span className="absolute right-0 top-0.5 inline-flex min-h-[16px] min-w-[16px] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-[#c24d86] px-1 text-[8px] font-semibold leading-none text-white">
                       {cartCount > 9 ? '9+' : cartCount}
@@ -1180,21 +1293,17 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => router.push(localizePath('/book'))}
-                className={`!hidden min-h-[42px] items-center justify-center rounded-full px-6 text-[14px] font-semibold transition-all duration-200 active:scale-[0.97] lg:!inline-flex ${
-                  isScrolled
-                    ? 'bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-10px_rgba(159,69,111,0.45)] scale-[1.03]'
-                    : 'border border-[#dec8d5] bg-white text-[#7a5f72] hover:bg-[#fff6fa]'
-                }`}
+                className="btn-primary nav-cta-btn !hidden lg:!inline-flex"
               >
                 {t('nav.bookNow')}
               </button>
 
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="icon-btn lg:!hidden"
+                className={`${utilityIconClass} lg:!hidden`}
                 aria-label="Open menu"
               >
-                <Menu />
+                <Menu className={navIconSvgClass} />
               </button>
             </div>
           </div>
@@ -1226,10 +1335,10 @@ export default function Home() {
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
                   data-mobile-menu-close="true"
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[#e8d9e3] text-[#6f5b6c] transition-colors duration-200 hover:bg-[#faf5f8] active:bg-[#f9eef5]"
+                  className={utilityIconClass}
                   aria-label="Close menu"
                 >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={navIconSvgClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -1258,7 +1367,7 @@ export default function Home() {
 
               <div className="mobile-menu-anim-item mt-6 space-y-4 border-t border-[#f0e4eb] pt-5 [animation:mobileMenuItemIn_240ms_ease-out_120ms_both]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a8899c]">
-                  {language === 'en' ? 'Account & language' : 'Konto ja keel'}
+                  {t('_auto.page.p009')}
                 </p>
                 <div className="mx-auto grid max-w-[300px] grid-cols-2 gap-3">
                   <button
@@ -1267,7 +1376,7 @@ export default function Home() {
                     className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
                   >
                     <FavoriteHeartIcon active={favoritesCount > 0} size={20} />
-                    <span>{language === 'en' ? 'Favourites' : 'Lemmikud'}</span>
+                    <span>{t('_auto.page.p010')}</span>
                     {favoritesCount > 0 && (
                       <span className="text-xs font-semibold text-[#c24d86]">{favoritesCount > 9 ? '9+' : favoritesCount}</span>
                     )}
@@ -1278,7 +1387,7 @@ export default function Home() {
                     className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl border border-[#eadce5] bg-[#faf6f9] px-3 py-3 text-center text-sm font-medium text-[#5d4a59] transition-colors active:bg-[#f5ebf2]"
                   >
                     <ShoppingBag className="h-5 w-5 text-[#7a6174]" strokeWidth={1.8} />
-                    <span>{language === 'en' ? 'Shop' : 'Pood'}</span>
+                    <span>{t('_auto.page.p011')}</span>
                     {cartCount > 0 && (
                       <span className="text-xs font-semibold text-[#c24d86]">{cartCount > 9 ? '9+' : cartCount}</span>
                     )}
@@ -1401,11 +1510,11 @@ export default function Home() {
                 }`}
               >
                 <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-[#8a6b7e]">
-                  {getI18nTextOrFallback('homepage.hero.luxuryOverline', language === 'en' ? 'PRIVATE NAIL STUDIO MUSTAMAE' : 'PRIVATE KUUNESTUUDIO MUSTAMAEL')}
+                  {t('homepage.hero.luxuryOverline')}
                 </p>
                 <h1 className="mb-[18px] mt-4 font-brand max-w-[560px] text-[clamp(2.4rem,5vw,4.1rem)] font-semibold leading-[1.05] tracking-[-0.02em] text-[#1f171d] lg:text-[54px] xl:text-[62px]">
                   {(() => {
-                    const headline = getI18nTextOrFallback('homepage.hero.luxuryHeadline', language === 'en' ? 'Perfect nails.\nTotal calm.' : 'Taiuslikud kuuned.\nTaielik rahu.');
+                    const headline = t('homepage.hero.luxuryHeadline');
                     const lines = headline.split('\n').filter(Boolean);
                     return lines.length >= 2 ? (
                       <>
@@ -1426,12 +1535,7 @@ export default function Home() {
                 }`}
                 style={{ transitionDelay: '120ms' }}
               >
-                {getI18nTextOrFallback(
-                  'homepage.hero.luxurySupport',
-                  language === 'en'
-                    ? 'A calm private appointment where every detail is finished for a flawless result.'
-                    : 'Rahulik privaatne hooldus, kus iga detail on viimistletud taiusliku tulemuse nimel.'
-                )}
+                {t('homepage.hero.luxurySupport')}
               </p>
 
               <div
@@ -1442,15 +1546,15 @@ export default function Home() {
               >
                 <button
                   onClick={focusHeroBooking}
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-7 py-[14px] text-[14px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(139,51,100,0.48)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  className="btn-primary btn-primary-lg"
                 >
-                  {language === 'en' ? 'Book now' : 'Broneeri kohe'}
+                  {t('_auto.page.p015')}
                 </button>
                 <button
                   onClick={() => scrollToSection('gallery')}
-                  className="inline-flex min-h-[48px] items-center rounded-full border border-[#d8c8d2] bg-transparent px-7 py-[14px] text-[14px] font-medium text-[#6b5a62] transition-all duration-300 hover:bg-[#fdf9fb] hover:border-[#c8b3bf] active:scale-[0.98]"
+                  className="btn-secondary"
                 >
-                  {language === 'en' ? 'Browse styles' : 'Vaata stiile'}
+                  {t('_auto.page.p016')}
                 </button>
               </div>
 
@@ -1459,19 +1563,19 @@ export default function Home() {
                 {[
                   {
                     icon: <Star className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: `${t('trust.rating')} ${language === 'en' ? 'rated' : 'hinnang'}`,
+                    label: `${t('trust.rating')} ${t('_auto.page.p017')}`,
                   },
                   {
                     icon: <Users className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: language === 'en' ? '1200+ clients' : '1200+ klienti',
+                    label: t('_auto.page.p018'),
                   },
                   {
                     icon: <Droplet className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: language === 'en' ? 'Sterile tools' : 'Steriilsed toovahendid',
+                    label: t('_auto.page.p019'),
                   },
                   {
                     icon: <HomeIcon className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: language === 'en' ? 'Private studio' : 'Privaatne stuudio',
+                    label: t('_auto.page.p020'),
                   },
                 ].map((item, index) => (
                   <div key={item.label} className="group flex items-center gap-3">
@@ -1512,7 +1616,7 @@ export default function Home() {
                 >
                   <HeroBookingWidget />
                   <p className="px-6 pb-5 pt-1 text-center text-xs text-[#7a6572]">
-                    {getI18nTextOrFallback('homepage.hero.cancelTrust', language === 'en' ? 'Free cancellation up to 24h' : 'Tuhistamine tasuta kuni 24h')}
+                    {t('homepage.hero.cancelTrust')}
                   </p>
                 </div>
               </div>
@@ -1523,19 +1627,19 @@ export default function Home() {
               {[
                 {
                   icon: <Star className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: `${t('trust.rating')} ${language === 'en' ? 'rated' : 'hinnang'}`,
+                  label: `${t('trust.rating')} ${t('_auto.page.p022')}`,
                 },
                 {
                   icon: <Users className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: language === 'en' ? '1200+ clients' : '1200+ klienti',
+                  label: t('_auto.page.p023'),
                 },
                 {
                   icon: <Droplet className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: language === 'en' ? 'Sterile tools' : 'Steriilsed toovahendid',
+                  label: t('_auto.page.p024'),
                 },
                 {
                   icon: <HomeIcon className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: language === 'en' ? 'Private studio' : 'Privaatne stuudio',
+                  label: t('_auto.page.p025'),
                 },
               ].map((item, index) => (
                 <div key={item.label} className="flex items-center gap-3">
@@ -1568,20 +1672,20 @@ export default function Home() {
         <div className={contentMax}>
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-10">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9d7a90]">
-              {language === 'en' ? 'Quick book' : 'Kiirbroneerimine'}
+              {t('_auto.page.p026')}
             </p>
             {[
-                  { id: 'today' as const, label: language === 'en' ? 'Today' : 'Täna' },
-              { id: 'tomorrow' as const, label: language === 'en' ? 'Tomorrow' : 'Homme' },
-                  { id: 'week' as const, label: language === 'en' ? 'This week' : 'Sel nädalal' },
-              { id: 'quick' as const, label: language === 'en' ? 'Quick service' : 'Kiire hooldus' },
-              { id: 'design' as const, label: language === 'en' ? 'Design' : 'Disain' },
+                  { id: 'today' as const, label: t('_auto.page.p027') },
+              { id: 'tomorrow' as const, label: t('_auto.page.p028') },
+                  { id: 'week' as const, label: t('_auto.page.p029') },
+              { id: 'quick' as const, label: t('_auto.page.p030') },
+              { id: 'design' as const, label: t('_auto.page.p031') },
             ].map((chip) => (
               <button
                 key={chip.id}
                 type="button"
                 onClick={() => openQuickBook(chip.id)}
-                className="motion-stagger-item rounded-full border border-[#ead9e3] bg-[#fff8fb] px-4 py-2 text-[12px] font-semibold text-[#6f4b62] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#d9c1cf] hover:bg-white"
+                className="motion-stagger-item pill-selectable min-h-[44px] px-4 text-[12px]"
               >
                 {chip.label}
               </button>
@@ -1780,17 +1884,17 @@ export default function Home() {
                         {getServiceDescriptionExtra(featuredService)}
                       </p>
                       <div className="mt-6 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-[#f0e8ec] px-3.5 py-1.5 text-xs font-medium text-[#5d4a59]">
+                        <span className="pill-meta min-h-[34px] px-3.5 text-xs">
                           <Clock className="mr-1.5 inline h-3.5 w-3.5" strokeWidth={1.8} />
                           {featuredService.duration} {t('common.minutes')}
                         </span>
                         {getServiceCategoryLabel(featuredService) && (
-                          <span className="rounded-full bg-[#f0e8ec] px-3.5 py-1.5 text-xs font-medium text-[#5d4a59]">
+                          <span className="pill-meta min-h-[34px] px-3.5 text-xs">
                             {getServiceCategoryLabel(featuredService)}
                           </span>
                         )}
                         {featuredService.isPopular && (
-                          <span className="rounded-full bg-[#fff0f5] px-3.5 py-1.5 text-xs font-medium text-[#9b5c7a]">
+                          <span className="pill-tag min-h-[32px] px-3.5 text-xs normal-case tracking-[0.01em]">
                             {t('homepage.trust.premium')}
                           </span>
                         )}
@@ -1813,7 +1917,7 @@ export default function Home() {
                           e.stopPropagation();
                           goToBooking();
                         }}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#c24d86] px-8 py-4 text-base font-semibold text-white shadow-[0_12px_28px_-8px_rgba(194,77,134,0.5)] transition-all duration-300 hover:bg-[#b04376] hover:shadow-[0_16px_32px_-8px_rgba(194,77,134,0.55)] hover:scale-[1.02] active:scale-[0.99] sm:w-auto"
+                        className="btn-primary btn-primary-xl w-full sm:w-auto"
                       >
                         {t('homepage.servicesUi.confirmTime')}
                         <ArrowRight className="h-5 w-5" strokeWidth={2.2} />
@@ -1824,7 +1928,7 @@ export default function Home() {
                           e.stopPropagation();
                           router.push(localizePath('/book'));
                         }}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#e0d0d8] bg-transparent px-8 py-4 text-base font-semibold text-[#5d4a59] transition-colors hover:bg-[#faf5f8] sm:w-auto"
+                        className="btn-secondary w-full sm:w-auto"
                       >
                         {t('homepage.servicesUi.viewDetails')}
                       </button>
@@ -1888,11 +1992,11 @@ export default function Home() {
                         {getServiceResultLine(service)}
                       </p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <span className="rounded-full bg-[#f0e8ec] px-2.5 py-1 text-[11px] font-medium text-[#5d4a59]">
+                        <span className="pill-meta min-h-[32px] px-2.5 text-[11px]">
                           {service.duration} {t('common.minutes')}
                         </span>
                         {getServiceCategoryLabel(service) && (
-                          <span className="rounded-full bg-[#f0e8ec] px-2.5 py-1 text-[11px] font-medium text-[#5d4a59]">
+                          <span className="pill-meta min-h-[32px] px-2.5 text-[11px]">
                             {getServiceCategoryLabel(service)}
                           </span>
                         )}
@@ -1910,7 +2014,7 @@ export default function Home() {
                             e.stopPropagation();
                             goToBooking();
                           }}
-                          className="w-full rounded-full bg-[#c24d86] px-5 py-3 text-sm font-semibold text-white transition-all duration-300 hover:bg-[#b04376] hover:scale-[1.02] active:scale-100 sm:w-auto sm:shrink-0"
+                          className="btn-primary btn-small w-full sm:w-auto sm:shrink-0"
                         >
                           {t('homepage.servicesUi.cardCta')}
                           <ArrowRight className="ml-1 inline h-4 w-4" strokeWidth={2.2} />
@@ -1932,10 +2036,10 @@ export default function Home() {
         <div className={contentMax}>
           <header className={`text-center ${headerToContent}`}>
             <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-[#8a6b7e]">
-              {getI18nTextOrFallback('homepage.gallery.eyebrow', language === 'en' ? 'OUR WORK' : 'MEIE TOO')}
+              {t('homepage.gallery.eyebrow')}
             </p>
             <h2 className={`font-brand text-[36px] font-semibold tracking-tight text-[#1f171d] ${headerTitleGap}`}>
-              {getI18nTextOrFallback('homepage.gallery.realResultsTitle', language === 'en' ? 'Real results.' : 'Paris tulemused.')}
+              {t('homepage.gallery.realResultsTitle')}
             </h2>
             <p className={`mx-auto max-w-[32rem] text-[1rem] leading-relaxed text-[#6b5a62] ${headerSubtitleGap}`}>
               {t('homepage.gallery.subtitle')}
@@ -1995,7 +2099,7 @@ export default function Home() {
                           }}
                           className="relative z-20 mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-white/95 underline-offset-4 transition-all duration-200 hover:text-white hover:underline"
                         >
-                          {getI18nTextOrFallback('homepage.gallery.bookStyleCta', language === 'en' ? 'Book this style' : 'Broneeri see stiil')}
+                          {t('homepage.gallery.bookStyleCta')}
                           <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
                         </button>
                       </div>
@@ -2099,7 +2203,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="rounded-[22px] border border-[#eadde5] bg-white/70 px-6 py-10 text-center text-[#735f6e] shadow-[0_14px_28px_-22px_rgba(60,40,55,0.22)]">
-              {language === 'en' ? 'Gallery is currently being updated.' : 'Galerii on hetkel uuendamisel.'}
+              {t('_auto.page.p035')}
             </div>
           )}
 
@@ -2110,11 +2214,11 @@ export default function Home() {
                 aria-expanded={isGalleryExpanded}
                 aria-controls="homepage-gallery-grid"
                 onClick={() => setIsGalleryExpanded((prev) => !prev)}
-                className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-[#d8bccd] bg-white/90 px-7 py-3 text-sm font-semibold text-[#6f4a61] shadow-[0_14px_28px_-20px_rgba(72,46,62,0.36)] transition-all duration-250 hover:-translate-y-[1px] hover:border-[#c89eb8] hover:bg-white hover:text-[#553448] focus:outline-none focus:ring-2 focus:ring-[#c184a6]/50 focus:ring-offset-2"
+                className="btn-secondary"
               >
                 {isGalleryExpanded
-                  ? getI18nTextOrFallback('homepage.gallery.showLess', language === 'en' ? 'Show less' : 'Näita vähem')
-                  : getI18nTextOrFallback('homepage.gallery.showAll', language === 'en' ? 'Show all' : 'Vaata kõiki')}
+                  ? t('homepage.gallery.showLess')
+                  : t('homepage.gallery.showAll')}
                 <ChevronDown
                   aria-hidden="true"
                   className={`h-4 w-4 transition-transform duration-300 ${isGalleryExpanded ? 'rotate-180' : ''}`}
@@ -2126,22 +2230,20 @@ export default function Home() {
           {/* CTA panel below grid */}
           <div className="mt-14 rounded-[24px] bg-gradient-to-b from-[#fdf5f9] to-[#f8f0f4] px-6 py-10 text-center shadow-[0_16px_40px_-20px_rgba(80,50,65,0.12)] lg:mt-16 lg:px-12 lg:py-12">
             <p className="text-[1.05rem] leading-relaxed text-[#5d4a56]">
-              {getI18nTextOrFallback('homepage.gallery.ctaLead', language === 'en' ? 'Find your next favorite style.' : 'Leia oma jargmine lemmik stiil.')}
+              {t('homepage.gallery.ctaLead')}
             </p>
             <p className="mt-2 text-[0.95rem] leading-relaxed text-[#7a6572]">
-              {language === 'en' 
-                ? 'Ready for your transformation?' 
-                : 'Valmis oma transformatsiooniks?'}
+              {t('_auto.page.p039')}
             </p>
             <p className="mt-1 text-[0.9rem] font-medium text-[#6f4b62]">
-              {language === 'en' ? 'Want the same result?' : 'Soovid sama tulemust?'}
+              {t('_auto.page.p040')}
             </p>
             <button
               type="button"
               onClick={() => router.push(localizePath('/book'))}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#c24d86] px-10 py-4 text-base font-semibold text-white shadow-[0_20px_40px_-12px_rgba(194,77,134,0.45)] transition-all duration-300 hover:bg-[#b04376] hover:shadow-[0_24px_48px_-12px_rgba(194,77,134,0.5)] hover:-translate-y-0.5 active:scale-[0.98]"
+              className="btn-primary btn-primary-xl mt-6"
             >
-              {getI18nTextOrFallback('homepage.gallery.bookTime', language === 'en' ? 'Book time' : 'Broneeri aeg')}
+              {t('homepage.gallery.bookTime')}
               <ArrowRight className="h-5 w-5" strokeWidth={2.2} />
             </button>
           </div>
@@ -2157,7 +2259,7 @@ export default function Home() {
           <button
             className="absolute inset-0"
             onClick={closeGallery}
-            aria-label={getI18nTextOrFallback('homepage.gallery.closeLightbox', language === 'en' ? 'Close gallery' : 'Sulge galerii')}
+            aria-label={t('homepage.gallery.closeLightbox')}
           />
           <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[1.8rem] border border-white/35 bg-[#140f13] shadow-[0_36px_60px_-28px_rgba(0,0,0,0.7)]">
             {isDataImageUrl(galleryCards[activeGalleryIndex].imageUrl) ? (
@@ -2187,26 +2289,26 @@ export default function Home() {
                 onClick={() => handleGalleryCta(galleryCards[activeGalleryIndex].ctaHref)}
                 className="mt-1 inline-flex w-fit rounded-full bg-white/95 px-4 py-2 text-xs font-semibold text-[#4b3044]"
               >
-                {getI18nTextOrFallback('homepage.gallery.bookTime', language === 'en' ? 'Book time' : 'Broneeri aeg')}
+                {t('homepage.gallery.bookTime')}
               </button>
             </div>
             <button
               onClick={prevGallery}
               className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/45 px-3 py-2 text-xs font-semibold text-white"
             >
-              {language === 'en' ? 'Prev' : 'Eelmine'}
+              {t('_auto.page.p044')}
             </button>
             <button
               onClick={nextGallery}
               className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/45 px-3 py-2 text-xs font-semibold text-white"
             >
-              {language === 'en' ? 'Next' : 'Jargmine'}
+              {t('_auto.page.p045')}
             </button>
             <button
               onClick={closeGallery}
               className="absolute right-3 top-3 z-20 rounded-full bg-black/45 px-3 py-2 text-xs font-semibold text-white"
             >
-              {language === 'en' ? 'Close' : 'Sulge'}
+              {t('_auto.page.p046')}
             </button>
           </div>
         </div>
@@ -2230,7 +2332,7 @@ export default function Home() {
                 <button
                   key={item.id}
                   onClick={() => router.push(localizePath('/book'))}
-                  className="inline-flex items-center gap-3 rounded-full border border-[#e8cfdd] bg-white/90 px-4 py-2 text-left text-[#5f4d5d] shadow-[0_14px_22px_-20px_rgba(101,65,90,0.45)] transition hover:-translate-y-0.5 hover:border-[#d9b4c8] hover:bg-white"
+                  className="pill-selectable min-h-[44px] gap-3 px-4 text-left text-[#5f4d5d]"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fff2fb] text-xs font-semibold text-[#7f4668]">
                     {item.name.slice(0, 2).toUpperCase()}
@@ -2243,9 +2345,9 @@ export default function Home() {
             ) : (
               <button
                 onClick={() => router.push(localizePath('/book'))}
-                className="inline-flex items-center gap-2 rounded-full border border-[#e8cfdd] bg-white/90 px-4 py-2.5 text-sm font-medium text-[#5f4d5d] shadow-[0_14px_22px_-20px_rgba(101,65,90,0.45)] transition hover:-translate-y-0.5 hover:border-[#d9b4c8] hover:bg-white"
+                className="pill-selectable min-h-[44px] gap-2 px-4 text-sm font-medium text-[#5f4d5d]"
               >
-                {language === 'en' ? 'Add-ons available when you book' : 'Lisateenused broneerimisel'}
+                {t('_auto.page.p047')}
               </button>
             )}
           </div>
@@ -2279,12 +2381,12 @@ export default function Home() {
                 <div className="absolute inset-0 z-10 bg-gradient-to-t from-[#170f15]/36 via-transparent to-transparent" />
                 <span className="absolute left-5 top-5 z-20 rounded-full border border-[#ead5e1]/85 bg-white/90 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#784f66] shadow-[0_14px_30px_-18px_rgba(59,35,49,0.45)] backdrop-blur-sm">
                   {activeTeamMember?.isFeatured
-                    ? getI18nTextOrFallback('homepage.team.favoriteBadge', language === 'en' ? 'Client favourite' : 'Kliendi lemmik')
-                    : activeTeamMember?.roleTitle?.trim() || getI18nTextOrFallback('homepage.team.eyebrow', language === 'en' ? 'Personal specialist' : 'Isiklik spetsialist')}
+                    ? t('homepage.team.favoriteBadge')
+                    : activeTeamMember?.roleTitle?.trim() || t('homepage.team.eyebrow')}
                 </span>
                 <Image
                   src={activeTeamMember?.mainImage?.trim() || media('team_portrait') || orderedGalleryItems[0]?.imageUrl || media('hero_main') || ''}
-                  alt={activeTeamMember?.fullName?.trim() || getI18nTextOrFallback('homepage.team.imageAlt', language === 'en' ? 'Nailify specialist at studio' : 'Nailify spetsialist stuudios')}
+                  alt={activeTeamMember?.fullName?.trim() || t('homepage.team.imageAlt')}
                   width={1200}
                   height={1500}
                   revealEnabled={false}
@@ -2302,23 +2404,23 @@ export default function Home() {
                   }`}
                   style={{ transitionDelay: '100ms' }}
                 >
-                  {activeTeamMember?.roleTitle?.trim() || getI18nTextOrFallback('homepage.team.eyebrow', language === 'en' ? 'Personal specialist' : 'Isiklik spetsialist')}
+                  {activeTeamMember?.roleTitle?.trim() || t('homepage.team.eyebrow')}
                 </p>
                 {hasTeamSwitcher ? (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={prevTeamMember}
-                      aria-label={language === 'en' ? 'Previous specialist' : 'Eelmine spetsialist'}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e8d8e1] bg-white/90 text-[#6e5161] transition hover:border-[#d8bfcc] hover:bg-white"
+                      aria-label={t('_auto.page.p052')}
+                      className="icon-circle-btn h-10 w-10"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={nextTeamMember}
-                      aria-label={language === 'en' ? 'Next specialist' : 'Jargmine spetsialist'}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e8d8e1] bg-white/90 text-[#6e5161] transition hover:border-[#d8bfcc] hover:bg-white"
+                      aria-label={t('_auto.page.p053')}
+                      className="icon-circle-btn h-10 w-10"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
@@ -2344,23 +2446,12 @@ export default function Home() {
                 {activeTeamMember?.shortIntro?.trim() || t('homepage.team.subtitle')}
               </p>
 
-              <div
-                className={`mt-6 flex flex-wrap gap-x-8 gap-y-2 text-sm text-[#6a5966] transition-all duration-500 ${
-                  isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
-                }`}
-                style={{ transitionDelay: '340ms' }}
-              >
-                <span className="font-medium text-[#5f4e5a]">★ 4.9 {language === 'en' ? 'average rating' : 'keskmine hinnang'}</span>
-                <span>{language === 'en' ? '1200+ served clients' : '1200+ teenindatud klienti'}</span>
-                <span>{language === 'en' ? '6+ years of experience' : '6+ aastat kogemust'}</span>
-              </div>
-
               {teamBadgeChips.length > 0 ? (
                 <div className="mt-6 flex flex-wrap gap-2.5">
                   {teamBadgeChips.map((chip, index) => (
                     <span
                       key={`${chip}-${index}`}
-                      className={`rounded-full border border-[#e8d8e1]/90 bg-white/84 px-4 py-2 text-xs font-medium text-[#5d4a59] shadow-[0_10px_20px_-18px_rgba(70,45,58,0.34)] transition-all duration-500 ${
+                      className={`pill-meta min-h-[36px] px-4 text-xs transition-all duration-500 ${
                         isSandraInView ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
                       }`}
                       style={{ transitionDelay: `${360 + index * 60}ms` }}
@@ -2401,11 +2492,11 @@ export default function Home() {
                     }`}
                     style={{ transitionDelay: '800ms' }}
                   >
-                    {activeTeamMember?.signatureLabel?.trim() || getI18nTextOrFallback('homepage.team.signatureLabel', language === 'en' ? 'Signature style' : 'Signature stiil')}
+                    {activeTeamMember?.signatureLabel?.trim() || t('homepage.team.signatureLabel')}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {signatureTags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-white/80 px-3.5 py-1.5 text-xs font-medium text-[#5d4a59] shadow-sm ring-1 ring-[#ead8e2]/80">
+                      <span key={tag} className="pill-tag min-h-[32px] px-3.5 text-xs normal-case tracking-[0.01em]">
                         {tag}
                       </span>
                     ))}
@@ -2415,7 +2506,7 @@ export default function Home() {
 
               <div className="mt-8">
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8a6b7e]">
-                  {getI18nTextOrFallback('homepage.team.resultsLabel', language === 'en' ? 'Real work results' : 'Paris too tulemused')}
+                  {t('homepage.team.resultsLabel')}
                 </p>
                 <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {specialistGallery.map((item, index) => (
@@ -2443,15 +2534,15 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={goToTeamCta}
-                  className="cta-premium w-full rounded-full bg-[linear-gradient(135deg,#bc4f84_0%,#8f3362_100%)] px-9 py-4 text-base font-semibold text-white shadow-[0_18px_42px_-18px_rgba(152,58,106,0.6)] transition-all duration-300 hover:bg-[linear-gradient(135deg,#b04376_0%,#7f2c55_100%)] hover:shadow-[0_26px_54px_-20px_rgba(152,58,106,0.65)] active:scale-[0.99] lg:w-auto lg:px-11 lg:py-4"
+                  className="btn-primary btn-primary-xl w-full lg:w-auto"
                 >
                   {activeTeamMember?.primaryCtaText?.trim()
-                    || (language === 'en' ? 'Book with specialist' : 'Broneeri aeg Sandraga')}
+                    || (t('_auto.page.p056'))}
                   <ArrowRight className="ml-2 inline h-5 w-5" strokeWidth={2.2} />
                 </button>
                 <p className="mt-3 text-xs font-medium text-[#7a6572]">
                   {activeTeamMember?.availabilityHelperText?.trim()
-                    || (language === 'en' ? 'Appointments available this week' : 'Vabad ajad juba sel nädalal')}
+                    || (t('_auto.page.p057'))}
                 </p>
               </div>
             </div>
@@ -2466,19 +2557,19 @@ export default function Home() {
             onClick={closeSpecialistImage}
             className="absolute right-4 top-4 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-white"
           >
-            {getI18nTextOrFallback('homepage.gallery.closeLightbox', language === 'en' ? 'Close gallery' : 'Sulge galerii')}
+            {t('homepage.gallery.closeLightbox')}
           </button>
           <button
             onClick={prevSpecialistImage}
             className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/12 px-3 py-2 text-xs font-semibold text-white"
           >
-            {language === 'en' ? 'Prev' : 'Eelmine'}
+            {t('_auto.page.p059')}
           </button>
           <button
             onClick={nextSpecialistImage}
             className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/12 px-3 py-2 text-xs font-semibold text-white"
           >
-            {language === 'en' ? 'Next' : 'Jargmine'}
+            {t('_auto.page.p060')}
           </button>
           <div className="w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/12 bg-black/35 shadow-[0_38px_64px_-34px_rgba(0,0,0,0.86)]">
             <Image
@@ -2494,7 +2585,7 @@ export default function Home() {
                 onClick={() => router.push(localizePath('/book'))}
                 className="mt-4 rounded-full bg-white px-5 py-2 text-xs font-semibold text-[#5e2d49] transition hover:bg-[#ffe9f5]"
               >
-                {getI18nTextOrFallback('homepage.gallery.wantThisStyle', language === 'en' ? 'I want this style' : 'Soovin seda stiili')}
+                {t('homepage.gallery.wantThisStyle')}
               </button>
             </div>
           </div>
@@ -2526,16 +2617,16 @@ export default function Home() {
                 {t('homepage.products.eyebrow')}
               </p>
               <h2 className="section-title">
-                {getI18nTextOrFallback('homepage.products.retailTitle', language === 'en' ? 'Keep your salon result beautiful for longer' : 'Hoia salongitulemus kauem kaunis')}
+                {t('homepage.products.retailTitle')}
               </h2>
               <p className="mt-4 max-w-[54ch] text-[1.01rem] leading-7 text-[#6f5d6d]">
-                {getI18nTextOrFallback('homepage.products.retailSubtitle', language === 'en' ? "Sandra's recommended aftercare essentials for shine, durability and healthier nails." : 'Sandra soovitatud jarelhooldus laike, pusivuse ja tervemate kuunte hoidmiseks.')}
+                {t('homepage.products.retailSubtitle')}
               </p>
               <p className="mt-2 text-sm font-medium text-[#8e6880]">
-                {getI18nTextOrFallback('homepage.products.retailSupport', language === 'en' ? 'Curated products you can add to your booking or take home.' : 'Valitud tooted, mida saad lisada broneeringule voi votta koju kaasa.')}
+                {t('homepage.products.retailSupport')}
               </p>
               <p className="mt-4 text-[1.06rem] font-semibold tracking-[-0.01em] text-[#6a4a60]">
-                {language === 'en' ? 'Keep your result longer. Gift the experience.' : 'Hoia tulemus kauem. Kingi kogemus.'}
+                {t('_auto.page.p064')}
               </p>
             </div>
             <button
@@ -2550,7 +2641,7 @@ export default function Home() {
             <div className="mb-6 grid gap-3 rounded-[22px] border border-[#eedfe7] bg-white/75 p-4 backdrop-blur-sm lg:grid-cols-[1.1fr_1fr_0.9fr]">
               <div className="rounded-[14px] border border-[#f0e4ea] bg-[#fffafd] p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
-                  {language === 'en' ? 'Bestseller trio' : 'Populaarseim kolmik'}
+                  {t('_auto.page.p065')}
                 </p>
                 <p className="mt-1 text-[13px] text-[#5e4c58]">
                   {retailProducts.slice(0, 3).map((product) => product.name).join(' \u00B7 ')}
@@ -2558,10 +2649,10 @@ export default function Home() {
               </div>
               <div className="rounded-[14px] border border-[#efdce6] bg-[#fff7fb] p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
-                  {language === 'en' ? 'Care bundle' : 'Hoolduskomplekt'}
+                  {t('_auto.page.p066')}
                 </p>
                 <p className="mt-1 text-[13px] text-[#5e4c58]">
-                  {language === 'en' ? 'Book + add 2 products and save up to EUR 6.' : 'Broneering + 2 toodet koos ja saastad kuni EUR 6.'}
+                  {t('_auto.page.p067')}
                 </p>
               </div>
               <button
@@ -2570,10 +2661,10 @@ export default function Home() {
                 className="rounded-[14px] border border-[#e8d6e1] bg-white px-4 py-3 text-left transition hover:bg-[#fff8fb]"
               >
                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9d7a90]">
-                  {language === 'en' ? 'Reorder in one tap' : 'Korda ostu uhe puudutusega'}
+                  {t('_auto.page.p068')}
                 </p>
                 <p className="mt-1 text-[13px] font-semibold text-[#6f4b62]">
-                  {language === 'en' ? 'Continue care journey' : 'Jatka hooldusteekonda'}
+                  {t('_auto.page.p069')}
                 </p>
               </button>
             </div>
@@ -2640,10 +2731,10 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); toggleFavorite(featuredProduct.id); }}
-                            className={`absolute right-3 top-3 z-10 inline-flex h-11 min-h-[44px] w-11 min-w-[44px] items-center justify-center rounded-full bg-white/95 transition-all duration-200 hover:scale-110 ${
+                            className={`icon-circle-btn absolute right-3 top-3 z-10 h-11 min-h-[44px] w-11 min-w-[44px] bg-white/95 transition-all duration-200 hover:scale-110 ${
                               isFavorite(featuredProduct.id) ? 'text-[#c24d86]' : 'text-[#8b6c81] hover:text-[#b07a9a]'
                             }`}
-                            aria-label={isFavorite(featuredProduct.id) ? (language === 'en' ? 'Remove from favourites' : 'Eemalda lemmikutest') : (language === 'en' ? 'Add to favourites' : 'Lisa lemmikutesse')}
+                            aria-label={isFavorite(featuredProduct.id) ? (t('_auto.page.p070')) : (t('_auto.page.p071'))}
                           >
                             <FavoriteHeartIcon active={isFavorite(featuredProduct.id)} size={18} />
                           </button>
@@ -2652,7 +2743,7 @@ export default function Home() {
                         <div className="relative -mt-20 mx-2.5 w-[calc(100%-1.25rem)] max-w-[min(100%,34rem)] rounded-2xl bg-white/92 p-4 shadow-[0_8px_32px_-12px_rgba(50,28,45,0.12)] backdrop-blur-md sm:mx-3 sm:-mt-24 sm:p-4 lg:-mt-28 lg:mx-4 lg:max-w-[38rem] lg:p-5">
                           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a06f8d]">
                             {featuredProduct.isFeatured
-                              ? getI18nTextOrFallback('homepage.products.badgeRecommended', language === 'en' ? 'Sandra recommends' : 'Sandra soovitab')
+                              ? t('homepage.products.badgeRecommended')
                               : t('homepage.products.badgeBestseller')}
                           </p>
                           <h3 className="text-[1.35rem] font-bold leading-tight tracking-[-0.02em] text-[#2d232d] sm:text-[1.65rem]">
@@ -2662,17 +2753,12 @@ export default function Home() {
                             {featuredProduct.description}
                           </p>
                           <p className="mt-1 text-[11px] font-medium leading-6 text-[#8f6a84]">
-                            {getI18nTextOrFallback(
-                              'homepage.products.useCaseFeatured',
-                              language === 'en'
-                                ? 'Best paired with gel manicure and maintenance visits to keep shine and cuticles balanced.'
-                                : 'Sobib eriti hasti geelhoolduse ja hooldusaegadega, et sailitada laige ning tasakaalus kuunenahad.',
-                            )}
+                            {t('homepage.products.useCaseFeatured')}
                           </p>
                           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <div>
                               <p className="text-[10px] uppercase tracking-[0.18em] text-[#9b7590]">
-                                {getI18nTextOrFallback('homepage.products.priceFrom', language === 'en' ? 'From' : 'Alates')}
+                                {t('homepage.products.priceFrom')}
                               </p>
                               <p className="text-[1.6rem] font-bold tracking-[-0.02em] text-[#b04b80] sm:text-2xl">EUR {featuredProduct.price}</p>
                             </div>
@@ -2697,13 +2783,11 @@ export default function Home() {
                                   addProductToBooking(bookingProduct);
                                   router.push(localizePath('/book'));
                                 }}
-                                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_45%,#8f3362_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_-8px_rgba(139,51,100,0.55)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+                                className="btn-primary btn-small w-full sm:w-auto"
                               >
                                 {selectedProducts.some((p) => p.productId === featuredProduct.id)
-                                  ? language === 'en'
-                                    ? 'Remove'
-                                    : 'Eemalda'
-                                  : getI18nTextOrFallback('homepage.products.ctaAddWithBooking', language === 'en' ? 'Add with booking' : 'Lisa broneeringule')}
+                                  ? t('_auto.page.p075')
+                                  : t('homepage.products.ctaAddWithBooking')}
                               </button>
                               <button
                                 onClick={() => {
@@ -2714,9 +2798,9 @@ export default function Home() {
                                   });
                                   goToProduct(featuredProduct.id);
                                 }}
-                                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-transparent px-4 py-2.5 text-sm font-semibold text-[#6a4c64] transition-all duration-200 hover:bg-[#fdf4f9] hover:scale-[1.01] active:scale-[0.99] sm:w-auto"
+                                className="btn-secondary btn-small w-full sm:w-auto"
                               >
-                                {getI18nTextOrFallback('homepage.products.ctaViewProduct', language === 'en' ? 'View product details' : 'Vaata toote detaile')}
+                                {t('homepage.products.ctaViewProduct')}
                               </button>
                             </div>
                           </div>
@@ -2728,15 +2812,10 @@ export default function Home() {
                   {/* ZONE 2 ā€” Curated picks: mobile = horizontal swipe; desktop = sticky panel with max-height + fade */}
                   <aside className="relative rounded-[20px] bg-white/40 p-3 backdrop-blur-sm lg:col-span-4 lg:sticky lg:top-20 lg:max-h-[min(320px,40vh)]">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#a06f8d]">
-                      {getI18nTextOrFallback('homepage.products.quickPicksLabel', language === 'en' ? 'Quick picks' : 'Kiired valikud')}
+                      {t('homepage.products.quickPicksLabel')}
                     </p>
                     <p className="mt-1 text-[12px] leading-5.5 text-[#6f5f6f] lg:max-w-[240px]">
-                      {getI18nTextOrFallback(
-                        'homepage.products.quickPicksDescription',
-                        language === 'en'
-                          ? 'Take-home essentials that support longer wear and healthier nails between appointments.'
-                          : 'Koduseks hoolduseks valitud tooted, mis aitavad tulemusel pusida ja hoiavad kuuned tervemad.',
-                      )}
+                      {t('homepage.products.quickPicksDescription')}
                     </p>
                     <div className="mt-2 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-col lg:overflow-y-auto lg:max-h-[200px] lg:gap-0 [scrollbar-width:thin]">
                       <div className="flex gap-3 lg:flex-col lg:gap-0 lg:divide-y lg:divide-[#eedce6]/40">
@@ -2764,7 +2843,7 @@ export default function Home() {
                             <div className="min-w-0 flex-1 text-left lg:flex-1">
                               <p className="truncate text-[13px] font-semibold text-[#312631]">{product.name}</p>
                               <p className="mt-0.5 text-[10px] text-[#7f6b7c]">
-                                {getI18nTextOrFallback('homepage.products.quickPickUseCase', language === 'en' ? 'Salon aftercare pick' : 'Salongi jarelhoolduse valik')}
+                                {t('homepage.products.quickPickUseCase')}
                               </p>
                             </div>
                             <p className="shrink-0 text-right text-[13px] font-semibold text-[#b04b80]">EUR {product.price}</p>
@@ -2819,10 +2898,10 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
-                            className={`absolute right-2.5 top-2.5 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 transition-all duration-200 hover:scale-110 ${
+                            className={`icon-circle-btn absolute right-2.5 top-2.5 z-10 h-8 w-8 min-h-[32px] min-w-[32px] bg-white/90 transition-all duration-200 hover:scale-110 ${
                               isFavorite(product.id) ? 'text-[#c24d86]' : 'text-[#8b6c81] hover:text-[#b07a9a]'
                             }`}
-                            aria-label={isFavorite(product.id) ? (language === 'en' ? 'Remove from favourites' : 'Eemalda lemmikutest') : (language === 'en' ? 'Add to favourites' : 'Lisa lemmikutesse')}
+                            aria-label={isFavorite(product.id) ? (t('_auto.page.p081')) : (t('_auto.page.p082'))}
                           >
                             <FavoriteHeartIcon active={isFavorite(product.id)} size={16} />
                           </button>
@@ -2835,7 +2914,7 @@ export default function Home() {
                             {product.description}
                           </p>
                           <p className="mt-1 text-[10px] font-medium text-[#9e7690]">
-                            {getI18nTextOrFallback('homepage.products.cardUseCase', language === 'en' ? 'Supports longer-lasting salon results.' : 'Toetab kauapusivamat salongitulemust.')}
+                            {t('homepage.products.cardUseCase')}
                           </p>
                           <div className="mt-auto flex flex-col gap-2 pt-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                             <span className={`font-semibold text-[#b04b80] ${isTall ? 'text-base' : 'text-[15px]'}`}>EUR {product.price}</span>
@@ -2848,9 +2927,9 @@ export default function Home() {
                                 });
                                 goToProduct(product.id);
                               }}
-                              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-3.5 py-2.5 text-[11px] font-semibold text-white shadow-[0_6px_16px_-8px_rgba(139,51,100,0.4)] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
+                              className="btn-primary btn-small w-full px-3.5 text-[11px] sm:w-auto"
                             >
-                              {getI18nTextOrFallback('homepage.products.ctaRetailTile', language === 'en' ? 'Buy now' : 'Osta kohe')}
+                              {t('homepage.products.ctaRetailTile')}
                             </button>
                           </div>
                         </div>
@@ -2893,9 +2972,7 @@ export default function Home() {
           {feedbackItems.length === 0 ? (
             <div className="rounded-3xl border border-[#efe0e8] bg-white/90 px-6 py-14 text-center shadow-[0_12px_40px_-20px_rgba(70,40,60,0.08)]">
               <p className="text-[#7e6376]">
-                {language === 'en'
-                  ? "New client feedback appears here as soon as it's published."
-                  : 'Uued kliendi tagasisided ilmuvad siia kohe, kui need on avaldatud.'}
+                {t('_auto.app_page.p106')}
               </p>
             </div>
           ) : (
@@ -2904,7 +2981,7 @@ export default function Home() {
               {feedbackItems[0] && (() => {
                 const featured = feedbackItems[0];
                 const firstName = featured.clientName.trim().split(/\s+/)[0] || featured.clientName;
-                const quoteText = featured.feedbackText.trim() || (language === 'en' ? 'Loved my natural set' : 'Armastan oma naturaalset tulemust');
+                const quoteText = featured.feedbackText.trim() || (t('_auto.page.p085'));
                 const serviceLabel = (featured.serviceId || '')
                   .toString()
                   .trim()
@@ -2939,7 +3016,7 @@ export default function Home() {
                                 <path d="M9 7.5v9l8-4.5-8-4.5Z" />
                               </svg>
                             </span>
-                            {language === 'en' ? 'Featured reel' : 'Esile tostetud'}
+                            {t('_auto.page.p086')}
                           </div>
 
                         </div>
@@ -2948,7 +3025,7 @@ export default function Home() {
                       {/* Right: quote + meta + CTA */}
                       <div className="relative flex flex-col justify-center px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
                         <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#a87a94]">
-                          {language === 'en' ? 'Client discovery' : 'Kliendi kogemus'}
+                          {t('_auto.page.p087')}
                         </p>
                         <blockquote className="mt-2 font-brand text-[1.22rem] font-medium leading-[1.5] tracking-[-0.015em] text-[#2d232d] sm:text-[1.45rem] lg:text-[1.7rem]">
                           &ldquo;{quoteText}&rdquo;
@@ -2963,14 +3040,14 @@ export default function Home() {
                             ))}
                           </div>
                           <span className="text-[12px] font-medium text-[#7a6677]">
-                            {featured.sourceLabel || (language === 'en' ? 'Verified client' : 'Kinnitatud klient')}
+                            {featured.sourceLabel || (t('_auto.page.p088'))}
                           </span>
                         </div>
 
                         <div className="mt-4 flex flex-wrap items-center gap-3">
                           <p className="text-[14px] font-semibold text-[#2d232d]">{firstName}</p>
                           {serviceLabel && (
-                            <span className="inline-flex items-center rounded-full border border-[#ead6e2] bg-[#fff7fb] px-3 py-1 text-[11px] font-semibold text-[#6a3b57]">
+                            <span className="pill-tag min-h-[30px] px-3 text-[11px] normal-case tracking-[0.01em]">
                               {serviceLabel}
                             </span>
                           )}
@@ -2980,16 +3057,16 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={() => router.push(localizePath('/book'))}
-                            className="cta-premium inline-flex min-h-[48px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_50%,#8f3362_100%)] px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_32px_-18px_rgba(194,77,134,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-[1.02] active:scale-[0.99]"
+                            className="btn-primary btn-primary-lg"
                           >
-                            {language === 'en' ? 'Book same result' : 'Broneeri sama tulemus'}
+                            {t('_auto.page.p089')}
                           </button>
                           <button
                             type="button"
                             onClick={() => router.push(localizePath('/book'))}
-                            className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-[#ead6e2] bg-white px-6 py-3 text-sm font-semibold text-[#6a3b57] transition-colors hover:bg-[#fff4fa]"
+                            className="btn-secondary"
                           >
-                            {language === 'en' ? 'See availability' : 'Vaata aegu'}
+                            {t('_auto.page.p090')}
                           </button>
                         </div>
                       </div>
@@ -3039,7 +3116,7 @@ export default function Home() {
                           <div className="absolute bottom-3 left-3 right-3">
                             <div className="rounded-2xl bg-white/14 px-3.5 py-2 backdrop-blur-md transition-opacity duration-300 md:opacity-95 md:group-hover:opacity-100">
                               <p className="text-[12px] font-medium leading-snug text-white">
-                                &ldquo;{caption || (language === 'en' ? 'Loved it.' : 'Vaga rahul.') }&rdquo;
+                                &ldquo;{caption || (t('_auto.page.p091')) }&rdquo;
                               </p>
                               <p className="mt-1 text-[11px] font-semibold text-white/85">{firstName}</p>
                             </div>
@@ -3097,7 +3174,7 @@ export default function Home() {
                 )}
                 <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#120c12]/58 to-transparent pointer-events-none" />
                 <span className="absolute bottom-4 left-4 rounded-full border border-white/30 bg-white/14 px-3.5 py-1.5 text-xs font-medium text-white/95 backdrop-blur-md">
-                  {language === 'en' ? 'Mustamäe studio' : 'Mustamäe stuudio'}
+                  {t('_auto.page.p092')}
                 </span>
               </div>
             </div>
@@ -3105,13 +3182,10 @@ export default function Home() {
             {/* RIGHT COLUMN: content block ā€” eyebrow, heading, paragraph, chips, CTAs */}
             <div className="order-2 lg:order-2 flex flex-col">
               <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[#8a6b7e]">
-                {getI18nTextOrFallback('homepage.localAuthority.eyebrow', language === 'en' ? 'Local trust' : 'Kohalik usaldus')}
+                {t('homepage.localAuthority.eyebrow')}
               </p>
               <h2 className="mt-4 font-brand text-[2rem] font-semibold leading-[1.14] tracking-[-0.02em] text-[#1f171d] md:text-[2.55rem]">
-                {getI18nTextOrFallback(
-                  'homepage.location.title',
-                  language === 'en' ? 'Visit our calm Mustamäe studio' : 'Külasta meie rahulikku Mustamäe stuudiot'
-                )}
+                {t('homepage.location.title')}
               </h2>
               <p className="mt-6 text-[1.03rem] leading-[1.72] text-[#5f4c59]">
                 {t('homepage.location.subtitle')}
@@ -3120,8 +3194,8 @@ export default function Home() {
                 {t('homepage.location.previewText')}
               </p>
               <p className="mt-4 font-brand text-[1.08rem] italic leading-relaxed text-[#6a4d61]">
-                “{language === 'en' ? 'The calmest studio in Tallinn.' : 'Kõige rahulikum stuudio Tallinnas.'}”
-                <span className="ml-2 not-italic text-sm text-[#8c7281]">— {language === 'en' ? 'Regular client' : 'Püsiklient'}</span>
+                “{t('_auto.page.p095')}”
+                <span className="ml-2 not-italic text-sm text-[#8c7281]">— {t('_auto.page.p096')}</span>
               </p>
 
               <ul className="mt-9 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -3133,7 +3207,7 @@ export default function Home() {
                 ].map(({ icon: Icon, key }) => (
                   <li
                     key={key}
-                    className="flex items-center gap-3.5 rounded-full border border-[#e7d7e0]/90 bg-white/75 px-4 py-2.5 text-[#544552] shadow-[0_10px_24px_-20px_rgba(73,43,60,0.5)]"
+                    className="pill-meta gap-3.5 bg-white/75 text-[#544552]"
                   >
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-[#8b6278] shadow-[0_8px_20px_-16px_rgba(73,43,60,0.55)] ring-1 ring-[#ead9e3]/90">
                       <Icon className="h-4 w-4" aria-hidden />
@@ -3147,25 +3221,22 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => router.push(localizePath('/book'))}
-                  className="cta-premium inline-flex w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#bc4f84_0%,#8f3362_100%)] px-8 py-4 text-base font-semibold text-white shadow-[0_18px_40px_-18px_rgba(152,58,106,0.62)] transition-all duration-300 hover:shadow-[0_24px_48px_-18px_rgba(152,58,106,0.7)] sm:w-auto"
+                  className="btn-primary btn-primary-xl w-full sm:w-auto"
                 >
-                  {language === 'en' ? 'Book appointment' : 'Broneeri aeg'}
+                  {t('_auto.page.p097')}
                 </button>
                 <a
                   href="https://www.google.com/maps?q=Mustam%C3%A4e+tee+55+Tallinn"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[#dfcdd8] bg-white/86 px-8 py-4 text-base font-medium text-[#5f4b5a] transition-all duration-200 hover:border-[#ccb5c3] hover:bg-white sm:w-auto"
+                  className="btn-secondary w-full sm:w-auto"
                 >
-                  {language === 'en' ? 'View directions' : 'Vaata juhiseid'}
+                  {t('_auto.page.p098')}
                 </a>
               </div>
 
               <p className="mt-4 text-xs font-medium text-[#7a6572]">
-                {getI18nTextOrFallback(
-                  'homepage.hero.cancelTrust',
-                  language === 'en' ? 'Free cancellation up to 24h' : 'Tühistamine tasuta kuni 24h'
-                )}
+                {t('homepage.hero.cancelTrust')}
               </p>
             </div>
           </div>
@@ -3216,7 +3287,7 @@ export default function Home() {
                 <div className="mt-7">
                   <button
                     onClick={() => router.push(localizePath('/shop'))}
-                    className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-[#dfc8d6] bg-white/88 px-6 py-3 text-[0.96rem] font-semibold text-[#6e4b63] shadow-[0_10px_24px_-18px_rgba(78,43,62,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cbadc0] hover:bg-white sm:w-auto"
+                    className="btn-secondary w-full sm:w-auto"
                   >
                     {t('homepage.aftercare.cta')}
                   </button>
@@ -3247,11 +3318,7 @@ export default function Home() {
                         type="button"
                         key={amount}
                         onClick={() => setSelectedGiftAmount(amount)}
-                        className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
-                          isSelected
-                            ? 'border border-[#b55586] bg-[linear-gradient(135deg,#c0588b_0%,#a34777_100%)] text-white shadow-[0_12px_24px_-12px_rgba(166,67,118,0.65)]'
-                            : 'border border-[#dec5d3] bg-white/88 text-[#6a4d63] hover:-translate-y-0.5 hover:border-[#cfaec0] hover:bg-white'
-                        }`}
+                        className={`pill-selectable ${isSelected ? 'is-selected' : ''}`}
                       >
                         EUR {amount}
                       </button>
@@ -3260,7 +3327,7 @@ export default function Home() {
                 </div>
                 <div className="mt-7">
                   <button
-                    className="inline-flex min-h-[50px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c0588b_0%,#9e3e70_100%)] px-7 py-3.5 text-[1rem] font-semibold text-white shadow-[0_20px_38px_-18px_rgba(158,62,112,0.62)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_44px_-18px_rgba(158,62,112,0.72)] active:scale-[0.99] sm:w-auto"
+                    className="btn-primary btn-primary-xl w-full sm:w-auto"
                   >
                     {t('homepage.giftcards.cta')}
                   </button>
@@ -3367,30 +3434,27 @@ export default function Home() {
               </p>
               <div className="mt-5 inline-flex flex-col rounded-2xl border border-[#e5d3de]/90 bg-white/68 px-4 py-3 text-left shadow-[0_12px_26px_-20px_rgba(67,38,55,0.32)]">
                 <p className="text-[0.9rem] font-medium text-[#6a4e5f]">
-                  {language === 'en' ? 'Limited spots every week.' : 'Piiratud ajad igal nädalal.'}
+                  {t('_auto.page.p100')}
                 </p>
                 <p className="mt-1 text-[0.84rem] text-[#7a6271]">
-                  {language === 'en' ? 'Average waiting time: 3-5 days.' : 'Keskmine ooteaeg: 3-5 päeva.'}
+                  {t('_auto.page.p101')}
                 </p>
               </div>
             </div>
 
             <ul className="mx-auto mt-7 grid max-w-[52rem] gap-3 sm:grid-cols-2 lg:mt-8 lg:grid-cols-3" role="list">
-              <li className="flex items-center gap-2.5 rounded-full bg-white/72 px-4 py-2.5 ring-1 ring-[#ead8e3]/85">
+              <li className="pill-meta gap-2.5 bg-white/72 ring-1 ring-[#ead8e3]/85">
                 <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-[#3f9a72]" aria-hidden />
                 <span className="text-[0.9rem] font-medium text-[#5a4a55]">{t('finalCta.mostClients')}</span>
               </li>
-              <li className="flex items-center gap-2.5 rounded-full bg-white/72 px-4 py-2.5 ring-1 ring-[#ead8e3]/85">
+              <li className="pill-meta gap-2.5 bg-white/72 ring-1 ring-[#ead8e3]/85">
                 <RefreshCw className="h-4.5 w-4.5 shrink-0 text-[#3f9a72]" aria-hidden />
                 <span className="text-[0.9rem] font-medium text-[#5a4a55]">{t('finalCta.freeReschedule')}</span>
               </li>
-              <li className="flex items-center gap-2.5 rounded-full bg-white/72 px-4 py-2.5 ring-1 ring-[#ead8e3]/85 sm:col-span-2 lg:col-span-1">
+              <li className="pill-meta gap-2.5 bg-white/72 ring-1 ring-[#ead8e3]/85 sm:col-span-2 lg:col-span-1">
                 <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-[#3f9a72]" aria-hidden />
                 <span className="text-[0.9rem] font-medium text-[#5a4a55]">
-                  {getI18nTextOrFallback(
-                    'homepage.final.depositTrust',
-                    language === 'en' ? 'Secure with a small deposit' : 'Turvaline kinnitamine väikese deposiidiga'
-                  )}
+                  {t('homepage.final.depositTrust')}
                 </span>
               </li>
             </ul>
@@ -3404,14 +3468,14 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => router.push(localizePath('/book'))}
-                  className="inline-flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#c0588b_0%,#9e3e70_100%)] px-7 text-[1rem] font-semibold text-white shadow-[0_20px_42px_-20px_rgba(158,62,112,0.72)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_26px_50px_-18px_rgba(158,62,112,0.78)] active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c4719b]/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  className="btn-primary btn-primary-xl w-full"
                 >
                   {t('finalCta.secureSlot')}
                 </button>
                 <button
                   type="button"
                   onClick={() => scrollToSection('services')}
-                  className="inline-flex min-h-[56px] w-full items-center justify-center rounded-full border border-[#d8c3cf] bg-white/84 px-7 text-[0.98rem] font-medium text-[#5f4a58] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#c9adbc] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d8c3cf] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  className="btn-secondary w-full"
                 >
                   {t('finalCta.browseServices')}
                 </button>
@@ -3432,9 +3496,9 @@ export default function Home() {
           <button
             type="button"
             onClick={focusHeroBooking}
-            className="inline-flex h-12 min-h-[48px] items-center justify-center rounded-[14px] bg-[linear-gradient(135deg,#c24d86_0%,#a93d71_52%,#8f3362_100%)] px-5 text-[15px] font-semibold text-white shadow-[0_14px_30px_-16px_rgba(194,77,134,0.55)]"
+            className="btn-primary btn-primary-md"
           >
-            {language === 'en' ? 'Book' : 'Broneeri'}
+            {t('_auto.page.p103')}
           </button>
         </div>
       </div>
@@ -3501,7 +3565,7 @@ export default function Home() {
                 <p className="text-[13px] font-medium text-[#5c4f58]">{t('footer.ctaLine')}</p>
                 <button
                   onClick={() => router.push(localizePath('/book'))}
-                  className="mt-2.5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_48%,#a93d71_100%)] px-6 py-3 text-[0.95rem] font-semibold text-white shadow-[0_10px_28px_-10px_rgba(139,51,100,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_-8px_rgba(139,51,100,0.5)] active:scale-[0.99] sm:w-auto"
+                  className="btn-primary btn-primary-lg mt-2.5 w-full sm:w-auto"
                 >
                   {t('footer.bookAppointment')}
                 </button>
@@ -3518,6 +3582,3 @@ export default function Home() {
     </div>
   );
 }
-
-
-

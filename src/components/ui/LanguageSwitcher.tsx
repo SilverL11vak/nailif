@@ -14,18 +14,14 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
+    <div className="flex items-center gap-1 rounded-full border border-[#e7d7e1] bg-white/85 p-1">
       {languages.map((lang) => (
         <button
           key={lang.code}
           onClick={() => handleLanguageChange(lang.code)}
-          className={`
-            px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200
-            ${language === lang.code
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-            }
-          `}
+          className={`pill-selectable min-h-[36px] px-3 text-sm ${
+            language === lang.code ? 'is-selected' : ''
+          }`}
         >
           {lang.nativeName}
         </button>

@@ -47,6 +47,17 @@ export interface ServiceRecord extends Service {
   variants?: ServiceVariant[];
 }
 
+export interface ServiceCategoryRecord {
+  id: string;
+  name: string;
+  nameEt: string;
+  nameEn: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 const defaultProducts: Omit<Product, 'createdAt'>[] = [
   {
     id: 'cuticle-oil-rose',
@@ -179,6 +190,17 @@ function localizedValue(locale: LocaleCode, et: string | null, en: string | null
   return etValue || fallbackValue || enValue;
 }
 
+function slugifyCategory(value: string) {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
 declare global {
   var __nailify_catalog_ensure__: Promise<void> | undefined;
 }
@@ -216,6 +238,7 @@ async function ensureCatalogTablesInternal() {
       category TEXT NOT NULL,
       image_url TEXT,
       is_popular BOOLEAN NOT NULL DEFAULT FALSE,
+      allow_addons BOOLEAN NOT NULL DEFAULT TRUE,
       sort_order INTEGER NOT NULL DEFAULT 0,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -226,6 +249,22 @@ async function ensureCatalogTablesInternal() {
   // Speeds up `active=true` service listings ordered by `sort_order` / `price`.
   await sql`CREATE INDEX IF NOT EXISTS idx_services_active_sort_price_name
     ON services (active, sort_order ASC, price ASC, name ASC)`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS service_categories (
+      id TEXT PRIMARY KEY,
+      name_et TEXT NOT NULL,
+      name_en TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_service_categories_active_sort
+      ON service_categories (active, sort_order ASC, name_et ASC)
+  `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS products (
@@ -292,7 +331,11 @@ async function ensureCatalogTablesInternal() {
   await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Üldine'`;
   await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE services ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE services ADD COLUMN IF NOT EXISTS category_id TEXT`;
+  await sql`ALTER TABLE services ADD COLUMN IF NOT EXISTS allow_addons BOOLEAN NOT NULL DEFAULT TRUE`;
   await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_services_category_id_active_sort
+    ON services (category_id, active, sort_order ASC)`;
 
   await sql`
     UPDATE services
@@ -318,6 +361,39 @@ async function ensureCatalogTablesInternal() {
       longevity_description_en = COALESCE(NULLIF(longevity_description_en, ''), NULLIF(longgevity_description_en, '')),
       longgevity_description_et = COALESCE(NULLIF(longgevity_description_et, ''), NULLIF(longevity_description_et, ''), 'Püsivus: individuaalne'),
       longgevity_description_en = COALESCE(NULLIF(longgevity_description_en, ''), NULLIF(longevity_description_en, ''))
+  `;
+
+  const existingCategories = await sql<Array<{ category: string | null }>>`
+    SELECT DISTINCT category
+    FROM services
+    WHERE category IS NOT NULL AND TRIM(category) <> ''
+  `;
+  for (const row of existingCategories) {
+    const categoryName = (row.category ?? '').trim();
+    if (!categoryName) continue;
+    const categoryId = slugifyCategory(categoryName) || 'services';
+    await sql`
+      INSERT INTO service_categories (id, name_et, name_en, sort_order, active)
+      VALUES (${categoryId}, ${categoryName}, ${''}, 0, TRUE)
+      ON CONFLICT (id) DO NOTHING
+    `;
+  }
+  await sql`
+    UPDATE services
+    SET category_id = COALESCE(category_id, LOWER(REGEXP_REPLACE(TRIM(category), '[^a-zA-Z0-9]+', '-', 'g')))
+    WHERE category IS NOT NULL AND TRIM(category) <> ''
+  `;
+  await sql`
+    UPDATE services
+    SET category_id = REGEXP_REPLACE(category_id, '(^-+|-+$)', '', 'g')
+    WHERE category_id IS NOT NULL
+  `;
+  await sql`
+    INSERT INTO service_categories (id, name_et, name_en, sort_order, active)
+    SELECT DISTINCT s.category_id, s.category, '', 0, TRUE
+    FROM services s
+    WHERE s.category_id IS NOT NULL AND TRIM(s.category_id) <> ''
+      AND NOT EXISTS (SELECT 1 FROM service_categories c WHERE c.id = s.category_id)
   `;
 
   await sql`
@@ -482,15 +558,25 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     duration: number;
     price: number;
     category: Service['category'];
+    category_id: string | null;
+    category_name_et: string | null;
+    category_name_en: string | null;
     image_url: string | null;
     is_popular: boolean;
+    allow_addons: boolean;
     sort_order: number;
     active: boolean;
   }[]>`
-    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, sort_order, active
-    FROM services
-    WHERE active = TRUE
-    ORDER BY sort_order ASC, price ASC, name ASC
+    SELECT
+      s.id, s.name, s.name_et, s.name_en, s.description, s.description_et, s.description_en,
+      s.result_description_et, s.result_description_en, s.longevity_description_et, s.longevity_description_en,
+      s.suitability_note_et, s.suitability_note_en, s.duration, s.price, s.category, s.category_id,
+      c.name_et AS category_name_et, c.name_en AS category_name_en,
+      s.image_url, s.is_popular, s.allow_addons, s.sort_order, s.active
+    FROM services s
+    LEFT JOIN service_categories c ON c.id = s.category_id
+    WHERE s.active = TRUE
+    ORDER BY COALESCE(c.sort_order, 9999) ASC, s.sort_order ASC, s.price ASC, s.name ASC
   `;
 
   const serviceIds = rows.map((r) => r.id);
@@ -515,9 +601,14 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     suitabilityNoteEn: row.suitability_note_en ?? '',
     duration: row.duration,
     price: row.price,
-    category: row.category,
+    category: row.category_id ?? row.category,
+    categoryId: row.category_id ?? undefined,
+    categoryName: localizedValue(lang, row.category_name_et, row.category_name_en, row.category),
+    categoryNameEt: row.category_name_et ?? row.category,
+    categoryNameEn: row.category_name_en ?? '',
     imageUrl: sanitizePublicImage(row.image_url),
     isPopular: row.is_popular,
+    allowAddOns: row.allow_addons,
     sortOrder: row.sort_order,
     active: row.active,
     variants: variantMap.get(row.id) ?? [],
@@ -543,14 +634,24 @@ export async function listAdminServices(locale?: string): Promise<ServiceRecord[
     duration: number;
     price: number;
     category: Service['category'];
+    category_id: string | null;
+    category_name_et: string | null;
+    category_name_en: string | null;
     image_url: string | null;
     is_popular: boolean;
+    allow_addons: boolean;
     sort_order: number;
     active: boolean;
   }[]>`
-    SELECT id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, sort_order, active
-    FROM services
-    ORDER BY sort_order ASC, created_at DESC
+    SELECT
+      s.id, s.name, s.name_et, s.name_en, s.description, s.description_et, s.description_en,
+      s.result_description_et, s.result_description_en, s.longevity_description_et, s.longevity_description_en,
+      s.suitability_note_et, s.suitability_note_en, s.duration, s.price, s.category, s.category_id,
+      c.name_et AS category_name_et, c.name_en AS category_name_en,
+      s.image_url, s.is_popular, s.allow_addons, s.sort_order, s.active
+    FROM services s
+    LEFT JOIN service_categories c ON c.id = s.category_id
+    ORDER BY COALESCE(c.sort_order, 9999) ASC, s.sort_order ASC, s.created_at DESC
   `;
 
   const serviceIds = rows.map((r) => r.id);
@@ -575,9 +676,14 @@ export async function listAdminServices(locale?: string): Promise<ServiceRecord[
     suitabilityNoteEn: row.suitability_note_en ?? '',
     duration: row.duration,
     price: row.price,
-    category: row.category,
+    category: row.category_id ?? row.category,
+    categoryId: row.category_id ?? undefined,
+    categoryName: localizedValue(lang, row.category_name_et, row.category_name_en, row.category),
+    categoryNameEt: row.category_name_et ?? row.category,
+    categoryNameEn: row.category_name_en ?? '',
     imageUrl: row.image_url,
     isPopular: row.is_popular,
+    allowAddOns: row.allow_addons,
     sortOrder: row.sort_order,
     active: row.active,
     variants: variantMap.get(row.id) ?? [],
@@ -599,8 +705,10 @@ export interface UpsertServiceInput {
   duration: number;
   price: number;
   category: Service['category'];
+  categoryId?: string;
   imageUrl?: string | null;
   isPopular?: boolean;
+  allowAddOns?: boolean;
   sortOrder?: number;
   active?: boolean;
 }
@@ -617,10 +725,18 @@ export async function upsertService(input: UpsertServiceInput) {
   const suitabilityNoteEt = input.suitabilityNoteEt ?? 'Sobivus: kohandatud';
   const suitabilityNoteEn = input.suitabilityNoteEn ?? '';
   const sortOrder = input.sortOrder ?? 0;
+  const normalizedCategory = (input.category || '').trim() || 'services';
+  const normalizedCategoryId = (input.categoryId ?? (slugifyCategory(normalizedCategory) || 'services')).trim();
+
+  await sql`
+    INSERT INTO service_categories (id, name_et, name_en, sort_order, active)
+    VALUES (${normalizedCategoryId}, ${normalizedCategory}, ${''}, 0, TRUE)
+    ON CONFLICT (id) DO NOTHING
+  `;
 
   await sql`
     INSERT INTO services (
-      id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, longgevity_description_et, longgevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, image_url, is_popular, sort_order, active
+      id, name, name_et, name_en, description, description_et, description_en, result_description_et, result_description_en, longevity_description_et, longevity_description_en, longgevity_description_et, longgevity_description_en, suitability_note_et, suitability_note_en, duration, price, category, category_id, image_url, is_popular, allow_addons, sort_order, active
     ) VALUES (
       ${input.id},
       ${nameEt},
@@ -639,9 +755,11 @@ export async function upsertService(input: UpsertServiceInput) {
       ${suitabilityNoteEn},
       ${input.duration},
       ${input.price},
-      ${input.category},
+      ${normalizedCategory},
+      ${normalizedCategoryId},
       ${input.imageUrl ?? null},
       ${input.isPopular ?? false},
+      ${input.allowAddOns ?? true},
       ${sortOrder},
       ${input.active ?? true}
     )
@@ -663,8 +781,10 @@ export async function upsertService(input: UpsertServiceInput) {
       duration = EXCLUDED.duration,
       price = EXCLUDED.price,
       category = EXCLUDED.category,
+      category_id = EXCLUDED.category_id,
       image_url = EXCLUDED.image_url,
       is_popular = EXCLUDED.is_popular,
+      allow_addons = EXCLUDED.allow_addons,
       sort_order = EXCLUDED.sort_order,
       active = EXCLUDED.active,
       updated_at = NOW()
@@ -723,6 +843,72 @@ export async function upsertVariant(input: UpsertVariantInput) {
 
 export async function deleteVariant(id: string) {
   await sql`DELETE FROM service_variants WHERE id = ${id}`;
+}
+
+export async function listServiceCategories(locale?: string, activeOnly = true): Promise<ServiceCategoryRecord[]> {
+  const lang = normalizeLocale(locale);
+  const rows = await sql<
+    Array<{
+      id: string;
+      name_et: string;
+      name_en: string | null;
+      sort_order: number;
+      active: boolean;
+      created_at: string;
+      updated_at: string;
+    }>
+  >`
+    SELECT id, name_et, name_en, sort_order, active, created_at::text, updated_at::text
+    FROM service_categories
+    ${activeOnly ? sql`WHERE active = TRUE` : sql``}
+    ORDER BY sort_order ASC, name_et ASC
+  `;
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: localizedValue(lang, row.name_et, row.name_en, row.name_et),
+    nameEt: row.name_et,
+    nameEn: row.name_en ?? '',
+    sortOrder: row.sort_order,
+    active: row.active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
+export interface UpsertServiceCategoryInput {
+  id?: string;
+  nameEt: string;
+  nameEn?: string;
+  sortOrder?: number;
+  active?: boolean;
+}
+
+export async function upsertServiceCategory(input: UpsertServiceCategoryInput): Promise<string> {
+  const nameEt = input.nameEt.trim();
+  const id = (input.id?.trim() || slugifyCategory(nameEt) || `category-${Date.now()}`).slice(0, 80);
+  await sql`
+    INSERT INTO service_categories (id, name_et, name_en, sort_order, active, updated_at)
+    VALUES (${id}, ${nameEt}, ${input.nameEn?.trim() ?? ''}, ${input.sortOrder ?? 0}, ${input.active ?? true}, NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      name_et = EXCLUDED.name_et,
+      name_en = EXCLUDED.name_en,
+      sort_order = EXCLUDED.sort_order,
+      active = EXCLUDED.active,
+      updated_at = NOW()
+  `;
+  return id;
+}
+
+export async function deleteServiceCategory(id: string): Promise<{ ok: boolean; reason?: string }> {
+  const [{ count }] = await sql<Array<{ count: string }>>`
+    SELECT COUNT(*)::text AS count FROM services WHERE category_id = ${id}
+  `;
+  if (Number(count) > 0) {
+    return { ok: false, reason: 'CATEGORY_IN_USE' };
+  }
+  await sql`DELETE FROM service_categories WHERE id = ${id}`;
+  return { ok: true };
 }
 
 /** Resolve price and duration for booking: from variant if variantId provided, else from service. */

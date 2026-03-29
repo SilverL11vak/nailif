@@ -3,13 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Language, getTranslation, languages } from './translations';
-import {
-  DEFAULT_LOCALE,
-  getLocaleFromPathname,
-  LOCALE_COOKIE,
-  stripLocalePrefix,
-  withLocale,
-} from './locale-path';
+import { DEFAULT_LOCALE, getLocaleFromPathname, stripLocalePrefix, withLocale } from './locale-path';
 
 export { type Language, languages };
 export { getTranslation };
@@ -23,13 +17,6 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-function getCookieLanguage(): Language | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(new RegExp(`(?:^|; )${LOCALE_COOKIE}=([^;]*)`));
-  const value = match ? decodeURIComponent(match[1]) : '';
-  return value === 'en' || value === 'et' ? value : null;
-}
-
 export function I18nProvider({ children, initialLanguage = DEFAULT_LOCALE }: { children: ReactNode; initialLanguage?: Language }) {
   const pathname = usePathname();
   const pathnameLocale = getLocaleFromPathname(pathname);
@@ -39,22 +26,13 @@ export function I18nProvider({ children, initialLanguage = DEFAULT_LOCALE }: { c
   const [language, setLanguageState] = useState<Language>(initialLanguage);
 
   useEffect(() => {
-    const persistedLanguage =
-      pathnameLocale ??
-      getCookieLanguage() ??
-      ((typeof window !== 'undefined' ? (localStorage.getItem('language') as Language | null) : null) ?? DEFAULT_LOCALE);
-
-    if (persistedLanguage === 'et' || persistedLanguage === 'en') {
-      setLanguageState(persistedLanguage);
-    }
-  }, [pathnameLocale]);
+    setLanguageState(pathnameLocale ?? initialLanguage);
+  }, [pathnameLocale, initialLanguage]);
 
   const setLanguage = (lang: Language) => {
+    // Route is the source of truth. State updates keep UI responsive
+    // before router navigation completes.
     setLanguageState(lang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('language', lang);
-      document.cookie = `${LOCALE_COOKIE}=${lang}; path=/; max-age=31536000; samesite=lax`;
-    }
   };
 
   const contextValue = useMemo<I18nContextType>(

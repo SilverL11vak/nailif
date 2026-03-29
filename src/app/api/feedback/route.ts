@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminFromCookies } from '@/lib/admin-auth';
 import {
   listFeedback,
+  type LocalizedValue,
   upsertFeedback,
   deleteFeedback,
   setFeedbackVisibility,
@@ -47,24 +48,24 @@ export async function POST(request: Request) {
     }
 
     const payload = (await request.json()) as {
-      id?: string;
-      clientName?: string;
-      clientAvatarUrl?: string | null;
-      rating?: number;
-      feedbackText?: string;
-      serviceId?: string | null;
-      sourceLabel?: string | null;
-      sortOrder?: number;
-      isVisible?: boolean;
+      id?: unknown;
+      clientName?: unknown;
+      clientAvatarUrl?: unknown;
+      rating?: unknown;
+      feedbackText?: unknown;
+      serviceId?: unknown;
+      sourceLabel?: unknown;
+      sortOrder?: unknown;
+      isVisible?: unknown;
     };
 
-    const clientName = payload.clientName?.trim();
+    const clientName = String(payload.clientName ?? '').trim();
     if (!clientName) {
       return NextResponse.json({ error: 'Client name is required' }, { status: 400 });
     }
 
     const id =
-      payload.id?.trim() ||
+      String(payload.id ?? '').trim() ||
       clientName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
@@ -75,12 +76,13 @@ export async function POST(request: Request) {
     await upsertFeedback({
       id,
       clientName,
-      clientAvatarUrl: payload.clientAvatarUrl ?? null,
-      rating: payload.rating ?? 5,
-      feedbackText: payload.feedbackText ?? '',
-      serviceId: payload.serviceId ?? null,
-      sourceLabel: payload.sourceLabel ?? null,
-      sortOrder: payload.sortOrder ?? 0,
+      clientAvatarUrl:
+        typeof payload.clientAvatarUrl === 'string' ? payload.clientAvatarUrl : null,
+      rating: typeof payload.rating === 'number' ? payload.rating : 5,
+      feedbackText: (payload.feedbackText as LocalizedValue | string | undefined) ?? '',
+      serviceId: typeof payload.serviceId === 'string' ? payload.serviceId : null,
+      sourceLabel: (payload.sourceLabel as LocalizedValue | string | null | undefined) ?? null,
+      sortOrder: typeof payload.sortOrder === 'number' ? payload.sortOrder : 0,
       isVisible: payload.isVisible !== false,
     });
 

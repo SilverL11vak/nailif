@@ -68,35 +68,33 @@ export function ConfirmStep() {
 
   const copy = useMemo(
     () => ({
-      timerText: en
-        ? 'This time is reserved for you'
-        : 'See aeg on sulle ajutiselt reserveeritud',
+      timerText: t('_auto.components_booking_ConfirmStep.p107'),
       timerSub: en
         ? `Complete your booking within ${formatLockMmSs(remainingSec)}`
         : `Lõpeta broneering ${formatLockMmSs(remainingSec)} jooksul`,
-      formTitle: en ? 'Your details' : 'Sinu andmed',
-      firstName: en ? 'First name' : 'Eesnimi',
-      phone: en ? 'Phone' : 'Telefon',
-      email: en ? 'Email (optional)' : 'E-post (valikuline)',
-      notes: en ? 'Quick note (optional)' : 'Kiire märkus (valikuline)',
-      uploadLabel: en ? 'Add inspiration photo' : 'Lisa inspiratsioonipilt',
-      uploadHint: en ? 'Optional' : 'Valikuline',
-      trustChip1: en ? 'Free rescheduling' : 'Tasuta ümberbroneerimine',
-      trustChip2: en ? 'Instant confirmation' : 'Kohe kinnitatud aeg',
-      trustChip3: en ? 'Certified technician' : 'Sertifitseeritud tehnik',
-      hybridCart: en ? 'Booking + care cart' : 'Broneering + hoolduskorv',
-      deliveryTitle: en ? 'Delivery method' : 'Tarneviis',
-      pickup: en ? 'Pick up during visit' : 'Võtan visiidil kaasa',
-      home: en ? 'Deliver home' : 'Saada koju',
-      commitTitle: en ? 'Confirm your time' : 'Kinnita oma aeg',
-      payNowLabel: en ? 'Pay today' : 'Täna maksad',
+      formTitle: t('_auto.components_booking_ConfirmStep.p108'),
+      firstName: t('_auto.components_booking_ConfirmStep.p109'),
+      phone: t('_auto.components_booking_ConfirmStep.p110'),
+      email: t('_auto.components_booking_ConfirmStep.p111'),
+      notes: t('_auto.components_booking_ConfirmStep.p112'),
+      uploadLabel: t('_auto.components_booking_ConfirmStep.p113'),
+      uploadHint: t('_auto.components_booking_ConfirmStep.p114'),
+      trustChip1: t('_auto.components_booking_ConfirmStep.p115'),
+      trustChip2: t('_auto.components_booking_ConfirmStep.p116'),
+      trustChip3: t('_auto.components_booking_ConfirmStep.p117'),
+      hybridCart: t('_auto.components_booking_ConfirmStep.p118'),
+      deliveryTitle: t('_auto.components_booking_ConfirmStep.p119'),
+      pickup: t('_auto.components_booking_ConfirmStep.p120'),
+      home: t('_auto.components_booking_ConfirmStep.p121'),
+      commitTitle: t('_auto.components_booking_ConfirmStep.p122'),
+      payNowLabel: t('_auto.components_booking_ConfirmStep.p123'),
       remainingLabel: en
         ? `Remaining €${payLaterTotal} at salon after service`
         : `Ülejäänud €${payLaterTotal} salongis pärast teenust`,
       cta: en ? `Confirm time & pay €${payNowTotal}` : `Kinnita aeg ja maksa €${payNowTotal}`,
-      ctaLoading: en ? 'Securing your appointment…' : 'Broneerime sinu aega…',
-      ctaSub: en ? 'Secure payment via Stripe' : 'Turvaline makse läbi Stripe',
-      toastExpired: en ? 'This time is no longer reserved' : 'See aeg pole enam broneeritud',
+      ctaLoading: t('_auto.components_booking_ConfirmStep.p124'),
+      ctaSub: t('_auto.components_booking_ConfirmStep.p125'),
+      toastExpired: t('_auto.components_booking_ConfirmStep.p126'),
     }),
     [en, payNowTotal, payLaterTotal, remainingSec]
   );
@@ -212,7 +210,7 @@ export function ConfirmStep() {
         const code = data.code;
         console.error('Checkout API error:', response.status, code, serverMsg);
         if (code === 'slot_unavailable' || code === 'slot_conflict') {
-          setToast(en ? 'This time slot is no longer available.' : 'See aeg pole enam saadaval.');
+          setToast(t('_auto.components_booking_ConfirmStep.p127'));
           selectSlot(null); setStep(2); setIsLoading(false); return false;
         }
         if (code === 'pricing_mismatch') {
@@ -222,7 +220,7 @@ export function ConfirmStep() {
             return handleConfirm(payloadContact);
           }
           pricingRetryRef.current = false;
-          setToast(en ? 'Pricing has changed — please review.' : 'Hind on muutunud — palun vaata üle.');
+          setToast(t('_auto.components_booking_ConfirmStep.p128'));
           setIsLoading(false); return false;
         }
         throw new Error(serverMsg);
@@ -300,14 +298,14 @@ export function ConfirmStep() {
   const handleImageUpload = async (kind: 'inspiration' | 'current', files: FileList | null) => {
     if (!files || files.length === 0) return;
     const file = files[0];
-    if (file.size > 3 * 1024 * 1024) { setFormErrors((p) => ({ ...p, inspiration: en ? 'Max 3 MB.' : 'Max 3 MB.' })); return; }
+    if (file.size > 3 * 1024 * 1024) { setFormErrors((p) => ({ ...p, inspiration: t('_auto.components_booking_ConfirmStep.p129') })); return; }
     if (kind === 'inspiration') setInspirationUploading(true);
     else setCurrentNailsUploading(true);
     try {
       const dataUrl = await fileToDataUrl(file);
       setForm((p) => ({ ...p, ...(kind === 'inspiration' ? { inspirationImage: dataUrl } : { currentNailImage: dataUrl }) }));
       setFormErrors((p) => ({ ...p, inspiration: '' }));
-    } catch { setFormErrors((p) => ({ ...p, inspiration: en ? 'Upload failed.' : 'Laadimine ebaõnnestus.' })); }
+    } catch { setFormErrors((p) => ({ ...p, inspiration: t('_auto.components_booking_ConfirmStep.p130') })); }
     finally {
       if (kind === 'inspiration') {
         setInspirationUploading(false);
@@ -332,7 +330,10 @@ export function ConfirmStep() {
   const dateShort = new Date(selectedSlot.date).toLocaleDateString(en ? 'en-GB' : 'et-EE', { day: 'numeric', month: 'short' });
   const effectiveDurationForDisplay = typeof selectedVariant?.duration === 'number' ? selectedVariant.duration : selectedService.duration;
   const durationMin = totalDuration || effectiveDurationForDisplay || 0;
-  const effectiveServiceName = (selectedVariant?.name || selectedVariant?.nameEt) ?? selectedService.name;
+  const variantNameForDisplay = (selectedVariant?.name || selectedVariant?.nameEt || '').trim();
+  const effectiveServiceName = variantNameForDisplay
+    ? `${selectedService.name} (${variantNameForDisplay.toLocaleLowerCase(language === 'en' ? 'en' : 'et')})`
+    : selectedService.name;
 
   const handleSubmit = async () => {
     setTouched({ firstName: true, phone: true, email: true, notes: true, inspiration: true });
@@ -458,21 +459,21 @@ export function ConfirmStep() {
 
             <div className="mt-4 space-y-1.5 border-t border-[#f2eaed] pt-3 text-[13px]">
               <div className="flex justify-between">
-                <span className="text-[#7a6a75]">{en ? 'Service price' : 'Teenuse hind'}</span>
+                <span className="text-[#7a6a75]">{t('_auto.components_booking_ConfirmStep.p131')}</span>
                 <span className="font-semibold tabular-nums text-[#2f2530]">{`€${totalPrice}`}</span>
               </div>
               {productsTotalPrice > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[#7a6a75]">{en ? 'Products' : 'Tooted'}</span>
+                  <span className="text-[#7a6a75]">{t('_auto.components_booking_ConfirmStep.p132')}</span>
                   <span className="font-semibold tabular-nums text-[#2f2530]">{`€${productsTotalPrice}`}</span>
                 </div>
               )}
               <div className="flex justify-between rounded-lg bg-[#fff9fc] px-2.5 py-1.5">
-                <span className="font-semibold text-[#6a3b57]">{en ? 'Pay today' : 'Ette maksta täna'}</span>
+                <span className="font-semibold text-[#6a3b57]">{t('_auto.components_booking_ConfirmStep.p133')}</span>
                 <span className="font-bold tabular-nums text-[#9f456f]">{`€${payNowTotal}`}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8a7a85]">{en ? 'Remaining at salon' : 'Ülejäänud salongis'}</span>
+                <span className="text-[#8a7a85]">{t('_auto.components_booking_ConfirmStep.p134')}</span>
                 <span className="font-medium tabular-nums text-[#8a7a85]">{`€${payLaterTotal}`}</span>
               </div>
             </div>
@@ -487,14 +488,14 @@ export function ConfirmStep() {
 
             {selectedProducts.length > 0 && (
               <div className="mt-3 border-t border-[#f2eaed] pt-3">
-                <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#a898a8]">{en ? 'Products' : 'Tooted'}</p>
+                <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#a898a8]">{t('_auto.components_booking_ConfirmStep.p135')}</p>
                 {selectedProducts.map((p) => (
                   <div key={p.productId} className="py-1.5 text-[12px]">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-[#2f2530]">{p.name}{p.quantity > 1 ? ` ×${p.quantity}` : ''}</span>
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="font-semibold tabular-nums text-[#9f456f]">{`€${p.unitPrice * p.quantity}`}</span>
-                        <button type="button" onClick={() => removeProductFromBooking(p.productId)} className="text-[10px] font-medium text-[#b85c8a] underline underline-offset-2">{en ? 'Remove' : 'Eemalda'}</button>
+                        <button type="button" onClick={() => removeProductFromBooking(p.productId)} className="text-[10px] font-medium text-[#b85c8a] underline underline-offset-2">{t('_auto.components_booking_ConfirmStep.p136')}</button>
                       </div>
                     </div>
                     <div className="mt-1.5 flex items-center gap-1.5">
@@ -530,10 +531,10 @@ export function ConfirmStep() {
             {suggestedCare && (
               <div className="mt-3 rounded-[12px] border border-[#efe3e9] bg-[#fffafd] p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9d7a90]">
-                  {en ? 'Clients often add this' : 'Kliendid lisavad sageli'}
+                  {t('_auto.components_booking_ConfirmStep.p137')}
                 </p>
                 <p className="mt-0.5 text-[11px] text-[#8a7a85]">
-                  {en ? 'Supports longer-lasting appointment results.' : 'Aitab tulemust kauem püsivana hoida.'}
+                  {t('_auto.components_booking_ConfirmStep.p138')}
                 </p>
                 <div className="mt-2 flex items-center gap-3">
                   <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#f0e8ec] bg-white">
@@ -560,7 +561,7 @@ export function ConfirmStep() {
                     }
                     className="rounded-full border border-[#dfcdd7] px-3 py-1 text-[11px] font-semibold text-[#6a3b57] hover:bg-white"
                   >
-                    {en ? 'Add' : 'Lisa'}
+                    {t('_auto.components_booking_ConfirmStep.p139')}
                   </button>
                 </div>
               </div>
@@ -583,7 +584,7 @@ export function ConfirmStep() {
                   onChange={(e) => { setForm((p) => ({ ...p, firstName: e.target.value })); setFormErrors((p) => ({ ...p, firstName: '' })); }}
                   onBlur={() => setTouched((p) => ({ ...p, firstName: true }))}
                   className={`mt-1 ${inputCls(Boolean(touched.firstName && !firstNameValid))}`}
-                  placeholder={en ? 'First name' : 'Eesnimi'}
+                  placeholder={t('_auto.components_booking_ConfirmStep.p140')}
                   aria-invalid={Boolean(formErrors.firstName)}
                 />
                 {touched.firstName && formErrors.firstName && <p className="mt-0.5 text-[10px] text-red-500">{formErrors.firstName}</p>}
@@ -617,7 +618,7 @@ export function ConfirmStep() {
                 onChange={(e) => { setForm((p) => ({ ...p, email: e.target.value })); setFormErrors((p) => ({ ...p, email: '' })); }}
                 onBlur={() => setTouched((p) => ({ ...p, email: true }))}
                 className={`mt-1 ${inputCls(Boolean(touched.email && emailInput && !emailValid))}`}
-                placeholder={en ? 'name@email.com' : 'nimi@email.com'}
+                placeholder={t('_auto.components_booking_ConfirmStep.p141')}
                 aria-invalid={Boolean(formErrors.email)}
               />
               {touched.email && formErrors.email && <p className="mt-0.5 text-[10px] text-red-500">{formErrors.email}</p>}
@@ -630,7 +631,7 @@ export function ConfirmStep() {
                 name="notes" value={form.notes}
                 onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                 className="mt-1 min-h-[52px] w-full resize-none rounded-[14px] border border-[#e8e8e8] bg-white px-4 py-3 text-[14px] shadow-[inset_0_1px_3px_rgba(0,0,0,0.04)] outline-none transition-all focus:border-[#c24d86]/40 focus:shadow-[0_0_0_3px_rgba(159,69,111,0.08)]"
-                placeholder={en ? 'E.g. nail shape preference...' : 'Nt. küünekuju eelistus...'}
+                placeholder={t('_auto.components_booking_ConfirmStep.p142')}
               />
             </label>
 
@@ -638,7 +639,7 @@ export function ConfirmStep() {
               {/* Inspiration */}
               <div className="rounded-[14px] border border-[#efeaed] bg-[#fcfbfc] p-3">
                 <p className="mb-1 text-[11px] font-medium text-[#8a7a85]">{copy.uploadLabel} ({copy.uploadHint})</p>
-                <p className="mb-2 text-[11px] text-[#a898a8]">{en ? 'Inspiration for desired style' : 'Inspiratsioon soovitud stiilist'}</p>
+                <p className="mb-2 text-[11px] text-[#a898a8]">{t('_auto.components_booking_ConfirmStep.p143')}</p>
                 <input ref={inspirationInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleImageUpload('inspiration', e.target.files)} />
                 {form.inspirationImage ? (
                   <div className="flex items-center gap-3">
@@ -646,9 +647,9 @@ export function ConfirmStep() {
                       <Image src={form.inspirationImage} alt="" fill className="object-cover" unoptimized />
                     </div>
                     <div>
-                      <button type="button" onClick={() => inspirationInputRef.current?.click()} className="text-[11px] font-medium text-[#9f456f] underline underline-offset-2">{en ? 'Replace' : 'Asenda'}</button>
+                      <button type="button" onClick={() => inspirationInputRef.current?.click()} className="text-[11px] font-medium text-[#9f456f] underline underline-offset-2">{t('_auto.components_booking_ConfirmStep.p144')}</button>
                       <span className="mx-1.5 text-[#d0c4ca]">·</span>
-                      <button type="button" onClick={() => setForm((p) => ({ ...p, inspirationImage: '' }))} className="text-[11px] font-medium text-[#b85c6a] underline underline-offset-2">{en ? 'Remove' : 'Eemalda'}</button>
+                      <button type="button" onClick={() => setForm((p) => ({ ...p, inspirationImage: '' }))} className="text-[11px] font-medium text-[#b85c6a] underline underline-offset-2">{t('_auto.components_booking_ConfirmStep.p145')}</button>
                     </div>
                   </div>
                 ) : (
@@ -657,15 +658,15 @@ export function ConfirmStep() {
                     className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[12px] border border-dashed border-[#e0e0e0] bg-white text-[12px] font-medium text-[#888] transition hover:border-[#c8a8bc] hover:text-[#9f456f]"
                   >
                     <Camera className="h-4 w-4" strokeWidth={1.5} />
-                    {inspirationUploading ? (en ? 'Uploading…' : 'Laen…') : copy.uploadLabel}
+                    {inspirationUploading ? (t('_auto.components_booking_ConfirmStep.p146')) : copy.uploadLabel}
                   </button>
                 )}
               </div>
 
               {/* Current nails photo */}
               <div className="rounded-[14px] border border-[#efeaed] bg-[#fcfbfc] p-3">
-                <p className="mb-1 text-[11px] font-medium text-[#8a7a85]">{en ? 'Add photo of your current nails (optional)' : 'Lisa foto oma küüntest (valikuline)'}</p>
-                <p className="mb-2 text-[11px] text-[#a898a8]">{en ? 'Helps your technician prepare better' : 'Aitab tehnikul paremini ette valmistuda'}</p>
+                <p className="mb-1 text-[11px] font-medium text-[#8a7a85]">{t('_auto.components_booking_ConfirmStep.p147')}</p>
+                <p className="mb-2 text-[11px] text-[#a898a8]">{t('_auto.components_booking_ConfirmStep.p148')}</p>
                 <input ref={currentNailsInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleImageUpload('current', e.target.files)} />
                 {form.currentNailImage ? (
                   <div className="flex items-center gap-3">
@@ -673,9 +674,9 @@ export function ConfirmStep() {
                       <Image src={form.currentNailImage} alt="" fill className="object-cover" unoptimized />
                     </div>
                     <div>
-                      <button type="button" onClick={() => currentNailsInputRef.current?.click()} className="text-[11px] font-medium text-[#9f456f] underline underline-offset-2">{en ? 'Replace' : 'Asenda'}</button>
+                      <button type="button" onClick={() => currentNailsInputRef.current?.click()} className="text-[11px] font-medium text-[#9f456f] underline underline-offset-2">{t('_auto.components_booking_ConfirmStep.p149')}</button>
                       <span className="mx-1.5 text-[#d0c4ca]">·</span>
-                      <button type="button" onClick={() => setForm((p) => ({ ...p, currentNailImage: '' }))} className="text-[11px] font-medium text-[#b85c6a] underline underline-offset-2">{en ? 'Remove' : 'Eemalda'}</button>
+                      <button type="button" onClick={() => setForm((p) => ({ ...p, currentNailImage: '' }))} className="text-[11px] font-medium text-[#b85c6a] underline underline-offset-2">{t('_auto.components_booking_ConfirmStep.p150')}</button>
                     </div>
                   </div>
                 ) : (
@@ -684,7 +685,7 @@ export function ConfirmStep() {
                     className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[12px] border border-dashed border-[#e0e0e0] bg-white text-[12px] font-medium text-[#888] transition hover:border-[#c8a8bc] hover:text-[#9f456f]"
                   >
                     <Camera className="h-4 w-4" strokeWidth={1.5} />
-                    {currentNailsUploading ? (en ? 'Uploading…' : 'Laen…') : (en ? 'Add photo of current nails' : 'Lisa foto oma küüntest')}
+                    {currentNailsUploading ? (t('_auto.components_booking_ConfirmStep.p151')) : (t('_auto.components_booking_ConfirmStep.p152'))}
                   </button>
                 )}
               </div>
@@ -704,14 +705,10 @@ export function ConfirmStep() {
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[50] h-32 bg-[linear-gradient(180deg,transparent_0%,rgba(248,247,246,0.95)_55%,#f8f7f6_100%)] lg:hidden" />
       <div className="fixed inset-x-0 bottom-0 z-[55] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1 lg:hidden">
         <div className="mx-auto w-full max-w-md rounded-[16px] border border-[#efefef] bg-white p-3 shadow-[0_12px_36px_-16px_rgba(0,0,0,0.10)]">
-          <div className="mb-1.5 flex items-center justify-between gap-3">
+          <div className="mb-1.5">
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold text-[#2f2530]">{effectiveServiceName}</p>
               <p className="truncate text-[11px] text-[#8a7a85]">{dateShort} · {selectedSlot.time}</p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[9px] font-semibold uppercase tracking-wider text-[#a898a8]">{copy.payNowLabel}</p>
-              <p className="text-[18px] font-bold tabular-nums leading-none text-[#9f456f]">{`€${payNowTotal}`}</p>
             </div>
           </div>
           <PaymentCard mobile />

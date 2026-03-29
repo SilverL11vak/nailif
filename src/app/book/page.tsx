@@ -183,6 +183,8 @@ function BookingContent() {
   ];
 
   const prefetchSlotsNav = () => { const now = new Date(); const to = new Date(now); to.setDate(to.getDate() + 40); void fetch(`/api/slots?from=${now.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}`).catch(() => null); };
+  const selectedServiceHasVariants = (selectedService?.variants ?? []).some((variant) => variant.isActive !== false);
+  const canProceedFromServiceStep = Boolean(selectedService) && (!selectedServiceHasVariants || Boolean(selectedVariant));
 
   const handleFunnelStepClick = (n: 1 | 2 | 3) => {
     if (n === 1 && currentStep > 1) setStep(1);
@@ -193,14 +195,25 @@ function BookingContent() {
   const handleBack = () => { if (currentStep > 1) prevStep(); else router.push('/'); };
 
   const handleMobileStickyCta = () => {
-    if (currentStep === 1 && selectedService) { prefetchSlotsNav(); nextStep(); }
+    if (currentStep === 1 && canProceedFromServiceStep) { prefetchSlotsNav(); nextStep(); }
   };
 
   const effectivePrice = typeof selectedVariant?.price === 'number' ? selectedVariant.price : selectedService?.price ?? 0;
   const effectiveDuration = typeof selectedVariant?.duration === 'number' ? selectedVariant.duration : selectedService?.duration ?? 0;
+  const variantNameForDisplay = (selectedVariant?.name || selectedVariant?.nameEt || '').trim();
   const effectiveServiceName = selectedService
-    ? (selectedVariant?.name || selectedVariant?.nameEt || selectedService.name)
+    ? variantNameForDisplay
+      ? `${selectedService.name} (${variantNameForDisplay.toLocaleLowerCase(en ? 'en' : 'et')})`
+      : selectedService.name
     : '';
+  const shellMaxWidthClass =
+    currentStep === 1
+      ? 'max-w-[1080px]'
+      : currentStep === 2
+        ? 'max-w-[960px]'
+        : currentStep === 3
+          ? 'max-w-[980px]'
+          : 'max-w-[1040px]';
 
   const renderStep = () => {
     switch (currentStep) {
@@ -224,7 +237,7 @@ function BookingContent() {
     >
       {/* ─── Header ─── */}
       <header className="sticky top-0 z-40 bg-[#f8f7f6]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[720px] items-center justify-between gap-3 px-5 py-3">
+        <div className={`mx-auto flex ${shellMaxWidthClass} items-center justify-between gap-3 px-5 py-3`}>
           <button type="button" onClick={handleBack} className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium text-[#555] transition hover:bg-white active:scale-[0.97]">
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
             {t('booking.back')}
@@ -237,15 +250,7 @@ function BookingContent() {
       {/* ─── Main ─── */}
       <main
         ref={serviceRef}
-        className={`mx-auto px-4 pt-4 sm:px-5 md:pt-8 ${
-          currentStep === 1
-            ? 'max-w-[1080px]'
-            : currentStep === 2
-              ? 'max-w-[960px]'
-              : currentStep >= 4
-                ? 'max-w-[1040px]'
-                : 'max-w-[720px]'
-        }`}
+        className={`mx-auto ${shellMaxWidthClass} px-4 pt-4 sm:px-5 md:pt-8`}
       >
         <section
           className={`overflow-hidden rounded-[24px] border border-[#efefef] bg-white shadow-[0_8px_40px_-16px_rgba(0,0,0,0.07)] transition-shadow duration-200 ${
@@ -311,39 +316,39 @@ function BookingContent() {
                 <aside className="sticky top-[92px] hidden self-start lg:block">
                   <div className="rounded-[18px] border border-[#efefef] bg-[#fcfbfc] p-5">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#a898a8]">
-                      {en ? 'Booking snapshot' : 'Minu valik'}
+                      {t('_auto.app_book_page.p247')}
                     </p>
                     <p className="mt-1 text-[11px] text-[#9a8a94]">
-                      {en ? 'Step 1 of 3' : 'Samm 1 / 3'}
+                      {t('_auto.app_book_page.p248')}
                     </p>
                     <div className="mt-3 space-y-3">
                       <div>
-                        <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{en ? 'Service' : 'Teenus'}</p>
+                        <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{t('_auto.app_book_page.p249')}</p>
                         <p className="mt-1 text-[15px] font-semibold text-[#1a1a1a]">
-                          {effectiveServiceName || (en ? 'Choose service' : 'Vali teenus')}
+                          {effectiveServiceName || (t('_auto.app_book_page.p250'))}
                         </p>
                         {selectedService && selectedVariant ? (
                           <p className="mt-1 text-[12px] text-[#7f727a]">
-                            {selectedVariant.duration} {en ? 'min' : 'min'} · {`€${selectedVariant.price}`}
+                            {selectedVariant.duration} {t('_auto.app_book_page.p251')} · {`€${selectedVariant.price}`}
                           </p>
                         ) : selectedService ? (
                           <p className="mt-1 text-[12px] text-[#7f727a]">
-                            {selectedService.duration} {en ? 'min' : 'min'}
+                            {selectedService.duration} {t('_auto.app_book_page.p252')}
                           </p>
                         ) : null}
                       </div>
                       <div className="h-px bg-[#eee8ec]" />
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{en ? 'Price' : 'Hind'}</p>
+                          <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{t('_auto.app_book_page.p253')}</p>
                           <p className="mt-1 text-[22px] font-bold tabular-nums text-[#9f456f]">
                             {selectedService ? `€${effectivePrice}` : '—'}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{en ? 'Time' : 'Aeg'}</p>
+                          <p className="text-[11px] uppercase tracking-wide text-[#9a8a94]">{t('_auto.app_book_page.p254')}</p>
                           <p className="mt-1 text-[13px] font-medium text-[#5f555b]">
-                            {selectedSlot ? `${selectedSlot.date} · ${selectedSlot.time}` : (en ? 'Choose time' : 'Vali aeg')}
+                            {selectedSlot ? `${selectedSlot.date} · ${selectedSlot.time}` : (t('_auto.app_book_page.p255'))}
                           </p>
                         </div>
                       </div>
@@ -353,11 +358,11 @@ function BookingContent() {
                             ? (en
                                 ? `Selected duration: ${effectiveDuration} min`
                                 : `Valitud kestus: ${effectiveDuration} min`)
-                            : (en ? 'Choose a service to continue' : 'Jätkamiseks vali teenus')}
+                            : (t('_auto.app_book_page.p256'))}
                         </p>
                       </div>
                       <p className="text-[11px] text-[#9a8a94]">
-                        {en ? 'You can change this later' : 'Seda saab hiljem muuta'}
+                        {t('_auto.app_book_page.p257')}
                       </p>
                     </div>
                   </div>
@@ -371,7 +376,7 @@ function BookingContent() {
       </main>
 
       {/* ─── Mobile sticky CTA — Step 1 (only when service selected) ─── */}
-      {currentStep === 1 && selectedService && (
+      {currentStep === 1 && canProceedFromServiceStep && selectedService && (
         <>
           <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] h-24 bg-[linear-gradient(180deg,transparent_0%,rgba(248,247,246,0.95)_50%,#f8f7f6_100%)] lg:hidden" aria-hidden />
           <div className="fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 lg:hidden" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
@@ -385,7 +390,7 @@ function BookingContent() {
                 onClick={handleMobileStickyCta}
                 className="shrink-0 rounded-xl bg-[linear-gradient(135deg,#8f3d62_0%,#9f456f_55%,#7f3559_100%)] px-6 py-3 text-[13px] font-semibold text-white shadow-[0_8px_24px_-10px_rgba(159,69,111,0.4)] transition-transform active:scale-[0.97]"
               >
-                {en ? 'Continue' : 'Jätka'}
+                {t('_auto.app_book_page.p258')}
               </button>
             </div>
           </div>

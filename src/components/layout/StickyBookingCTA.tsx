@@ -140,7 +140,7 @@ export function StickyBookingCTA({ hideOnPaths = [] }: StickyBookingCTAProps) {
         <div className="flex max-w-md flex-col items-center gap-1">
           <button
             onClick={handleClick}
-            className="cta-sticky-desktop group inline-flex min-w-[280px] max-w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#b03d6f_0%,#c24d86_45%,#a93d71_100%)] px-6 py-3 font-semibold text-[0.95rem] text-white shadow-[0_12px_32px_-14px_rgba(139,51,100,0.45),0_0_0_1px_rgba(255,255,255,0.15)_inset] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_-12px_rgba(139,51,100,0.55)] active:scale-[0.99]"
+            className="btn-primary btn-primary-lg cta-sticky-desktop group min-w-[280px] max-w-full"
           >
             <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

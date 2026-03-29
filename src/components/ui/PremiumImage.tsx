@@ -8,6 +8,7 @@ interface PremiumImageProps extends Omit<ImageProps, 'alt'> {
   revealEnabled?: boolean;
   skeletonClassName?: string;
   fallbackSrc?: string;
+  placeholderMode?: 'blur' | 'empty';
 }
 
 function normalizeSrcValue(value: PremiumImageProps['src']): PremiumImageProps['src'] {
@@ -25,6 +26,7 @@ export function PremiumImage({
   alt,
   className,
   revealEnabled = true,
+  placeholderMode = 'blur',
   skeletonClassName = '',
   fallbackSrc,
   onLoad,
@@ -85,8 +87,12 @@ export function PremiumImage({
             setLoaded(true);
             onLoad?.(event);
           }}
-          placeholder="blur"
-          blurDataURL="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10'%3E%3Crect width='16' height='10' fill='%23f6ece8'/%3E%3C/svg%3E"
+          placeholder={placeholderMode}
+          blurDataURL={
+            placeholderMode === 'blur'
+              ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10'%3E%3Crect width='16' height='10' fill='%23f6ece8'/%3E%3C/svg%3E"
+              : undefined
+          }
           className={`${className ?? ''} transition-all duration-500 ease-out ${
             hasError
               ? 'opacity-100'

@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     await ensureBookingContentTables();
     const payload = (await request.json()) as Partial<{
       id: string;
-      serviceId: string;
+      serviceId: string | null;
       nameEt: string;
       nameEn: string;
       descriptionEt: string;
@@ -74,16 +74,13 @@ export async function POST(request: Request) {
     }>;
 
     const nameEt = payload.nameEt?.trim();
-    const serviceId = payload.serviceId?.trim();
+    const serviceId = payload.serviceId?.trim() || null;
     if (!nameEt) {
       return NextResponse.json({ error: 'Add-on name is required' }, { status: 400 });
     }
-    if (!serviceId) {
-      return NextResponse.json({ error: 'Service id is required' }, { status: 400 });
-    }
 
     await upsertBookingAddOn({
-      id: payload.id?.trim() || `${serviceId}-${slugify(nameEt)}`,
+      id: payload.id?.trim() || `${serviceId ?? 'global'}-${slugify(nameEt)}`,
       serviceId,
       nameEt,
       nameEn: (payload.nameEn ?? '').trim(),

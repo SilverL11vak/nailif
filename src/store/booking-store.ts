@@ -193,6 +193,7 @@ function compactServiceForPersist(service: Service | null): Service | null {
     duration: service.duration,
     price: service.price,
     category: service.category,
+    allowAddOns: service.allowAddOns,
     isPopular: service.isPopular,
   };
 }
