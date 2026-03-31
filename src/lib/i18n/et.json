@@ -577,7 +577,8 @@
   "common": {
     "minutes": "min",
     "from": "alates",
-    "book": "Broneeri"
+    "book": "Broneeri",
+    "close": "Sulge"
   },
   "_auto": {
     "page": {
@@ -985,10 +986,22 @@
   },
   "shopPage": {
     "eyebrow": "Nailify pood",
-    "title": "Premium hooldustooted",
-    "subtitle": "Hoolikalt valitud järelhooldus salongitulemuse hoidmiseks kodus.",
+    "title": "Premium iluhooldustooted",
+    "subtitle": "Sirvi, vali ja osta tooted iseseisvalt, ilma broneeringuta.",
+    "trustLine": "Salongis testitud valik. Kiire tarne. Turvaline Stripe makse.",
+    "categoryAll": "Kõik kategooriad",
+    "sortLabel": "Sorteeri",
+    "mobileFilters": "Filtrid",
     "loading": "Laen tooteid...",
-    "addToCart": "Lisa hooldusesse",
+    "emptyProducts": "Selles vaates tooteid ei leitud.",
+    "addToCart": "Lisa ostukorvi",
+    "addToBooking": "Lisa broneeringule",
+    "viewDetails": "Vaata toodet",
+    "benefitLabel": "Salongitulemus kodus",
+    "bestSeller": "Lemmik",
+    "cartButton": "Ostukorv",
+    "cartSummary": "Kokku",
+    "cartTitle": "Sinu ostukorv",
     "cart": "Ostukorv",
     "yourItems": "Sinu tooted",
     "empty": "Ostukorv on tühi.",
@@ -996,11 +1009,31 @@
     "total": "Kokku",
     "checkout": "Maksa Stripega",
     "redirecting": "Suunan maksmisse...",
-    "checkoutError": "Maksmine ebaõnnestus. Kontrolli Stripe seadeid ja proovi uuesti.",
+    "checkoutError": "Makse ebaõnnestus. Proovi uuesti.",
     "fallbackBrand": "Nailify",
-    "viewDetails": "Vaata lähemalt",
     "favorites": "Lemmikud",
-    "backToHome": "Tagasi avalehele"
+    "backToHome": "Tagasi avalehele",
+    "sort": {
+      "featured": "Soovitatud",
+      "priceAsc": "Hind: madalam enne",
+      "priceDesc": "Hind: kõrgem enne",
+      "nameAsc": "Nimi A–Z"
+    },
+    "merch": {
+      "favorites": {
+        "title": "Salongi lemmikud",
+        "description": "Enim ostetud tooted püsivaks tulemuseks."
+      },
+      "aftercare": {
+        "title": "Aftercare essentials",
+        "description": "Igapäevane hooldus, mis hoiab tulemuse kauem kaunina."
+      },
+      "gift": {
+        "title": "Kingiideed",
+        "description": "Elegantsed valikud kingituseks või enesehellituseks."
+      }
+    },
+    "emailPlaceholder": "client@email.com"
   },
   "shopDetail": {
     "back": "Tagasi toodete juurde",
@@ -1015,13 +1048,40 @@
     "benefits": "Peamised kasud",
     "pairing": "Sobib salongihooldusega",
     "similar": "Sarnased tooted",
-    "viewDetails": "Vaata detaile",
+    "viewDetails": "Vaata toodet",
     "notFound": "Toodet ei leitud",
     "notFoundHint": "See toode võib hetkel olla ajutiselt mitte saadaval.",
     "backToShop": "Tagasi toodete juurde",
     "categoryLabel": "Kategooria:",
     "availabilityLabel": "Saadavus:",
     "inStock": "laos",
-    "productCodeLabel": "Tootekood:"
-  }
+    "productCodeLabel": "Tootekood:",
+    "loading": "Laen toodet...",
+    "breadcrumbShop": "Pood",
+    "addToCartPrimary": "Lisa ostukorvi",
+    "addToBookingSecondary": "Lisa broneeringule",
+    "quantity": "Kogus",
+    "categoryFallback": "Järelhooldus",
+    "inStockLabel": "Saadaval",
+    "outOfStockLabel": "Ajutiselt otsas",
+    "relatedTitle": "Sarnased tooted",
+    "detailsHeading": "Toote kirjeldus",
+    "usageHeading": "Kasutusjuhis",
+    "pairingHeading": "Sobitamine hooldusega",
+    "detailsBody": "Professionaalse kvaliteediga koostis, mis toetab püsivamat tulemust.",
+    "usageBody": "Kanna puhtale küünele vastavalt vajadusele. Parima tulemuse jaoks kasuta regulaarselt.",
+    "pairingBody": "Sobita see toode oma salongihooldusega, et tulemus püsiks kauem värske ja elegantne.",
+    "trust": {
+      "salonTested": "Salongis testitud",
+      "longerResults": "Pikem tulemus",
+      "aftercareGuidance": "Järelhoolduse juhis"
+    },
+    "tabs": {
+      "details": "Detailid",
+      "usage": "Kasutamine",
+      "pairing": "Sobivus"
+    }
+  },
+  "add_to_cart": "Lisa ostukorvi",
+  "add_to_booking": "Lisa broneeringule"
 }

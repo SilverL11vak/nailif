@@ -577,7 +577,8 @@
   "common": {
     "minutes": "min",
     "from": "from",
-    "book": "Book"
+    "book": "Book",
+    "close": "Close"
   },
   "_auto": {
     "page": {
@@ -984,11 +985,23 @@
     "removeFavoriteAria": "Remove from favourites"
   },
   "shopPage": {
-    "eyebrow": "Nailify Shop",
-    "title": "Premium care products",
-    "subtitle": "Curated aftercare for salon-level results at home.",
+    "eyebrow": "Nailify shop",
+    "title": "Premium beauty aftercare",
+    "subtitle": "Browse, add to cart, and purchase instantly without booking.",
+    "trustLine": "Salon-tested selection. Fast delivery. Secure Stripe checkout.",
+    "categoryAll": "All categories",
+    "sortLabel": "Sort by",
+    "mobileFilters": "Filters",
     "loading": "Loading products...",
-    "addToCart": "Add to care",
+    "emptyProducts": "No products found for this view.",
+    "addToCart": "Add to cart",
+    "addToBooking": "Add to booking",
+    "viewDetails": "View product",
+    "benefitLabel": "Salon finish at home",
+    "bestSeller": "Best seller",
+    "cartButton": "Cart",
+    "cartSummary": "Total",
+    "cartTitle": "Your cart",
     "cart": "Cart",
     "yourItems": "Your items",
     "empty": "Your cart is empty.",
@@ -996,11 +1009,31 @@
     "total": "Total",
     "checkout": "Checkout with Stripe",
     "redirecting": "Redirecting...",
-    "checkoutError": "Checkout failed. Please configure Stripe keys and try again.",
+    "checkoutError": "Checkout failed. Please try again.",
     "fallbackBrand": "Nailify",
-    "viewDetails": "See details",
     "favorites": "Favourites",
-    "backToHome": "Back to home"
+    "backToHome": "Back to home",
+    "sort": {
+      "featured": "Featured",
+      "priceAsc": "Price: low to high",
+      "priceDesc": "Price: high to low",
+      "nameAsc": "Name A–Z"
+    },
+    "merch": {
+      "favorites": {
+        "title": "Salon favourites",
+        "description": "Most-loved products for long-lasting results."
+      },
+      "aftercare": {
+        "title": "Aftercare essentials",
+        "description": "Daily care that helps your manicure stay polished longer."
+      },
+      "gift": {
+        "title": "Gift ideas",
+        "description": "Elegant picks for gifting or self-care moments."
+      }
+    },
+    "emailPlaceholder": "client@email.com"
   },
   "shopDetail": {
     "back": "Back to products",
@@ -1015,13 +1048,40 @@
     "benefits": "Benefits",
     "pairing": "Salon pairing",
     "similar": "Similar products",
-    "viewDetails": "View details",
+    "viewDetails": "View product",
     "notFound": "Product not found",
     "notFoundHint": "This product may be unavailable right now.",
     "backToShop": "Back to products",
     "categoryLabel": "Category:",
     "availabilityLabel": "Availability:",
     "inStock": "in stock",
-    "productCodeLabel": "Product code:"
-  }
+    "productCodeLabel": "Product code:",
+    "loading": "Loading product...",
+    "breadcrumbShop": "Shop",
+    "addToCartPrimary": "Add to cart",
+    "addToBookingSecondary": "Add to booking",
+    "quantity": "Quantity",
+    "categoryFallback": "Aftercare",
+    "inStockLabel": "In stock",
+    "outOfStockLabel": "Temporarily unavailable",
+    "relatedTitle": "Related products",
+    "detailsHeading": "Product overview",
+    "usageHeading": "How to use",
+    "pairingHeading": "Salon pairing",
+    "detailsBody": "Professional-quality formula designed to support longer-lasting beauty results.",
+    "usageBody": "Apply to clean nails as needed. For best results, use consistently as part of your routine.",
+    "pairingBody": "Pair this product with your salon service to keep the result fresh, glossy, and refined for longer.",
+    "trust": {
+      "salonTested": "Salon-tested",
+      "longerResults": "Longer-lasting results",
+      "aftercareGuidance": "Aftercare guidance"
+    },
+    "tabs": {
+      "details": "Details",
+      "usage": "Usage",
+      "pairing": "Pairing"
+    }
+  },
+  "add_to_cart": "Add to cart",
+  "add_to_booking": "Add to booking"
 }

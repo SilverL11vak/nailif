@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureHomepageContentTables, listAdminHomepageSections, upsertHomepageSection, deleteHomepageSection } from '@/lib/homepage-content';
+import { getAdminFromCookies } from '@/lib/admin-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,12 +8,15 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const isAdmin = searchParams.get('admin') === '1';
-    
-    // Get locale from header or default
-    const acceptLanguage = request.headers.get('accept-language');
-    const locale = acceptLanguage?.includes('en') ? 'en' : 'et';
-    
+
+    // Locale is route/query-driven, never inferred from mixed browser header.
+    const locale = searchParams.get('lang') === 'en' ? 'en' : 'et';
+
     if (isAdmin) {
+      const adminUser = await getAdminFromCookies();
+      if (!adminUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
       // Admin: return all sections with both languages
       await ensureHomepageContentTables();
       const sections = await listAdminHomepageSections();
@@ -39,6 +43,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const adminUser = await getAdminFromCookies();
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await ensureHomepageContentTables();
     
     const body = await request.json();
@@ -68,6 +77,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const adminUser = await getAdminFromCookies();
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     

@@ -290,12 +290,22 @@ export async function ensureTeamTable() {
         short_intro_et = COALESCE(NULLIF(short_intro_et, ''), short_intro),
         short_intro_en = COALESCE(NULLIF(short_intro_en, ''), short_intro),
         signature_tags_et = CASE
-          WHEN jsonb_typeof(signature_tags_et) = 'array' AND jsonb_array_length(signature_tags_et) > 0 THEN signature_tags_et
+          WHEN jsonb_typeof(signature_tags_et) = 'array' THEN
+            CASE
+              WHEN jsonb_array_length(signature_tags_et) > 0 THEN signature_tags_et
+              WHEN jsonb_typeof(signature_tags) = 'array' THEN signature_tags
+              ELSE '[]'::jsonb
+            END
           WHEN jsonb_typeof(signature_tags) = 'array' THEN signature_tags
           ELSE '[]'::jsonb
         END,
         signature_tags_en = CASE
-          WHEN jsonb_typeof(signature_tags_en) = 'array' AND jsonb_array_length(signature_tags_en) > 0 THEN signature_tags_en
+          WHEN jsonb_typeof(signature_tags_en) = 'array' THEN
+            CASE
+              WHEN jsonb_array_length(signature_tags_en) > 0 THEN signature_tags_en
+              WHEN jsonb_typeof(signature_tags) = 'array' THEN signature_tags
+              ELSE '[]'::jsonb
+            END
           WHEN jsonb_typeof(signature_tags) = 'array' THEN signature_tags
           ELSE '[]'::jsonb
         END

@@ -10,6 +10,7 @@ import {
   Gem,
   Image as ImageIcon,
   LayoutDashboard,
+  FileText,
   Menu,
   Package,
   UserSquare2,
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/admin/products', label: 'Tooted', icon: Package },
   { href: '/admin/customers', label: 'Kliendid', icon: Users },
   { href: '/admin/gallery', label: 'Galerii', icon: ImageIcon },
+  { href: '/admin/homepage-content', label: 'Avalehe tekstid', icon: FileText },
   { href: '/admin/team', label: 'Tiim', icon: UserSquare2 },
   { href: '/admin/analytics', label: 'Analüütika', icon: BarChart3 },
   { href: '/admin/account', label: 'Seaded', icon: UserSquare2 },
@@ -44,6 +46,7 @@ const titleMap: Record<string, string> = {
   '/admin/products': 'Tooted',
   '/admin/customers': 'Kliendid',
   '/admin/gallery': 'Galerii',
+  '/admin/homepage-content': 'Avalehe tekstid',
   '/admin/team': 'Tiim',
   '/admin/analytics': 'Analüütika',
   '/admin/account': 'Seaded',
@@ -102,6 +105,9 @@ export function AdminShell({ children }: AdminShellProps) {
         </nav>
 
         <div className="admin-app-sidebar-foot">
+          <Link href="/admin/homepage-content" className="admin-app-link-chip">
+            Avalehe tekstid
+          </Link>
           <Link href="/admin/booking" className="admin-app-link-chip">
             Broneerimise tekstid
           </Link>

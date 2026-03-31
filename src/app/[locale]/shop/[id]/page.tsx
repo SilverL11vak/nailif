@@ -25,4 +25,3 @@ export async function generateMetadata({
 }
 
 export default ProductDetailPage;
-

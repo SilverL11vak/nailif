@@ -88,7 +88,7 @@ function money(n: number) {
 
 function dateLabel(isoDate: string, time: string) {
   const dt = new Date(`${isoDate}T${time}:00`);
-  return dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) + ` · ${time.slice(0, 5)}`;
+  return dt.toLocaleDateString('et-EE', { weekday: 'short', day: 'numeric', month: 'short' }) + ` · ${time.slice(0, 5)}`;
 }
 
 export default function AdminCustomerDetailPage() {
@@ -112,7 +112,7 @@ export default function AdminCustomerDetailPage() {
         const res = await fetch(`/api/admin/customers/${encodeURIComponent(id)}`, { cache: 'no-store' });
         if (!res.ok) {
           const err = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(err.error ?? 'Failed to load customer');
+          throw new Error(err.error ?? 'Kliendi laadimine ebaõnnestus');
         }
         const payload = (await res.json()) as CustomerDetailPayload;
         if (!cancelled) {
@@ -120,7 +120,7 @@ export default function AdminCustomerDetailPage() {
           setNotesDraft(payload.customer.notes ?? '');
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load customer');
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Kliendi laadimine ebaõnnestus');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -145,10 +145,10 @@ export default function AdminCustomerDetailPage() {
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(err.error ?? 'Failed to save notes');
+        throw new Error(err.error ?? 'Märkme salvestamine ebaõnnestus');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save notes');
+      setError(e instanceof Error ? e.message : 'Märkme salvestamine ebaõnnestus');
     } finally {
       setSavingNotes(false);
     }
@@ -159,11 +159,11 @@ export default function AdminCustomerDetailPage() {
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <AdminPageHeader
           overline="CRM"
-          title="Customer profile"
-          subtitle="Bookings + orders combined into one operational view."
+          title="Kliendi profiil"
+          subtitle="Broneeringud ja tellimused ühes vaates."
           backHref="/admin/customers"
-          backLabel="Customers"
-          secondaryLinks={[{ label: 'Bookings', href: '/admin/bookings' }, { label: 'Orders', href: '/admin/orders' }]}
+          backLabel="Kliendid"
+          secondaryLinks={[{ label: 'Broneeringud', href: '/admin/bookings' }, { label: 'Tellimused', href: '/admin/orders' }]}
         />
 
         {error && (
@@ -172,15 +172,15 @@ export default function AdminCustomerDetailPage() {
 
         {loading || !data ? (
           <div className="rounded-2xl border border-[#e5e7eb] bg-white p-10 text-center text-sm text-slate-500">
-            Loading customer…
+            Kliendi andmete laadimine...
           </div>
         ) : (
           <>
-            {/* Overview */}
+            {/* Ülevaade */}
             <section className="mb-6 rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Overview</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Ülevaade</p>
                   <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{data.customer.fullName}</h1>
                   <p className="mt-1 text-sm text-slate-600">
                     {data.customer.email ?? '—'} {data.customer.phone ? `· ${data.customer.phone}` : ''}
@@ -207,9 +207,9 @@ export default function AdminCustomerDetailPage() {
 
                 <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-[520px] lg:grid-cols-3">
                   {[
-                    { label: 'Total spend', value: money(data.summary.totalSpend), icon: Star },
-                    { label: 'Bookings', value: String(data.summary.totalBookings), icon: Calendar },
-                    { label: 'Orders', value: String(data.summary.totalOrders), icon: ShoppingBag },
+                    { label: 'Kogukulu', value: money(data.summary.totalSpend), icon: Star },
+                    { label: 'Broneeringud', value: String(data.summary.totalBookings), icon: Calendar },
+                    { label: 'Tellimused', value: String(data.summary.totalOrders), icon: ShoppingBag },
                   ].map(({ label, value, icon: Icon }) => (
                     <div key={label} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
                       <div className="flex items-center gap-2 text-slate-500">
@@ -224,26 +224,26 @@ export default function AdminCustomerDetailPage() {
 
               <div className="mt-6 grid gap-4 lg:grid-cols-3">
                 <div className="rounded-2xl border border-[#f1ece8] bg-white p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Next booking</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Järgmine broneering</p>
                   <p className="mt-2 text-sm font-semibold text-slate-900">
                     {data.summary.nextBooking ? dateLabel(data.summary.nextBooking.slot_date, data.summary.nextBooking.slot_time) : '—'}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">{data.summary.nextBooking?.service_name ?? ''}</p>
                 </div>
                 <div className="rounded-2xl border border-[#f1ece8] bg-white p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Last booking</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Viimane broneering</p>
                   <p className="mt-2 text-sm font-semibold text-slate-900">
                     {data.summary.lastBooking ? dateLabel(data.summary.lastBooking.slot_date, data.summary.lastBooking.slot_time) : '—'}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">{data.summary.lastBooking?.service_name ?? ''}</p>
                 </div>
                 <div className="rounded-2xl border border-[#f1ece8] bg-white p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Notes</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Märkmed</p>
                   <textarea
                     value={notesDraft}
                     onChange={(e) => setNotesDraft(e.target.value)}
                     rows={4}
-                    placeholder="Internal notes: preferences, risks, upsell ideas…"
+                    placeholder="Sisemärkmed: eelistused, riskid, lisamüügi ideed..."
                     className="mt-2 w-full rounded-xl border border-[#e5e7eb] bg-slate-50/60 px-3 py-2 text-sm text-slate-800 focus:border-slate-300 focus:outline-none"
                   />
                   <button
@@ -252,105 +252,105 @@ export default function AdminCustomerDetailPage() {
                     disabled={savingNotes}
                     className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
                   >
-                    {savingNotes ? 'Saving…' : 'Save note'}
+                    {savingNotes ? 'Salvestan...' : 'Salvesta märge'}
                   </button>
                 </div>
               </div>
             </section>
 
-            {/* Insights + quick actions */}
+            {/* Ülevaated + kiirtegevused */}
             <section className="mb-6 grid gap-6 lg:grid-cols-12">
               <div className="lg:col-span-7">
                 <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Insights</p>
-                  <h2 className="mt-2 text-lg font-semibold text-slate-900">Behavior & value</h2>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Ülevaated</p>
+                  <h2 className="mt-2 text-lg font-semibold text-slate-900">Käitumine ja väärtus</h2>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cancellation rate</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Tühistamise määr</p>
                       <p className="mt-2 text-xl font-semibold tabular-nums text-slate-900">
                         {Math.round(data.insights.cancellationRate * 100)}%
                       </p>
                       {data.insights.cancelsOften && (
-                        <p className="mt-1 text-xs font-medium text-rose-700">Flagged: cancels often</p>
+                        <p className="mt-1 text-xs font-medium text-rose-700">Märge: tühistab sageli</p>
                       )}
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Avg spend (service)</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Keskmine teenusekulu</p>
                       <p className="mt-2 text-xl font-semibold tabular-nums text-slate-900">
                         {data.insights.averageSpend == null ? '—' : money(data.insights.averageSpend)}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">Based on completed/paid bookings.</p>
+                      <p className="mt-1 text-xs text-slate-500">Arvestatud lõpetatud/tasutud broneeringute põhjal.</p>
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Most booked service</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Enim broneeritud teenus</p>
                       <p className="mt-2 text-sm font-semibold text-slate-900">
                         {data.insights.mostBookedService ?? '—'}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Preferred time</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Eelistatud kellaaeg</p>
                       <p className="mt-2 text-sm font-semibold text-slate-900">
                         {data.insights.preferredHour == null ? '—' : `${String(data.insights.preferredHour).padStart(2, '0')}:00`}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        Avg rebooking interval: {data.insights.avgRebookIntervalDays == null ? '—' : `${data.insights.avgRebookIntervalDays} days`}
+                        Keskmine kordusbroneeringu vahe: {data.insights.avgRebookIntervalDays == null ? '—' : `${data.insights.avgRebookIntervalDays} päeva`}
                       </p>
                     </div>
                   </div>
 
                   <div className="mt-4 rounded-2xl border border-[#f1ece8] bg-white p-4">
                     <p className="text-sm font-medium text-slate-800">{data.insights.forecastLine}</p>
-                    <p className="mt-1 text-xs text-slate-500">Forecast improves as profiles accumulate bookings + orders.</p>
+                    <p className="mt-1 text-xs text-slate-500">Prognoos täpsustub, kui kliendikaardile koguneb rohkem andmeid.</p>
                   </div>
                 </section>
               </div>
 
               <div className="lg:col-span-5">
                 <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Quick actions</p>
-                  <h2 className="mt-2 text-lg font-semibold text-slate-900">Do next</h2>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Kiirtegevused</p>
+                  <h2 className="mt-2 text-lg font-semibold text-slate-900">Tee järgmiseks</h2>
                   <div className="mt-4 grid gap-2">
                     <button
                       type="button"
                       onClick={() => router.push('/book')}
                       className="inline-flex min-h-[48px] items-center justify-between rounded-2xl border border-[#e5ccd6] bg-[#fff2f9] px-4 py-3 text-sm font-semibold text-[#8b4d6a] transition hover:bg-[#ffe6f2]"
                     >
-                      <span className="inline-flex items-center gap-2"><Plus className="h-4 w-4" /> Create booking</span>
+                      <span className="inline-flex items-center gap-2"><Plus className="h-4 w-4" /> Loo broneering</span>
                       <ArrowRight className="h-4 w-4" />
                     </button>
                     <Link
                       href="/admin/bookings"
                       className="inline-flex min-h-[48px] items-center justify-between rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
-                      <span className="inline-flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Open bookings</span>
+                      <span className="inline-flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Ava broneeringud</span>
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                     <Link
                       href="/admin/orders"
                       className="inline-flex min-h-[48px] items-center justify-between rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
-                      <span className="inline-flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> Open orders</span>
+                      <span className="inline-flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> Ava tellimused</span>
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                     <a
                       href={data.customer.phone ? `sms:${encodeURIComponent(data.customer.phone)}` : undefined}
                       className={`inline-flex min-h-[48px] items-center justify-between rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 ${data.customer.phone ? '' : 'pointer-events-none opacity-50'}`}
                     >
-                      <span className="inline-flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Message client</span>
+                      <span className="inline-flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Saada kliendile sõnum</span>
                       <ArrowRight className="h-4 w-4" />
                     </a>
                   </div>
 
                   <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Risk</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Riskitase</p>
                     <div className="mt-2 flex items-start gap-2 text-sm text-slate-700">
                       <ShieldAlert className="mt-0.5 h-4 w-4 text-rose-600" />
                       <p>
                         {data.insights.cancelsOften
-                          ? 'Higher cancellation behavior detected. Consider requiring deposit confirmation before reschedule.'
+                          ? 'Kliendil on kõrgem tühistamise risk. Soovitame võtta ümberbroneerimisel ettemaksu kinnituse.'
                           : data.insights.inactive
-                            ? 'Client is inactive. Consider a gentle reactivation message.'
-                            : 'No major risk signals detected.'}
+                            ? 'Klient on olnud passiivne. Võid saata pehme taasaktiveerimise meeldetuletuse.'
+                            : 'Olulisi riskisignaale ei tuvastatud.'}
                       </p>
                     </div>
                   </div>
@@ -358,11 +358,11 @@ export default function AdminCustomerDetailPage() {
               </div>
             </section>
 
-            {/* Histories */}
+            {/* Ajalugu */}
             <section className="grid gap-6 lg:grid-cols-2">
               <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Booking history</h2>
-                <p className="mt-1 text-xs text-slate-500">Completed / cancelled / upcoming (latest first).</p>
+                <h2 className="text-lg font-semibold text-slate-900">Broneeringute ajalugu</h2>
+                <p className="mt-1 text-xs text-slate-500">Lõpetatud / tühistatud / tulevased (uusim eespool).</p>
                 <div className="mt-4 space-y-2">
                   {data.bookings.slice(0, 40).map((b) => (
                     <div key={b.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
@@ -380,13 +380,13 @@ export default function AdminCustomerDetailPage() {
                   ))}
                 </div>
                 {data.bookings.length > 40 && (
-                  <p className="mt-4 text-center text-xs text-slate-500">Showing 40 of {data.bookings.length}</p>
+                  <p className="mt-4 text-center text-xs text-slate-500">Näitan 40 kirjet {data.bookings.length}-st</p>
                 )}
               </section>
 
               <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Order history</h2>
-                <p className="mt-1 text-xs text-slate-500">Paid orders contribute to product spend.</p>
+                <h2 className="text-lg font-semibold text-slate-900">Tellimuste ajalugu</h2>
+                <p className="mt-1 text-xs text-slate-500">Tasutud tellimused lisatakse tootekulu arvestusse.</p>
                 <div className="mt-4 space-y-2">
                   {data.orders.slice(0, 40).map((o) => (
                     <div key={o.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
@@ -404,7 +404,7 @@ export default function AdminCustomerDetailPage() {
                   ))}
                 </div>
                 {data.orders.length > 40 && (
-                  <p className="mt-4 text-center text-xs text-slate-500">Showing 40 of {data.orders.length}</p>
+                  <p className="mt-4 text-center text-xs text-slate-500">Näitan 40 kirjet {data.orders.length}-st</p>
                 )}
               </section>
             </section>
@@ -414,4 +414,3 @@ export default function AdminCustomerDetailPage() {
     </main>
   );
 }
-

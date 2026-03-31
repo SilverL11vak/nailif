@@ -185,9 +185,9 @@ function localizedValue(locale: LocaleCode, et: string | null, en: string | null
   const fallbackValue = (fallback ?? '').trim();
 
   if (locale === 'en') {
-    return enValue || etValue || fallbackValue;
+    return enValue || '';
   }
-  return etValue || fallbackValue || enValue;
+  return etValue || fallbackValue || '';
 }
 
 function slugifyCategory(value: string) {

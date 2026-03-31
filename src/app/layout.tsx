@@ -40,6 +40,9 @@ export default async function RootLayout({
   const analyticsEnabled = await getAnalyticsEnabled();
   return (
     <html lang="et">
+      <head>
+        <meta charSet="UTF-8" />
+      </head>
       <body className={`${inter.variable} ${cormorant.variable} antialiased`}>
         <script
           dangerouslySetInnerHTML={{

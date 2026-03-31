@@ -5,6 +5,13 @@ export interface LocalizedText {
   en: string;
 }
 
+export function getLocalizedValue(input: { et?: string | null; en?: string | null; locale: LocaleCode }): string {
+  const et = typeof input.et === 'string' ? input.et.trim() : '';
+  const en = typeof input.en === 'string' ? input.en.trim() : '';
+  if (input.locale === 'en') return en || et;
+  return et;
+}
+
 export function asLocalizedText(value: unknown, fallback = ''): LocalizedText {
   if (typeof value === 'string') {
     const normalized = value.trim();
@@ -31,7 +38,7 @@ export function asLocalizedText(value: unknown, fallback = ''): LocalizedText {
 }
 
 export function localizeText(value: LocalizedText, locale: LocaleCode): string {
-  return locale === 'en' ? value.en : value.et;
+  return getLocalizedValue({ et: value.et, en: value.en, locale });
 }
 
 export function mergeLocalizedText(
@@ -48,4 +55,3 @@ export function mergeLocalizedText(
     en: trim ? en.trim() : en,
   };
 }
-

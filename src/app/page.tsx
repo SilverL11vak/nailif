@@ -16,6 +16,7 @@ import { getNextAvailableSlotClient } from '@/lib/next-available-slot-client';
 import { FavoriteHeartIcon } from '@/components/ui/FavoriteHeartIcon';
 import { trackEvent as trackBehaviorEvent } from '@/lib/behavior-tracking';
 import { getTodayInTallinn, getTomorrowInTallinn } from '@/lib/timezone';
+import { getLocalizedValue } from '@/lib/localized-text';
 import {
   Globe,
   ShoppingBag,
@@ -115,9 +116,11 @@ function isDataImageUrl(src: string | null | undefined): boolean {
 function readLocalizedText(value: LocalizedTextLike, language: Language): string {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object') {
-    const et = typeof value.et === 'string' ? value.et : '';
-    const en = typeof value.en === 'string' ? value.en : '';
-    return language === 'en' ? en || et : et || en;
+    return getLocalizedValue({
+      et: typeof value.et === 'string' ? value.et : '',
+      en: typeof value.en === 'string' ? value.en : '',
+      locale: language,
+    });
   }
   return '';
 }
@@ -127,7 +130,7 @@ function readLocalizedList(value: LocalizedListLike, language: Language): string
   if (value && typeof value === 'object') {
     const et = Array.isArray(value.et) ? value.et.filter((item): item is string => typeof item === 'string') : [];
     const en = Array.isArray(value.en) ? value.en.filter((item): item is string => typeof item === 'string') : [];
-    return language === 'en' ? (en.length > 0 ? en : et) : (et.length > 0 ? et : en);
+    return language === 'en' ? (en.length ? en : et) : et;
   }
   return [];
 }
@@ -140,7 +143,8 @@ export default function Home() {
   const selectedProducts = useBookingStore((state) => state.selectedProducts);
   const removeProductFromBooking = useBookingStore((state) => state.removeProductFromBooking);
   const { favoritesCount, isFavorite, toggleFavorite } = useFavorites();
-  const { cartCount } = useCart();
+  const { cartCount, addToCart } = useCart();
+  const activeBookingSession = useBookingStore((state) => state.selectedService || state.selectedSlot);
   const pathname = usePathname();
   const [nextAvailable, setNextAvailable] = useState<string>('');
   const [isScrolled, setIsScrolled] = useState(false);
@@ -152,6 +156,7 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [homepageMedia, setHomepageMedia] = useState<Record<string, string>>({});
+  const [homepageSections, setHomepageSections] = useState<Record<string, string>>({});
   const [serviceCards, setServiceCards] = useState<ServiceCard[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryImageItem[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMemberItem[]>([]);
@@ -207,6 +212,27 @@ export default function Home() {
   const featuredProduct = productSource.find((product) => product.isFeatured) ?? productSource[0];
   const supportingProducts = productSource.filter((product) => product.id !== featuredProduct?.id);
   const retailProducts = productSource;
+  const sectionText = (key: string, fallbackKey?: string, fallbackLiteral = '') => {
+    const override = homepageSections[key]?.trim();
+    if (override) return override;
+    if (fallbackKey) return t(fallbackKey);
+    return fallbackLiteral;
+  };
+  const trustRatingLabel = sectionText('trust_rating_label', 'trust.rating');
+  const trustGoogleRating = sectionText('trust_google_rating', 'trust.googleRating');
+  const trustClientsLabel = sectionText('trust_clients_label', 'trust.clients');
+  const trustHygienicToolsLabel = sectionText('trust_hygienic_tools_label', 'trust.hygienicTools');
+  const trustStudioLabel = sectionText('trust_studio_label', 'trust.mustamaeStudio');
+  const locationMapQuery = sectionText('location_map_query', undefined, 'Mustamäe tee 55, Tallinn');
+  const localAuthorityItem1 = sectionText('local_authority_item_1', 'homepage.localAuthority.item1');
+  const localAuthorityItem2 = sectionText('local_authority_item_2', 'homepage.localAuthority.item2');
+  const localAuthorityItem3 = sectionText('local_authority_item_3', 'homepage.localAuthority.item3');
+  const footerContactLine1 = sectionText('footer_contact_line_1', 'homepage.footer.contactLine1');
+  const footerContactLine2 = sectionText('footer_contact_line_2', 'homepage.footer.contactLine2');
+  const footerContactLine3 = sectionText('footer_contact_line_3', 'homepage.footer.contactLine3');
+  const footerEmail = sectionText('footer_email', undefined, 'hello@nailify.com');
+  const footerHoursLabel = sectionText('footer_hours_label', 'homepage.footer.hours1Label');
+  const footerHoursValue = sectionText('footer_hours_value', 'homepage.footer.hours1Value');
 
   useEffect(() => {
     showDiscountPillRef.current = showDiscountPill;
@@ -521,6 +547,26 @@ export default function Home() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadHomepageSections = async () => {
+      try {
+        const response = await fetch(`/api/homepage-sections?lang=${language}`);
+        if (!response.ok) return;
+        const data = (await response.json()) as { sections?: Record<string, string> };
+        if (mounted && data.sections && typeof data.sections === 'object') {
+          setHomepageSections(data.sections);
+        }
+      } catch {
+        if (mounted) setHomepageSections({});
+      }
+    };
+    void loadHomepageSections();
+    return () => {
+      mounted = false;
+    };
+  }, [language]);
 
   useEffect(() => {
     let mounted = true;
@@ -1563,19 +1609,19 @@ export default function Home() {
                 {[
                   {
                     icon: <Star className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: `${t('trust.rating')} ${t('_auto.page.p017')}`,
+                    label: trustRatingLabel,
                   },
                   {
                     icon: <Users className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: t('_auto.page.p018'),
+                    label: trustClientsLabel,
                   },
                   {
                     icon: <Droplet className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: t('_auto.page.p019'),
+                    label: trustHygienicToolsLabel,
                   },
                   {
                     icon: <HomeIcon className="h-4 w-4 opacity-60 transition-colors duration-180 group-hover:text-[#8f3d62]" strokeWidth={1.8} />,
-                    label: t('_auto.page.p020'),
+                    label: trustStudioLabel,
                   },
                 ].map((item, index) => (
                   <div key={item.label} className="group flex items-center gap-3">
@@ -1627,19 +1673,19 @@ export default function Home() {
               {[
                 {
                   icon: <Star className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: `${t('trust.rating')} ${t('_auto.page.p022')}`,
+                  label: trustRatingLabel,
                 },
                 {
                   icon: <Users className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: t('_auto.page.p023'),
+                  label: trustClientsLabel,
                 },
                 {
                   icon: <Droplet className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: t('_auto.page.p024'),
+                  label: trustHygienicToolsLabel,
                 },
                 {
                   icon: <HomeIcon className="h-4 w-4 opacity-60" strokeWidth={1.8} />,
-                  label: t('_auto.page.p025'),
+                  label: trustStudioLabel,
                 },
               ].map((item, index) => (
                 <div key={item.label} className="flex items-center gap-3">
@@ -1730,7 +1776,7 @@ export default function Home() {
             {/* CENTER ā€” Trust indicators: address, parking, transport (pill badges, hover lift) */}
             <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-col lg:overflow-visible lg:gap-4">
               <a
-                href="https://maps.google.com/?q=Mustamae+tee+55+Tallinn"
+                href={`https://maps.google.com/?q=${encodeURIComponent(locationMapQuery)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex min-w-[260px] shrink-0 items-center gap-3 rounded-xl border border-[#ead8e2] bg-white/80 px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#dfc8d4] hover:bg-[#fdf8fb] lg:min-w-0"
@@ -1738,19 +1784,19 @@ export default function Home() {
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5ebf0] text-[#9b7590] transition-colors group-hover:bg-[#f0e2eb]">
                   <MapPin className="h-5 w-5" strokeWidth={1.8} />
                 </span>
-                <span className="text-sm font-medium text-[#4d3d47]">{t('homepage.localAuthority.item1')}</span>
+                <span className="text-sm font-medium text-[#4d3d47]">{localAuthorityItem1}</span>
               </a>
               <div className="flex min-w-[260px] shrink-0 items-center gap-3 rounded-xl border border-[#ead8e2] bg-white/80 px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#dfc8d4] hover:bg-[#fdf8fb] lg:min-w-0">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5ebf0] text-[#9b7590]">
                   <Car className="h-5 w-5" strokeWidth={1.8} />
                 </span>
-                <span className="text-sm font-medium text-[#4d3d47]">{t('homepage.localAuthority.item2')}</span>
+                <span className="text-sm font-medium text-[#4d3d47]">{localAuthorityItem2}</span>
               </div>
               <div className="flex min-w-[260px] shrink-0 items-center gap-3 rounded-xl border border-[#ead8e2] bg-white/80 px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#dfc8d4] hover:bg-[#fdf8fb] lg:min-w-0">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f5ebf0] text-[#9b7590]">
                   <Bus className="h-5 w-5" strokeWidth={1.8} />
                 </span>
-                <span className="text-sm font-medium text-[#4d3d47]">{t('homepage.localAuthority.item3')}</span>
+                <span className="text-sm font-medium text-[#4d3d47]">{localAuthorityItem3}</span>
               </div>
             </div>
 
@@ -1763,8 +1809,8 @@ export default function Home() {
                 style={{ transitionDelay: localTrustInView ? '0ms' : '0ms' }}
               >
                 <span className="text-[#c24d86]" aria-hidden>{'\u2022'}</span>
-                <span className="text-sm font-semibold text-[#2d232d]">{t('trust.rating')}</span>
-                <span className="text-sm text-[#6f5e66]">{t('trust.googleRating')}</span>
+                <span className="text-sm font-semibold text-[#2d232d]">{trustRatingLabel}</span>
+                <span className="text-sm text-[#6f5e66]">{trustGoogleRating}</span>
               </div>
               <div className="hidden h-px w-12 bg-[#e0d0d8] lg:block" aria-hidden />
               <div
@@ -1774,7 +1820,7 @@ export default function Home() {
                 style={{ transitionDelay: localTrustInView ? '80ms' : '0ms' }}
               >
                 <span className="text-[#c24d86]" aria-hidden>{'\u2022'}</span>
-                <span className="text-sm font-semibold text-[#2d232d]">{t('trust.clients')}</span>
+                <span className="text-sm font-semibold text-[#2d232d]">{trustClientsLabel}</span>
               </div>
               <div className="hidden h-px w-12 bg-[#e0d0d8] lg:block" aria-hidden />
               <div
@@ -1784,7 +1830,7 @@ export default function Home() {
                 style={{ transitionDelay: localTrustInView ? '160ms' : '0ms' }}
               >
                 <span className="text-[#c24d86]" aria-hidden>{'\u2022'}</span>
-                <span className="text-sm font-semibold text-[#2d232d]">{t('trust.mustamaeStudio')}</span>
+                <span className="text-sm font-semibold text-[#2d232d]">{trustStudioLabel}</span>
               </div>
             </div>
             </div>
@@ -2764,31 +2810,39 @@ export default function Home() {
                             </div>
                             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                               <button
-                                onClick={() => {
-                                  const isSelected = selectedProducts.some((p) => p.productId === featuredProduct.id);
-                                  if (isSelected) {
-                                    clearBookingProductIntent();
-                                    removeProductFromBooking(featuredProduct.id);
-                                    return;
-                                  }
-
-                                  const bookingProduct = {
-                                    productId: featuredProduct.id,
-                                    name: featuredProduct.name,
-                                    unitPrice: featuredProduct.price,
-                                    quantity: 1,
-                                    imageUrl: featuredProduct.imageUrl ?? null,
-                                  };
-                                  setBookingProductIntent(bookingProduct);
-                                  addProductToBooking(bookingProduct);
-                                  router.push(localizePath('/book'));
-                                }}
+                                onClick={() => addToCart(featuredProduct.id, 1, featuredProduct.price)}
                                 className="btn-primary btn-small w-full sm:w-auto"
                               >
-                                {selectedProducts.some((p) => p.productId === featuredProduct.id)
-                                  ? t('_auto.page.p075')
-                                  : t('homepage.products.ctaAddWithBooking')}
+                                {t('add_to_cart')}
                               </button>
+                              {Boolean(activeBookingSession) && (
+                                <button
+                                  onClick={() => {
+                                    const isSelected = selectedProducts.some((p) => p.productId === featuredProduct.id);
+                                    if (isSelected) {
+                                      clearBookingProductIntent();
+                                      removeProductFromBooking(featuredProduct.id);
+                                      return;
+                                    }
+
+                                    const bookingProduct = {
+                                      productId: featuredProduct.id,
+                                      name: featuredProduct.name,
+                                      unitPrice: featuredProduct.price,
+                                      quantity: 1,
+                                      imageUrl: featuredProduct.imageUrl ?? null,
+                                    };
+                                    setBookingProductIntent(bookingProduct);
+                                    addProductToBooking(bookingProduct);
+                                    router.push(localizePath('/book'));
+                                  }}
+                                  className="btn-secondary btn-small w-full sm:w-auto"
+                                >
+                                  {selectedProducts.some((p) => p.productId === featuredProduct.id)
+                                    ? t('_auto.page.p075')
+                                    : t('add_to_booking')}
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   trackBehaviorEvent('product_card_click', {
@@ -3520,11 +3574,11 @@ export default function Home() {
                 {t('footer.description')}
               </p>
               <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] font-medium text-[#7d6e78]">
-                <span>{t('trust.rating')}</span>
+                <span>{trustRatingLabel}</span>
                 <span className="text-[#d4c4ce]" aria-hidden>{'\u00B7'}</span>
-                <span>{t('trust.clients')}</span>
+                <span>{trustClientsLabel}</span>
                 <span className="text-[#d4c4ce]" aria-hidden>{'\u00B7'}</span>
-                <span>{t('trust.hygienicTools')}</span>
+                <span>{trustHygienicToolsLabel}</span>
               </div>
             </div>
 
@@ -3551,11 +3605,11 @@ export default function Home() {
               <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7c6977]">
                 {t('footer.contact')}
               </h4>
-              <p className="text-sm font-medium text-[#4a3d44]">{t('homepage.footer.contactLine1')}</p>
-              <p className="mt-0.5 text-sm text-[#6b5c65]">{t('homepage.footer.contactLine2')}</p>
-              <p className="text-sm text-[#6b5c65]">{t('homepage.footer.contactLine3')}</p>
-              <p className="mt-2 text-sm font-medium" style={{ color: colors.primary }}>hello@nailify.com</p>
-              <p className="mt-2 text-xs text-[#7d6e78]">{t('homepage.footer.hours1Label')}: {t('homepage.footer.hours1Value')}</p>
+              <p className="text-sm font-medium text-[#4a3d44]">{footerContactLine1}</p>
+              <p className="mt-0.5 text-sm text-[#6b5c65]">{footerContactLine2}</p>
+              <p className="text-sm text-[#6b5c65]">{footerContactLine3}</p>
+              <p className="mt-2 text-sm font-medium" style={{ color: colors.primary }}>{footerEmail}</p>
+              <p className="mt-2 text-xs text-[#7d6e78]">{footerHoursLabel}: {footerHoursValue}</p>
               <p className="mt-3 text-[11px] text-[#8a7b88]">{t('footer.rescheduleHint')}</p>
             </div>
 
