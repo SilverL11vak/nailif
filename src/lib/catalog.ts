@@ -185,7 +185,7 @@ function localizedValue(locale: LocaleCode, et: string | null, en: string | null
   const fallbackValue = (fallback ?? '').trim();
 
   if (locale === 'en') {
-    return enValue || '';
+    return enValue || etValue || fallbackValue || '';
   }
   return etValue || fallbackValue || '';
 }
