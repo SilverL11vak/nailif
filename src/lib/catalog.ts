@@ -3,6 +3,7 @@ import { isDatabaseMigrated } from './schema-validator';
 import type { Service, ServiceVariant } from '@/store/booking-types';
 import type { LocaleCode } from './i18n/locale-path';
 import { mockServices } from '@/store/mock-data';
+import { resolveLocalizedWithAutoTranslate } from './google-auto-translate';
 
 export interface Product {
   id: string;
@@ -188,6 +189,43 @@ function localizedValue(locale: LocaleCode, et: string | null, en: string | null
     return enValue || etValue || fallbackValue || '';
   }
   return etValue || fallbackValue || '';
+}
+
+async function autofillMissingLocaleField<T extends Record<string, unknown>>(
+  row: T,
+  locale: LocaleCode,
+  keys: { et: keyof T; en: keyof T; fallback?: keyof T },
+) {
+  const etValue = typeof row[keys.et] === 'string' ? String(row[keys.et] ?? '') : '';
+  const enValue = typeof row[keys.en] === 'string' ? String(row[keys.en] ?? '') : '';
+  const fallbackValue = keys.fallback && typeof row[keys.fallback] === 'string'
+    ? String(row[keys.fallback] ?? '')
+    : '';
+
+  if (locale === 'en' && !enValue.trim()) {
+    const translated = await resolveLocalizedWithAutoTranslate({
+      locale: 'en',
+      et: etValue,
+      en: enValue,
+      fallback: fallbackValue,
+    });
+    if (translated.trim()) {
+      row[keys.en] = translated as T[keyof T];
+    }
+    return;
+  }
+
+  if (locale === 'et' && !etValue.trim()) {
+    const translated = await resolveLocalizedWithAutoTranslate({
+      locale: 'et',
+      et: etValue,
+      en: enValue,
+      fallback: fallbackValue,
+    });
+    if (translated.trim()) {
+      row[keys.et] = translated as T[keyof T];
+    }
+  }
 }
 
 function slugifyCategory(value: string) {
@@ -519,6 +557,7 @@ export async function listVariantsForServiceIds(
   `;
   const map = new Map<string, ServiceVariant[]>();
   for (const row of rows) {
+    await autofillMissingLocaleField(row, lang, { et: 'name_et', en: 'name_en', fallback: 'name' });
     const list = map.get(row.service_id) ?? [];
     const displayName =
       localizedValue(lang, row.name_et, row.name_en, row.name) || row.name || '';
@@ -578,6 +617,15 @@ export async function listServices(locale?: string): Promise<ServiceRecord[]> {
     WHERE s.active = TRUE
     ORDER BY COALESCE(c.sort_order, 9999) ASC, s.sort_order ASC, s.price ASC, s.name ASC
   `;
+
+  for (const row of rows) {
+    await autofillMissingLocaleField(row, lang, { et: 'name_et', en: 'name_en', fallback: 'name' });
+    await autofillMissingLocaleField(row, lang, { et: 'description_et', en: 'description_en', fallback: 'description' });
+    await autofillMissingLocaleField(row, lang, { et: 'result_description_et', en: 'result_description_en', fallback: 'description' });
+    await autofillMissingLocaleField(row, lang, { et: 'longevity_description_et', en: 'longevity_description_en' });
+    await autofillMissingLocaleField(row, lang, { et: 'suitability_note_et', en: 'suitability_note_en' });
+    await autofillMissingLocaleField(row, lang, { et: 'category_name_et', en: 'category_name_en', fallback: 'category' });
+  }
 
   const serviceIds = rows.map((r) => r.id);
   const variantMap = await listVariantsForServiceIds(serviceIds, true, locale);
@@ -653,6 +701,15 @@ export async function listAdminServices(locale?: string): Promise<ServiceRecord[
     LEFT JOIN service_categories c ON c.id = s.category_id
     ORDER BY COALESCE(c.sort_order, 9999) ASC, s.sort_order ASC, s.created_at DESC
   `;
+
+  for (const row of rows) {
+    await autofillMissingLocaleField(row, lang, { et: 'name_et', en: 'name_en', fallback: 'name' });
+    await autofillMissingLocaleField(row, lang, { et: 'description_et', en: 'description_en', fallback: 'description' });
+    await autofillMissingLocaleField(row, lang, { et: 'result_description_et', en: 'result_description_en', fallback: 'description' });
+    await autofillMissingLocaleField(row, lang, { et: 'longevity_description_et', en: 'longevity_description_en' });
+    await autofillMissingLocaleField(row, lang, { et: 'suitability_note_et', en: 'suitability_note_en' });
+    await autofillMissingLocaleField(row, lang, { et: 'category_name_et', en: 'category_name_en', fallback: 'category' });
+  }
 
   const serviceIds = rows.map((r) => r.id);
   const variantMap = await listVariantsForServiceIds(serviceIds, false, locale);
@@ -864,6 +921,10 @@ export async function listServiceCategories(locale?: string, activeOnly = true):
     ORDER BY sort_order ASC, name_et ASC
   `;
 
+  for (const row of rows) {
+    await autofillMissingLocaleField(row, lang, { et: 'name_et', en: 'name_en' });
+  }
+
   return rows.map((row) => ({
     id: row.id,
     name: localizedValue(lang, row.name_et, row.name_en, row.name_et),
@@ -958,6 +1019,12 @@ export async function listProducts(activeOnly = true, locale?: string): Promise<
     ORDER BY is_featured DESC, created_at DESC
   `;
 
+  for (const row of rows) {
+    await autofillMissingLocaleField(row, lang, { et: 'name_et', en: 'name_en', fallback: 'name' });
+    await autofillMissingLocaleField(row, lang, { et: 'description_et', en: 'description_en', fallback: 'description' });
+    await autofillMissingLocaleField(row, lang, { et: 'category_et', en: 'category_en', fallback: 'category' });
+  }
+
   const normalizeImages = (raw: unknown) => {
     const parsed =
       typeof raw === 'string'
@@ -1033,6 +1100,12 @@ export async function getProductsByIds(ids: string[], locale?: string): Promise<
     WHERE id IN ${sql(ids)}
       AND active = TRUE
   `;
+
+  for (const row of rows) {
+    await autofillMissingLocaleField(row, lang, { et: 'name_et', en: 'name_en', fallback: 'name' });
+    await autofillMissingLocaleField(row, lang, { et: 'description_et', en: 'description_en', fallback: 'description' });
+    await autofillMissingLocaleField(row, lang, { et: 'category_et', en: 'category_en', fallback: 'category' });
+  }
 
   const normalizeImages = (raw: unknown) => {
     const parsed =
